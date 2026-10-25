@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. The app is dark-first (practice often happens in the evening or on a
+ * phone in a dim office), with a light variant for bright daylight use.
+ */
+:root {
+  --bg: #0b0d14;
+  --bg-elev: #131726;
+  --bg-elev-2: #1b2033;
+  --line: #262c44;
+  --text: #eef0f8;
+  --text-dim: #a3a9c2;
+  --text-faint: #6b7291;
+  --accent: #7c5cff;
+  --accent-2: #3ee6c1;
+  --accent-soft: rgba(124, 92, 255, 0.16);
+  --good: #3ee6a0;
+  --warn: #ffc24b;
+  --bad: #ff6b81;
+  --ring: rgba(124, 92, 255, 0.55);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f6f7fb;
+    --bg-elev: #ffffff;
+    --bg-elev-2: #eef0f7;
+    --line: #dfe2ee;
+    --text: #12152a;
+    --text-dim: #4a5070;
+    --text-faint: #8a90ab;
+    --accent: #5b3df5;
+    --accent-2: #0fb894;
+    --accent-soft: rgba(91, 61, 245, 0.1);
+    --good: #12a46c;
+    --warn: #c78a00;
+    --bad: #e0334f;
+    --ring: rgba(91, 61, 245, 0.45);
+    color-scheme: light;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elev: var(--bg-elev);
+  --color-elev-2: var(--bg-elev-2);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-dim: var(--text-dim);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --font-sans: var(--font-geist-sans), system-ui, "Segoe UI", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+}
+
+/* Hebrew snippets (stuck mode, translations) get a font stack with good Hebrew glyphs. */
+[lang="he"] {
+  font-family: "Rubik", "Heebo", "Segoe UI", Arial, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+}
+
+.accent-gradient {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
