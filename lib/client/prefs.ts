@@ -13,6 +13,11 @@ export interface Prefs {
   tutorChosen: boolean;
   speechRate: number;
   dailyGoalMinutes: number;
+  /** How much the tutor corrects during the conversation (the report always has fixes). */
+  correctionMode: "off" | "gentle" | "precise";
+  /** Show Hebrew translations next to explanations by default. Off keeps it challenging. */
+  hebrewHelp: boolean;
+  sessionMinutes: number;
 }
 
 const KEY = "sw_prefs_v1";
@@ -21,6 +26,9 @@ const DEFAULTS: Prefs = {
   tutorChosen: false,
   speechRate: 1,
   dailyGoalMinutes: 12,
+  correctionMode: "gentle",
+  hebrewHelp: false,
+  sessionMinutes: 10,
 };
 
 const listeners = new Set<() => void>();

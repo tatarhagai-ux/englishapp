@@ -19,6 +19,13 @@
   --warn: #ffc24b;
   --bad: #ff6b81;
   --ring: rgba(124, 92, 255, 0.55);
+  /* Game layer (Duolingo-style): a green "go" action, XP gold, streak orange. */
+  --accent-deep: #4b2fd6;
+  --go: #2fbf71;
+  --go-deep: #1f8a50;
+  --go-ink: #04230f;
+  --xp: #ffd34d;
+  --streak: #ff9b2e;
   color-scheme: dark;
 }
 
@@ -38,6 +45,12 @@
     --warn: #c78a00;
     --bad: #e0334f;
     --ring: rgba(91, 61, 245, 0.45);
+    --accent-deep: #3a22b8;
+    --go: #2fbf71;
+    --go-deep: #1f8a50;
+    --go-ink: #04230f;
+    --xp: #e0a800;
+    --streak: #e87a00;
     color-scheme: light;
   }
 }
@@ -56,7 +69,13 @@
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
-  --font-sans: var(--font-geist-sans), system-ui, "Segoe UI", Arial, sans-serif;
+  --color-accent-deep: var(--accent-deep);
+  --color-go: var(--go);
+  --color-go-deep: var(--go-deep);
+  --color-go-ink: var(--go-ink);
+  --color-xp: var(--xp);
+  --color-streak: var(--streak);
+  --font-sans: "Nunito Variable", system-ui, "Segoe UI", Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
@@ -84,7 +103,7 @@ body {
 
 .card {
   background: var(--bg-elev);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: 1.25rem;
 }
 
@@ -97,6 +116,50 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/*
+ * Chunky "3D" buttons: a solid bottom edge that collapses on press. The tactile feel is
+ * what makes Duolingo-style apps satisfying to tap every day.
+ */
+.btn-3d {
+  position: relative;
+  border-radius: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transition:
+    transform 80ms ease,
+    box-shadow 80ms ease,
+    filter 120ms ease;
+}
+.btn-3d:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 transparent !important;
+}
+.btn-3d:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.btn-go {
+  background: var(--go);
+  color: var(--go-ink);
+  box-shadow: 0 4px 0 var(--go-deep);
+}
+.btn-accent {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 0 var(--accent-deep);
+}
+.btn-ghost {
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 2px solid var(--line);
+  box-shadow: 0 3px 0 var(--line);
+}
+
+.tile {
+  background: var(--bg-elev);
+  border: 2px solid var(--line);
+  border-radius: 1.25rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

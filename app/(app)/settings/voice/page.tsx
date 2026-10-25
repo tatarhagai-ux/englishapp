@@ -58,7 +58,7 @@ export default function VoicePickerPage() {
           <ChevronLeft className="size-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Your tutor&apos;s voice</h1>
+          <h1 className="text-2xl font-black tracking-tight">Your tutor&apos;s voice</h1>
           <p className="text-sm text-dim">Listen to a few, then pick the one you&apos;d enjoy talking to every day.</p>
         </div>
       </header>
@@ -150,10 +150,8 @@ export default function VoicePickerPage() {
                 onClick={() => setPrefs({ tutorVoiceId: v.id, tutorChosen: true })}
                 aria-pressed={selected}
                 className={clsx(
-                  "inline-flex items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold transition-colors",
-                  selected
-                    ? "accent-gradient text-white"
-                    : "border border-line text-dim hover:border-accent hover:text-text",
+                  "btn-3d inline-flex items-center justify-center gap-1.5 py-2 text-sm",
+                  selected ? "btn-accent" : "btn-ghost text-dim hover:text-text",
                 )}
               >
                 {selected ? (

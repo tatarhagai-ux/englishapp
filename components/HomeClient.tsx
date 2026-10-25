@@ -18,7 +18,7 @@ export function Greeting() {
   // Rendered after mount so the server's timezone never decides the greeting.
   const [text, setText] = useState("Hi");
   useEffect(() => setText(partOfDay(new Date().getHours())), []);
-  return <h1 className="text-2xl font-semibold tracking-tight">{text}, Hagai</h1>;
+  return <h1 className="text-xl font-black tracking-tight">{text}, Hagai</h1>;
 }
 
 export function TutorBadge() {
@@ -41,12 +41,12 @@ export function ChooseVoicePrompt() {
   const [prefs] = usePrefs();
   if (prefs.tutorChosen) return null;
   return (
-    <Link href="/settings/voice" className="card flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
+    <Link href="/settings/voice" className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
       <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
         <Headphones className="size-5" aria-hidden />
       </span>
       <span className="flex-1">
-        <span className="block font-semibold">Choose your tutor&apos;s voice</span>
+        <span className="block font-extrabold">Choose your tutor&apos;s voice</span>
         <span className="block text-sm text-dim">Listen to 8 voices and pick the one you like.</span>
       </span>
       <ArrowRight className="size-5 text-dim" aria-hidden />

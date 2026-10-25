@@ -11,6 +11,8 @@ export interface SeedError {
   example: string;
   better: string;
   why: string;
+  /** A concrete daily mission that makes the tutor elicit this structure. */
+  mission: string;
 }
 
 export const PLACEMENT = {
@@ -28,6 +30,7 @@ export const SEED_ERRORS: readonly SeedError[] = [
     example: "I live in Shoham for ten years.",
     better: "I've been living in Shoham for ten years.",
     why: "When something started in the past and is still true now, English uses the present perfect, not the present simple.",
+    mission: "Say “I've been … for …” 3 times",
   },
   {
     key: "looking_forward_to_ing",
@@ -36,6 +39,7 @@ export const SEED_ERRORS: readonly SeedError[] = [
     example: "I'm looking forward to meet you.",
     better: "I'm looking forward to meeting you.",
     why: "Here “to” is a preposition, so the verb after it takes -ing.",
+    mission: "Use “looking forward to + -ing” twice",
   },
   {
     key: "missing_be",
@@ -44,6 +48,7 @@ export const SEED_ERRORS: readonly SeedError[] = [
     example: "An Azure exam that called AZ-900.",
     better: "An Azure exam that's called AZ-900.",
     why: "English needs a form of “be” in passive phrases like “is called”, even when it feels optional.",
+    mission: "Describe 3 things with “it's called” or “it's used for”",
   },
   {
     key: "study_for",
@@ -52,6 +57,7 @@ export const SEED_ERRORS: readonly SeedError[] = [
     example: "I learn to the test.",
     better: "I'm studying for the exam.",
     why: "You “study for” an exam. “Learn” is about gaining a skill or fact, “study” is the activity.",
+    mission: "Explain how you study for something, in 3 sentences",
   },
   {
     key: "online_not_at_internet",
@@ -60,6 +66,7 @@ export const SEED_ERRORS: readonly SeedError[] = [
     example: "Example tests at the internet.",
     better: "Practice tests online.",
     why: "Things are “on” the internet, and “online” is the most natural way to say it.",
+    mission: "Say where you found something online, twice",
   },
   {
     key: "noun_modifier_order",
@@ -68,6 +75,7 @@ export const SEED_ERRORS: readonly SeedError[] = [
     example: "An official course of Microsoft.",
     better: "An official Microsoft course.",
     why: "In English the describing noun comes first: a Microsoft course, a Google account.",
+    mission: "Name 3 tools the English way (a Microsoft course)",
   },
   {
     key: "office_idioms",
@@ -76,6 +84,7 @@ export const SEED_ERRORS: readonly SeedError[] = [
     example: "“Let's touch base” misunderstood as “let's finish”.",
     better: "touch base = briefly check in with each other.",
     why: "Workplace English runs on short idioms. We'll add a few to every work conversation.",
+    mission: "Use 2 office phrases: touch base, follow up, on the same page",
   },
   {
     key: "answer_all_parts",
@@ -84,5 +93,6 @@ export const SEED_ERRORS: readonly SeedError[] = [
     example: "Answered what you did, skipped what you want to do next year.",
     better: "Last weekend I… And a year from now, I'd like to…",
     why: "When building sentences takes effort, the second half of a question gets lost. Interviews punish this.",
+    mission: "Answer two-part questions fully, 3 times",
   },
 ];

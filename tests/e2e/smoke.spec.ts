@@ -1,12 +1,41 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("app shell", () => {
-  test("home shows today's session, focus areas and setup prompt", async ({ page }) => {
+  test("home shows the mission, boss mistake, stats and setup prompt", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Hagai");
-    await expect(page.getByRole("heading", { name: "Tell me about your week" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tell your tutor about your AZ-900 prep" })).toBeVisible();
+    await expect(page.getByText("Say “I've been … for …” 3 times")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Boss mistake: Present perfect for “how long”" })).toBeVisible();
     await expect(page.getByText("Finish setup to start talking")).toBeVisible();
-    await expect(page.getByText("Present perfect for “how long”", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Start talking/ })).toHaveAttribute("href", "/setup");
+    await expect(page.getByLabel("0 day streak")).toBeVisible();
+  });
+
+  test("progress lists every focus mistake and locked achievements", async ({ page }) => {
+    await page.goto("/progress");
+    await expect(page.getByRole("heading", { name: "Level 1" })).toBeVisible();
+    await expect(page.getByText("New", { exact: true })).toHaveCount(8);
+    await expect(page.getByText("Interview ready")).toBeVisible();
+    await expect(page.getByText("First words")).toBeVisible();
+  });
+
+  test("settings save and survive a reload", async ({ page }) => {
+    await page.goto("/settings");
+    await expect(
+      page.getByRole("group", { name: "Correction style" }).getByRole("button", { name: "Gentle" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("group", { name: "Correction style" }).getByRole("button", { name: "Precise" }).click();
+    await page.getByRole("group", { name: "Daily goal" }).getByRole("button", { name: "15", exact: true }).click();
+    await expect(page.getByText(/points out each important mistake/)).toBeVisible();
+    await page.reload();
+    await expect(
+      page.getByRole("group", { name: "Correction style" }).getByRole("button", { name: "Precise" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.getByRole("group", { name: "Daily goal" }).getByRole("button", { name: "15", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByText("Monthly spending cap:")).toContainText("$15");
   });
 
   test("bottom navigation reaches every tab", async ({ page }) => {
@@ -14,6 +43,7 @@ test.describe("app shell", () => {
     const nav = page.getByRole("navigation", { name: "Main" });
     for (const [label, heading] of [
       ["Practice", "Practice"],
+      ["Progress", "Progress"],
       ["Settings", "Settings"],
       ["Home", /Hagai/],
     ] as const) {
@@ -24,7 +54,7 @@ test.describe("app shell", () => {
   });
 
   test("no horizontal scrolling on any main screen", async ({ page }) => {
-    for (const path of ["/", "/practice", "/settings", "/settings/voice", "/setup"]) {
+    for (const path of ["/", "/practice", "/progress", "/settings", "/settings/voice", "/setup"]) {
       await page.goto(path);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `horizontal overflow on ${path}`).toBeLessThanOrEqual(0);

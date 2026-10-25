@@ -12,9 +12,9 @@ interface Props {
 export function ComingNext({ icon: Icon, title, body, bullets }: Props) {
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <h1 className="text-2xl font-black tracking-tight">{title}</h1>
       <section className="card p-6 text-center">
-        <div className="accent-gradient mx-auto grid size-16 place-items-center rounded-3xl shadow-lg shadow-accent/25">
+        <div className="mx-auto grid size-16 place-items-center rounded-3xl bg-accent shadow-[0_5px_0_var(--accent-deep)]">
           <Icon className="size-8 text-white" aria-hidden />
         </div>
         <p className="mx-auto mt-4 max-w-sm text-dim">{body}</p>
