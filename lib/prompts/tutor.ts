@@ -34,6 +34,7 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
     who,
     LEARNER_PROFILE,
     `Setting: ${scenario.setting}.\nThe learner's task: ${scenario.task}`,
+    scenario.tutorNotes ?? "",
     targets
       ? `Mistakes he is working on. Ask questions that naturally make him use these structures, without naming them:\n${targets}`
       : "",

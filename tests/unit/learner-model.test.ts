@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   applyAnalysis,
+  averageWpm,
+  currentSpeakingLevel,
+  hasPlacement,
+  levelHistory,
   duePhrases,
   initialState,
   rankedErrors,
@@ -199,5 +203,59 @@ describe("warm-up", () => {
 
   it("counts warm-up reviews in session XP", () => {
     expect(sessionXp(session({ speakingSeconds: 60, reviewsDone: 3 }), 0, 12)).toBe(10 + 15);
+  });
+});
+
+describe("speaking level", () => {
+  const withLevel = (id: string, day: string, cefr: string, confidence = "medium", scenarioId = "free-your-week") =>
+    session({ id, day, scenarioId, report: analysis({ level: { cefr, confidence } }) });
+
+  it("falls back to the placement quiz until there are estimates", () => {
+    expect(currentSpeakingLevel(initialState(NOW), "B1+")).toBe("B1+");
+  });
+
+  it("uses the median of the last five confident estimates", () => {
+    const s: LearnerState = {
+      ...initialState(NOW),
+      sessions: [
+        withLevel("a", "2026-10-20", "C2", "low"),
+        withLevel("b", "2026-10-21", "B1"),
+        withLevel("c", "2026-10-22", "B2"),
+        withLevel("d", "2026-10-23", "B1+"),
+        withLevel("e", "2026-10-24", "C1"),
+        withLevel("f", "2026-10-25", "B2", "high", "placement"),
+      ],
+    };
+    expect(levelHistory(s).map((p) => p.cefr)).toEqual(["B1", "B2", "B1+", "C1", "B2"]);
+    expect(currentSpeakingLevel(s, "B1+")).toBe("B2");
+    expect(hasPlacement(s)).toBe(true);
+    expect(levelHistory(s).at(-1)?.placement).toBe(true);
+  });
+
+  it("ignores an invalid level instead of failing the whole report", () => {
+    expect(analysisSchema.parse({ level: { cefr: "Z9" } }).level).toBeUndefined();
+  });
+
+  it("averages words per minute over voice conversations only", () => {
+    const s: LearnerState = {
+      ...initialState(NOW),
+      sessions: [
+        session({
+          speakingSeconds: 60,
+          turns: [{ role: "learner", text: "one two three four five six", input: "voice" }],
+        }),
+        session({
+          id: "q",
+          mode: "quiet",
+          speakingSeconds: 60,
+          turns: [{ role: "learner", text: "x ".repeat(500), input: "text" }],
+        }),
+      ],
+    };
+    expect(averageWpm(s, (t) => t.trim().split(/\s+/).length)).toBe(6);
+  });
+
+  it("never recommends the hidden level check", () => {
+    for (let i = 0; i < 5; i++) expect(recommendScenario(initialState(NOW)).hidden).toBeFalsy();
   });
 });

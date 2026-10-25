@@ -26,7 +26,7 @@ describe("scenario library", () => {
     for (const t of s.targets) expect(seedKeys.has(t), `target ${t} is a known mistake`).toBe(true);
     expect(s.phrases.length).toBeGreaterThanOrEqual(3);
     expect(s.opener.trim().endsWith("?"), "opener invites a reply").toBe(true);
-    expect(s.minutes).toBeGreaterThanOrEqual(5);
+    expect(s.minutes).toBeGreaterThanOrEqual(s.hidden ? 3 : 5);
   });
 
   it("every known mistake is practiced by at least one scenario", () => {

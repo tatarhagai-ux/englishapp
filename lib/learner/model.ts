@@ -204,8 +204,9 @@ export function recommendScenario(state: LearnerState): Scenario {
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
     .slice(0, 5)
     .map((s) => s.scenarioId);
-  const fits = SCENARIOS.filter((s) => (top ? s.targets.includes(top.key) : true));
-  const pool = fits.length ? fits : [...SCENARIOS];
+  const listed = SCENARIOS.filter((s) => !s.hidden);
+  const fits = listed.filter((s) => (top ? s.targets.includes(top.key) : true));
+  const pool = fits.length ? fits : listed;
   return pool.find((s) => !recent.includes(s.id)) ?? pool[0];
 }
 
@@ -317,4 +318,51 @@ export function warmupItems(state: LearnerState, now = new Date(), max = 3): War
     hebrew: p.meaningHe,
   }));
   return [...mistakes, ...phrases].slice(0, max);
+}
+
+const CEFR_ORDER = ["A1", "A2", "B1", "B1+", "B2", "B2+", "C1", "C2"] as const;
+export type Cefr = (typeof CEFR_ORDER)[number];
+
+export interface LevelPoint {
+  day: string;
+  cefr: Cefr;
+  placement: boolean;
+}
+
+/** Speaking level estimates over time; low-confidence guesses are left out. */
+export function levelHistory(state: LearnerState): LevelPoint[] {
+  return state.sessions
+    .filter((s) => s.report?.level && s.report.level.confidence !== "low")
+    .map((s) => ({ day: s.day, cefr: s.report!.level!.cefr, placement: s.scenarioId === "placement" }));
+}
+
+/**
+ * Current speaking level: the median of the last five estimates, so one great or one bad
+ * day doesn't swing it. Falls back to the placement quiz.
+ */
+export function currentSpeakingLevel(state: LearnerState, fallback: Cefr): Cefr {
+  const recent = levelHistory(state)
+    .slice(-5)
+    .map((p) => CEFR_ORDER.indexOf(p.cefr));
+  if (recent.length === 0) return fallback;
+  const sorted = [...recent].sort((a, b) => a - b);
+  return CEFR_ORDER[sorted[Math.floor((sorted.length - 1) / 2)]];
+}
+
+export function hasPlacement(state: LearnerState): boolean {
+  return state.sessions.some((s) => s.scenarioId === "placement" && s.report);
+}
+
+/** Average speaking speed across voice conversations, in words per minute. */
+export function averageWpm(state: LearnerState, wordsOf: (text: string) => number): number | null {
+  let words = 0;
+  let seconds = 0;
+  for (const s of state.sessions) {
+    if (s.mode !== "voice" || s.speakingSeconds < 20) continue;
+    seconds += s.speakingSeconds;
+    words += s.turns
+      .filter((t) => t.role === "learner" && t.input !== "stuck")
+      .reduce((n, t) => n + wordsOf(t.text), 0);
+  }
+  return seconds > 0 ? Math.round(words / (seconds / 60)) : null;
 }

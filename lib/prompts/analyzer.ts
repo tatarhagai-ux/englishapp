@@ -53,6 +53,15 @@ export const analysisSchema = z.object({
     })
     .default({ completed: false, met: [], feedback_en: "" }),
   praise_en: z.string().default(""),
+  /** Speaking level shown in this conversation. Optional: a short chat may not show enough. */
+  level: z
+    .object({
+      cefr: z.enum(["A1", "A2", "B1", "B1+", "B2", "B2+", "C1", "C2"]),
+      confidence: z.enum(["low", "medium", "high"]).catch("low"),
+      note_en: z.string().default(""),
+    })
+    .optional()
+    .catch(undefined),
 });
 
 export type Analysis = z.infer<typeof analysisSchema>;
@@ -88,9 +97,10 @@ Rules:
 - phrases: up to 5 useful expressions from the tutor's lines or your corrections worth saving, with a short English meaning and a Hebrew translation.
 - task: decide if he completed the task, list which success criteria he met (copy their wording), and give one sentence of feedback.
 - praise_en: one specific thing he did well, quoting him if possible.
+- level: his SPEAKING level as shown here (A1, A2, B1, B1+, B2, B2+, C1, C2), judged on range, accuracy, fluency and how well he handles harder questions. confidence is "low" if he said little. note_en: one sentence on what would move him up.
 
 JSON shape:
-{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":""}`;
+{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","level":{"cefr":"B1+","confidence":"medium","note_en":""}}`;
 
   const user = `Scenario: ${scenario.title}
 Task: ${scenario.task}

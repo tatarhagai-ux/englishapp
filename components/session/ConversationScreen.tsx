@@ -62,7 +62,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const isTutor = scenario.voiceId === null;
   const voice = voiceById(scenario.voiceId ?? prefs.tutorVoiceId) ?? voiceById(DEFAULT_TUTOR_VOICE_ID)!;
   const tutorName = voiceById(prefs.tutorVoiceId)?.displayName ?? "Ava";
-  const limitSeconds = (isTutor ? prefs.sessionMinutes : scenario.minutes) * 60;
+  // Free talk follows the length setting; roleplays and the level check have their own.
+  const limitSeconds = (isTutor && !scenario.hidden ? prefs.sessionMinutes : scenario.minutes) * 60;
   const spentThisMonth = state.spend[monthKey()] ?? 0;
 
   const [phase, setPhase] = useState<"intro" | "warmup" | "live" | "finishing">("intro");

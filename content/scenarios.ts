@@ -28,6 +28,10 @@ export interface Scenario {
   /** The AI's first line. Short, natural, ends with a question. */
   opener: string;
   minutes: number;
+  /** Extra instructions for the AI in this scenario only. */
+  tutorNotes?: string;
+  /** Not listed in the library (e.g. the placement chat, reached from Home). */
+  hidden?: boolean;
 }
 
 export const CATEGORY_INFO: Record<ScenarioCategory, { label: string; goal: string }> = {
@@ -38,7 +42,30 @@ export const CATEGORY_INFO: Record<ScenarioCategory, { label: string; goal: stri
   world: { label: "World & ideas", goal: "Talk freely and confidently" },
 };
 
+export const PLACEMENT_ID = "placement";
+
 export const SCENARIOS: readonly Scenario[] = [
+  // Placement: a short chat that climbs from easy to hard so the analyzer can place him.
+  {
+    id: PLACEMENT_ID,
+    category: "free",
+    title: "Speaking level check",
+    summary: "Five questions that get a little harder each time. No corrections, just talk.",
+    voiceId: null,
+    setting: "A relaxed level check with your tutor",
+    task: "Answer five questions as fully as you can. Long answers help us measure you better.",
+    successCriteria: ["Answers at least four questions", "Gives at least one answer of three sentences or more"],
+    targets: ["present_perfect_duration", "answer_all_parts"],
+    phrases: ["To be honest…", "It depends on…", "For example…", "If I could…"],
+    opener:
+      "Let's find your level. No stress, there are no wrong answers. First, tell me a bit about yourself: what do you do these days?",
+    minutes: 4,
+    hidden: true,
+    tutorNotes: `This is a placement check. Ask exactly five questions, one per turn, each a little harder:
+1 (already asked) about himself now. 2 a past experience he remembers well. 3 his plans for the next few years. 4 his opinion on something that matters to him, and why. 5 a hypothetical: what he would change if he could.
+Do not correct anything. React in a few words, then ask the next question. After his fifth answer, thank him and say his report is ready.`,
+  },
+
   // Job interview track (5). Completing all five unlocks "Interview ready".
   {
     id: "interview-about-you",

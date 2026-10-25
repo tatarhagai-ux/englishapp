@@ -9,7 +9,17 @@ import { ACHIEVEMENTS } from "@/lib/game/achievements";
 import { levelFromXp } from "@/lib/game/xp";
 import { dayKey } from "@/lib/game/streak";
 import { useLearner } from "@/lib/client/learner";
-import { isRealSession, statsFrom, type ErrorRecord, type ErrorStatus } from "@/lib/learner/model";
+import {
+  averageWpm,
+  currentSpeakingLevel,
+  isRealSession,
+  levelHistory,
+  statsFrom,
+  type Cefr,
+  type ErrorRecord,
+  type ErrorStatus,
+} from "@/lib/learner/model";
+import { wordCount } from "@/lib/text/compare";
 import { monthKey } from "@/lib/cost/budget";
 
 const STATUS_STYLE: Record<ErrorStatus, string> = {
@@ -28,6 +38,9 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
   );
   const recent = state.sessions.filter(isRealSession).slice(-10).reverse();
   const spent = state.spend[monthKey()] ?? 0;
+  const history = levelHistory(state);
+  const speaking = currentSpeakingLevel(state, PLACEMENT.production as Cefr);
+  const wpm = averageWpm(state, wordCount);
 
   return (
     <div className="space-y-5">
@@ -63,18 +76,34 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
         <h2 id="skills-title" className="font-black">
           English level
         </h2>
-        <dl className="mt-3 grid grid-cols-2 gap-3">
+        <dl className="mt-3 grid grid-cols-3 gap-3">
           <div className="rounded-xl bg-elev-2 p-3">
-            <dt className="text-sm font-bold text-dim">Understanding</dt>
+            <dt className="text-xs font-bold text-dim">Understanding</dt>
             <dd className="text-2xl font-black">{PLACEMENT.comprehension}</dd>
           </div>
           <div className="rounded-xl bg-elev-2 p-3">
-            <dt className="text-sm font-bold text-dim">Speaking</dt>
-            <dd className="text-2xl font-black text-accent-2">{PLACEMENT.production}</dd>
+            <dt className="text-xs font-bold text-dim">Speaking</dt>
+            <dd className="text-2xl font-black text-accent-2">{speaking}</dd>
+          </div>
+          <div className="rounded-xl bg-elev-2 p-3">
+            <dt className="text-xs font-bold text-dim">Words / min</dt>
+            <dd className="text-2xl font-black">{wpm ?? "—"}</dd>
           </div>
         </dl>
+        {history.length > 0 ? (
+          <ol className="mt-3 flex flex-wrap gap-1.5" aria-label="Speaking level over time">
+            {history.slice(-12).map((p, i) => (
+              <li key={i} className="rounded-lg bg-elev-2 px-2 py-1 text-xs font-bold text-dim">
+                {p.day.slice(5)} <span className="font-black text-text">{p.cefr}</span>
+                {p.placement ? " ★" : ""}
+              </li>
+            ))}
+          </ol>
+        ) : null}
         <p className="mt-3 text-xs font-bold text-faint">
-          From the placement quiz on {PLACEMENT.date} ({PLACEMENT.quizScore} plus a writing sample).
+          {history.length
+            ? "Speaking is the middle of your last five conversation estimates. ★ = level check. Native speakers talk at about 120 to 150 words a minute."
+            : `From the placement quiz on ${PLACEMENT.date} (${PLACEMENT.quizScore} plus a writing sample). Each conversation updates it.`}
         </p>
       </section>
 

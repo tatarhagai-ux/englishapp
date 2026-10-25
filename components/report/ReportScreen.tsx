@@ -154,6 +154,18 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
             </span>
           </div>
 
+          {report.level && report.level.confidence !== "low" && (
+            <section className="tile flex items-center gap-4 p-4" aria-label="Speaking level in this conversation">
+              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-accent text-xl font-black text-white">
+                {report.level.cefr}
+              </span>
+              <div>
+                <p className="font-extrabold">Speaking level in this conversation</p>
+                {report.level.note_en && <p className="text-sm text-dim">{report.level.note_en}</p>}
+              </div>
+            </section>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <Stat
               icon={Clock}

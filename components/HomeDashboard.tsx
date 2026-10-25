@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock, Flame, MessageCircle, Sparkles, Target, Trophy, Wrench, Zap } from "lucide-react";
+import { ArrowRight, Clock, Flame, Gauge, MessageCircle, Sparkles, Target, Trophy, Wrench, Zap } from "lucide-react";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
-import { minutesOnDay, rankedErrors, recommendScenario, statsFrom } from "@/lib/learner/model";
+import { hasPlacement, minutesOnDay, rankedErrors, recommendScenario, statsFrom } from "@/lib/learner/model";
+import { PLACEMENT_ID } from "@/content/scenarios";
 import { dayKey } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/xp";
 import { ChooseVoicePrompt, Greeting, TutorBadge } from "./HomeClient";
@@ -66,6 +67,22 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           <span className="flex-1">
             <span className="block font-extrabold">Finish setup to start talking</span>
             <span className="block text-sm text-dim">Connect the speech and AI services. About 20 minutes.</span>
+          </span>
+          <ArrowRight className="size-5 text-dim" aria-hidden />
+        </Link>
+      )}
+
+      {hydrated && ready && !hasPlacement(state) && (
+        <Link
+          href={`/session/${PLACEMENT_ID}`}
+          className="tile flex items-center gap-3 border-accent/60 bg-accent-soft p-4 transition-colors hover:border-accent"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-white">
+            <Gauge className="size-5" aria-hidden />
+          </span>
+          <span className="flex-1">
+            <span className="block font-extrabold">Measure your speaking level</span>
+            <span className="block text-sm text-dim">A 4-minute chat with 5 questions. Start here.</span>
           </span>
           <ArrowRight className="size-5 text-dim" aria-hidden />
         </Link>

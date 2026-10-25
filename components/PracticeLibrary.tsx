@@ -54,7 +54,7 @@ export function PracticeLibrary() {
             <p className="text-xs font-bold text-faint">Goal: {CATEGORY_INFO[cat].goal}</p>
           </div>
           <ul className="space-y-2.5">
-            {SCENARIOS.filter((s) => s.category === cat).map((s) => (
+            {SCENARIOS.filter((s) => s.category === cat && !s.hidden).map((s) => (
               <li key={s.id}>
                 <ScenarioCard scenario={s} done={done.has(s.id)} tutorName={tutorName} />
               </li>
