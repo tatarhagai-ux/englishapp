@@ -37,3 +37,16 @@ export function sttCostUsd(seconds: number, usedThisMonth: number): number {
   const billable = Math.max(0, seconds - free);
   return (billable / 3600) * PRICING.azure.sttUsdPerHour;
 }
+
+/** Cost of one LLM call: the provider's own figure when it reports one, else our estimate. */
+export function usageCostUsd(
+  model: string,
+  usage:
+    | { promptTokens: number; completionTokens: number; cachedPromptTokens?: number; costUsd?: number }
+    | null
+    | undefined,
+): number {
+  if (!usage) return 0;
+  if (typeof usage.costUsd === "number") return usage.costUsd;
+  return llmCostUsd(model, usage.promptTokens, usage.completionTokens, usage.cachedPromptTokens ?? 0);
+}

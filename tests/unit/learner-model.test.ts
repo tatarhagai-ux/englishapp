@@ -1,0 +1,171 @@
+import { describe, expect, it } from "vitest";
+import {
+  applyAnalysis,
+  duePhrases,
+  initialState,
+  rankedErrors,
+  recommendScenario,
+  reviewPhrase,
+  sessionXp,
+  statsFrom,
+  targetKeysForNext,
+  type LearnerState,
+  type SessionRecord,
+} from "@/lib/learner/model";
+import { analysisSchema, type Analysis } from "@/lib/prompts/analyzer";
+
+const NOW = new Date("2026-10-25T10:00:00Z");
+
+function session(over: Partial<SessionRecord> = {}): SessionRecord {
+  return {
+    id: "s1",
+    scenarioId: "free-your-week",
+    mode: "voice",
+    startedAt: NOW.toISOString(),
+    endedAt: NOW.toISOString(),
+    day: "2026-10-25",
+    turns: [
+      { role: "tutor", text: "Hi?" },
+      { role: "learner", text: "Hello", input: "voice" },
+    ],
+    speakingSeconds: 300,
+    stuckCount: 0,
+    fixedAloud: [],
+    xp: 0,
+    costUsd: 0,
+    ...over,
+  };
+}
+
+function analysis(partial: Partial<Record<keyof Analysis, unknown>>): Analysis {
+  return analysisSchema.parse(partial);
+}
+
+function withSession(s: SessionRecord = session()): LearnerState {
+  return { ...initialState(NOW), sessions: [s] };
+}
+
+describe("learner model", () => {
+  it("starts with the 8 placement mistakes as new", () => {
+    const s = initialState(NOW);
+    expect(Object.keys(s.errors)).toHaveLength(8);
+    expect(Object.values(s.errors).every((e) => e.status === "new")).toBe(true);
+  });
+
+  it("moves a mistake new → practicing → mastered over clean sessions, and back on a relapse", () => {
+    const used = analysis({ correct_uses: ["present_perfect_duration"] });
+    let s = applyAnalysis(withSession(), "s1", used, NOW);
+    expect(s.errors.present_perfect_duration.status).toBe("practicing");
+    s = applyAnalysis(s, "s1", used, NOW);
+    expect(s.errors.present_perfect_duration.status).toBe("mastered");
+
+    s = applyAnalysis(
+      s,
+      "s1",
+      analysis({
+        corrections: [
+          {
+            original: "I live here two years",
+            better: "I've lived here for two years",
+            why_en: "x",
+            error_key: "present_perfect_duration",
+          },
+        ],
+      }),
+      NOW,
+    );
+    expect(s.errors.present_perfect_duration).toMatchObject({ status: "practicing", cleanSessions: 0, occurrences: 2 });
+  });
+
+  it("does not count a correct use in a session where the same mistake was also made", () => {
+    const s = applyAnalysis(
+      withSession(),
+      "s1",
+      analysis({
+        corrections: [{ original: "a", better: "b", why_en: "x", error_key: "missing_be" }],
+        correct_uses: ["missing_be"],
+      }),
+      NOW,
+    );
+    expect(s.errors.missing_be).toMatchObject({ status: "new", correctUses: 0 });
+  });
+
+  it("adds new mistakes with a readable title and saves the report", () => {
+    const s = applyAnalysis(
+      withSession(),
+      "s1",
+      analysis({
+        corrections: [
+          { original: "I am agree", better: "I agree", why_en: "agree is a verb", why_he: "x", error_key: "be_agree" },
+        ],
+      }),
+      NOW,
+    );
+    expect(s.errors.be_agree).toMatchObject({ title: "Be agree", example: "I am agree", status: "new" });
+    expect(s.sessions[0].report?.corrections).toHaveLength(1);
+  });
+
+  it("adds phrases once, case-insensitively", () => {
+    const a = analysis({ phrases: [{ text: "touch base" }, { text: "Touch base" }, { text: "follow up" }] });
+    let s = applyAnalysis(withSession(), "s1", a, NOW);
+    s = applyAnalysis(s, "s1", a, NOW);
+    expect(s.phrases.map((p) => p.text)).toEqual(["touch base", "follow up"]);
+  });
+
+  it("ranks frequent unmastered mistakes first and picks targets", () => {
+    let s = withSession();
+    s = { ...s, errors: { ...s.errors, missing_be: { ...s.errors.missing_be, occurrences: 5 } } };
+    expect(rankedErrors(s)[0].key).toBe("missing_be");
+    expect(targetKeysForNext(s)).toHaveLength(3);
+    expect(targetKeysForNext(s)[0]).toBe("missing_be");
+  });
+
+  it("recommends a scenario for the top mistake and avoids repeating the last one", () => {
+    let s = withSession(session({ scenarioId: "interview-strengths" }));
+    s = { ...s, errors: { ...s.errors, missing_be: { ...s.errors.missing_be, occurrences: 9 } } };
+    const rec = recommendScenario(s);
+    expect(rec.targets).toContain("missing_be");
+    expect(rec.id).not.toBe("interview-strengths");
+  });
+
+  it("computes stats for achievements", () => {
+    const s: LearnerState = {
+      ...initialState(NOW),
+      sessions: [
+        session({
+          id: "a",
+          day: "2026-10-24",
+          scenarioId: "interview-about-you",
+          xp: 40,
+          report: analysis({ task: { completed: true } }),
+        }),
+        session({ id: "b", day: "2026-10-25", scenarioId: "abroad-airport", stuckCount: 2, xp: 30 }),
+        session({ id: "c", day: "2026-10-25", turns: [{ role: "tutor", text: "Hi?" }] }),
+      ],
+    };
+    expect(statsFrom(s, "2026-10-25")).toMatchObject({
+      sessions: 2,
+      totalSpeakingSeconds: 600,
+      currentStreak: 2,
+      interviewScenariosDone: 1,
+      accentsHeard: 2,
+      stuckFreeSessions: 1,
+      xp: 70,
+    });
+  });
+
+  it("gives the daily-goal bonus only to the session that crosses the goal", () => {
+    const s = session({ speakingSeconds: 6 * 60 });
+    expect(sessionXp(s, 8, 12)).toBe(60 + 10);
+    expect(sessionXp(s, 13, 12)).toBe(60);
+  });
+
+  it("schedules phrase reviews, surviving a JSON round trip", () => {
+    let s = applyAnalysis(withSession(), "s1", analysis({ phrases: [{ text: "touch base" }] }), NOW);
+    expect(duePhrases(s, NOW)).toHaveLength(1);
+    s = JSON.parse(JSON.stringify(s));
+    s = reviewPhrase(s, "touch base", true, NOW);
+    expect(duePhrases(s, NOW)).toHaveLength(0);
+    expect(new Date(s.phrases[0].card.due).getTime()).toBeGreaterThan(NOW.getTime());
+  });
+});

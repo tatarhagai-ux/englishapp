@@ -1,0 +1,284 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  Check,
+  Circle,
+  Clock,
+  Gauge,
+  Languages,
+  LifeBuoy,
+  Loader2,
+  MessageCircle,
+  RotateCcw,
+  Sparkles,
+  Trophy,
+} from "lucide-react";
+import clsx from "clsx";
+import { scenarioById } from "@/content/scenarios";
+import { useHydrated, useLearner, learner } from "@/lib/client/learner";
+import { usePrefs } from "@/lib/client/prefs";
+import { analyzeSession, ApiError, API_ERROR_TEXT } from "@/lib/client/api";
+import { usageCostUsd } from "@/lib/cost/pricing";
+import { wordCount } from "@/lib/text/compare";
+import { CorrectionCard } from "./CorrectionCard";
+
+export function ReportScreen({ sessionId }: { sessionId: string }) {
+  const hydrated = useHydrated();
+  const state = useLearner();
+  const [prefs] = usePrefs();
+  const session = state.sessions.find((s) => s.id === sessionId);
+  const scenario = session ? scenarioById(session.scenarioId) : undefined;
+  const [status, setStatus] = useState<"idle" | "analyzing" | "error">("idle");
+  const [errorText, setErrorText] = useState("");
+  const started = useRef(false);
+
+  async function analyze() {
+    if (!session) return;
+    setStatus("analyzing");
+    try {
+      const res = await analyzeSession(session.scenarioId, session.turns);
+      learner.addSpend(session.id, usageCostUsd(res.model, res.usage));
+      learner.saveReport(session.id, res.analysis, prefs.dailyGoalMinutes);
+      setStatus("idle");
+    } catch (err) {
+      setErrorText(API_ERROR_TEXT[err instanceof ApiError ? err.kind : "provider"]);
+      setStatus("error");
+    }
+  }
+
+  useEffect(() => {
+    if (!hydrated || !session || session.report || started.current) return;
+    started.current = true;
+    void analyze();
+    // Run once per mount when the report is missing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, session?.id, session?.report]);
+
+  if (!hydrated)
+    return (
+      <Shell>
+        <p className="text-dim">Loading…</p>
+      </Shell>
+    );
+  if (!session || !scenario) {
+    return (
+      <Shell>
+        <p className="font-bold">This report isn&apos;t on this device.</p>
+        <Link href="/" className="btn-3d btn-go mt-4 inline-block px-5 py-3">
+          Home
+        </Link>
+      </Shell>
+    );
+  }
+
+  const report = session.report;
+  const learnerTurns = session.turns.filter((t) => t.role === "learner");
+  const englishTurns = learnerTurns.filter((t) => t.input !== "stuck");
+  const words = englishTurns.reduce((n, t) => n + wordCount(t.text), 0);
+  const voiceSeconds = session.speakingSeconds;
+  const wpm = session.mode === "voice" && voiceSeconds > 20 ? Math.round(words / (voiceSeconds / 60)) : null;
+  const met = new Set((report?.task.met ?? []).map((m) => m.toLowerCase().trim()));
+  const criterionMet = (c: string) =>
+    [...met].some(
+      (m) => m === c.toLowerCase() || m.includes(c.toLowerCase().slice(0, 24)) || c.toLowerCase().includes(m),
+    );
+
+  return (
+    <Shell>
+      <header>
+        <p className="text-xs font-extrabold uppercase tracking-wider text-faint">Session report</p>
+        <h1 className="text-2xl font-black leading-tight">{scenario.title}</h1>
+      </header>
+
+      {status === "analyzing" && (
+        <section className="tile flex items-center gap-3 p-5" aria-live="polite">
+          <Loader2 className="size-6 animate-spin text-accent" aria-hidden />
+          <div>
+            <p className="font-extrabold">Reviewing your conversation…</p>
+            <p className="text-sm text-dim">Finding your 3 most useful fixes. About 10 seconds.</p>
+          </div>
+        </section>
+      )}
+      {status === "error" && (
+        <section role="alert" className="tile space-y-3 border-bad/40 p-5">
+          <p className="font-bold text-bad">{errorText}</p>
+          <button type="button" onClick={() => void analyze()} className="btn-3d btn-ghost px-4 py-2 text-sm">
+            Try again
+          </button>
+        </section>
+      )}
+
+      {report && (
+        <>
+          <section
+            className={clsx("rounded-3xl p-5", report.task.completed ? "bg-go text-go-ink" : "bg-warn/15 text-text")}
+            style={report.task.completed ? { boxShadow: "0 6px 0 var(--go-deep)" } : undefined}
+          >
+            <p className="flex items-center gap-2 text-lg font-black">
+              {report.task.completed ? (
+                <Trophy className="size-6" aria-hidden />
+              ) : (
+                <Circle className="size-5" aria-hidden />
+              )}
+              {report.task.completed ? "Mission complete!" : "Mission not finished yet"}
+            </p>
+            <ul className="mt-3 space-y-1 text-sm font-bold">
+              {scenario.successCriteria.map((c) => (
+                <li key={c} className="flex gap-2">
+                  {criterionMet(c) ? (
+                    <Check className="size-4 shrink-0" strokeWidth={3} aria-label="Met" />
+                  ) : (
+                    <Circle className="size-4 shrink-0 opacity-60" aria-label="Not yet" />
+                  )}
+                  {c}
+                </li>
+              ))}
+            </ul>
+            {report.task.feedback_en && <p className="mt-3 text-sm font-bold opacity-90">{report.task.feedback_en}</p>}
+          </section>
+
+          <div className="flex items-center justify-between gap-3">
+            {report.praise_en && (
+              <p className="tile flex-1 p-3 text-sm">
+                <span className="font-extrabold text-good">Nice: </span>
+                {report.praise_en}
+              </p>
+            )}
+            <span
+              className="shrink-0 rounded-2xl bg-xp px-4 py-3 text-lg font-black text-[#3a2a00]"
+              aria-label={`${session.xp} XP earned`}
+            >
+              +{session.xp} XP
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Stat
+              icon={Clock}
+              label={session.mode === "voice" ? "Minutes speaking" : "Practice minutes"}
+              value={(voiceSeconds / 60).toFixed(1)}
+            />
+            <Stat icon={Gauge} label="Words per minute" value={wpm ?? "—"} />
+            <Stat icon={MessageCircle} label="Your turns" value={learnerTurns.length} />
+            <Stat icon={LifeBuoy} label="“I'm stuck” used" value={session.stuckCount} />
+          </div>
+
+          <section aria-labelledby="fixes-title" className="space-y-3">
+            <h2 id="fixes-title" className="font-black">
+              {report.corrections.length ? "Your top fixes" : "No important mistakes this time"}
+            </h2>
+            {report.corrections.map((c) => (
+              <CorrectionCard
+                key={c.original}
+                correction={c}
+                sessionId={session.id}
+                fixed={session.fixedAloud.includes(c.error_key)}
+                hebrewHelp={prefs.hebrewHelp}
+                voiceId={prefs.tutorVoiceId}
+                dailyGoalMinutes={prefs.dailyGoalMinutes}
+              />
+            ))}
+          </section>
+
+          {report.phrases.length > 0 && (
+            <section aria-labelledby="phrases-title" className="space-y-2.5">
+              <h2 id="phrases-title" className="flex items-center gap-2 font-black">
+                <Sparkles className="size-5 text-xp" aria-hidden /> Saved to your phrase bank
+              </h2>
+              <ul className="space-y-2">
+                {report.phrases.map((p) => (
+                  <PhraseRow
+                    key={p.text}
+                    text={p.text}
+                    meaning={p.meaning_en}
+                    hebrew={p.meaning_he}
+                    showHe={prefs.hebrewHelp}
+                  />
+                ))}
+              </ul>
+              <p className="text-xs font-bold text-faint">
+                They&apos;ll come back in your warm-up when it&apos;s time to review them.
+              </p>
+            </section>
+          )}
+        </>
+      )}
+
+      <details className="tile p-4">
+        <summary className="cursor-pointer font-extrabold">Full transcript</summary>
+        <ol className="mt-3 space-y-2 text-sm">
+          {session.turns.map((t, i) => (
+            <li
+              key={i}
+              dir="auto"
+              lang={t.input === "stuck" ? "he" : "en"}
+              className={t.role === "tutor" ? "text-dim" : ""}
+            >
+              <span className="font-extrabold">{t.role === "tutor" ? "Them" : "You"}: </span>
+              {t.text}
+            </li>
+          ))}
+        </ol>
+      </details>
+
+      <div className="grid grid-cols-2 gap-3 pb-6">
+        <Link href={`/session/${scenario.id}`} className="btn-3d btn-ghost flex items-center justify-center gap-2 py-3">
+          <RotateCcw className="size-4" aria-hidden /> Again
+        </Link>
+        <Link href="/" className="btn-3d btn-go flex items-center justify-center py-3 uppercase">
+          Continue
+        </Link>
+      </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return <main className="mx-auto min-h-dvh max-w-xl space-y-5 px-4 py-6">{children}</main>;
+}
+
+function Stat({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string | number }) {
+  return (
+    <div className="tile p-3">
+      <Icon className="size-4 text-accent" aria-hidden />
+      <p className="mt-1 text-xl font-black">{value}</p>
+      <p className="text-xs font-bold text-dim">{label}</p>
+    </div>
+  );
+}
+
+function PhraseRow({
+  text,
+  meaning,
+  hebrew,
+  showHe,
+}: {
+  text: string;
+  meaning: string;
+  hebrew: string;
+  showHe: boolean;
+}) {
+  const [open, setOpen] = useState(showHe);
+  return (
+    <li className="tile p-3">
+      <p className="font-extrabold">{text}</p>
+      {meaning && <p className="text-sm text-dim">{meaning}</p>}
+      {hebrew &&
+        (open ? (
+          <p dir="rtl" lang="he" className="mt-1 text-sm">
+            {hebrew}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="mt-1 inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+          >
+            <Languages className="size-4" aria-hidden /> Translate
+          </button>
+        ))}
+    </li>
+  );
+}

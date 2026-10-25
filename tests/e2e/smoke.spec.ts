@@ -4,7 +4,7 @@ test.describe("app shell", () => {
   test("home shows the mission, boss mistake, stats and setup prompt", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Hagai");
-    await expect(page.getByRole("heading", { name: "Tell your tutor about your AZ-900 prep" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tell me about yourself" })).toBeVisible();
     await expect(page.getByText("Say “I've been … for …” 3 times")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Boss mistake: Present perfect for “how long”" })).toBeVisible();
     await expect(page.getByText("Finish setup to start talking")).toBeVisible();
@@ -15,7 +15,7 @@ test.describe("app shell", () => {
   test("progress lists every focus mistake and locked achievements", async ({ page }) => {
     await page.goto("/progress");
     await expect(page.getByRole("heading", { name: "Level 1" })).toBeVisible();
-    await expect(page.getByText("New", { exact: true })).toHaveCount(8);
+    await expect(page.getByText("new", { exact: true })).toHaveCount(8);
     await expect(page.getByText("Interview ready")).toBeVisible();
     await expect(page.getByText("First words")).toBeVisible();
   });
