@@ -1,0 +1,280 @@
+{
+  "about": "Sentences a Hebrew speaker at B1+/B2 might say, labeled with the expected error_key. Empty errors = already natural (measures false corrections). Keys match content/learner-seed.ts and content/l1/he.ts.",
+  "items": [
+    {
+      "id": "e01",
+      "question": "How long have you lived in Shoham?",
+      "text": "I live in Shoham for ten years.",
+      "errors": ["present_perfect_duration"]
+    },
+    {
+      "id": "e02",
+      "question": "How long have you been studying for the exam?",
+      "text": "I study for it two weeks already.",
+      "errors": ["present_perfect_duration"]
+    },
+    {
+      "id": "e03",
+      "question": "How long do you know your best friend?",
+      "text": "I know him since first grade.",
+      "errors": ["present_perfect_duration"]
+    },
+    {
+      "id": "e04",
+      "question": "Are you excited about the trip?",
+      "text": "Yes, I'm looking forward to see the city.",
+      "errors": ["looking_forward_to_ing"]
+    },
+    {
+      "id": "e05",
+      "question": "Any plans with the new team?",
+      "text": "I'm looking forward to work with them.",
+      "errors": ["looking_forward_to_ing"]
+    },
+    {
+      "id": "e06",
+      "question": "What exam are you studying for?",
+      "text": "It's an Azure exam that called AZ-900.",
+      "errors": ["missing_be"]
+    },
+    {
+      "id": "e07",
+      "question": "Tell me about your brother.",
+      "text": "My brother very smart, he engineer.",
+      "errors": ["missing_be", "articles"]
+    },
+    {
+      "id": "e08",
+      "question": "Do you like coffee?",
+      "text": "Yes. You want coffee also?",
+      "errors": ["missing_be_do"]
+    },
+    {
+      "id": "e09",
+      "question": "How are you preparing?",
+      "text": "I learn to the test every evening.",
+      "errors": ["study_for"]
+    },
+    {
+      "id": "e10",
+      "question": "Where did you find the practice tests?",
+      "text": "I found example tests at the internet.",
+      "errors": ["online_not_at_internet"]
+    },
+    {
+      "id": "e11",
+      "question": "What course are you taking?",
+      "text": "I take an official course of Microsoft.",
+      "errors": ["noun_modifier_order"]
+    },
+    {
+      "id": "e12",
+      "question": "Whose car is that?",
+      "text": "It's the car of my father.",
+      "errors": ["noun_modifier_order"]
+    },
+    {
+      "id": "e13",
+      "question": "What do you need to do tonight?",
+      "text": "I must to finish my report.",
+      "errors": ["modal_to"]
+    },
+    {
+      "id": "e14",
+      "question": "Can you help me later?",
+      "text": "Yes, I can to help you after six.",
+      "errors": ["modal_to"]
+    },
+    {
+      "id": "e15",
+      "question": "Do you know Dan?",
+      "text": "Yes, I am knowing him for years.",
+      "errors": ["ing_overuse", "present_perfect_duration"]
+    },
+    { "id": "e16", "question": "How was the movie?", "text": "I am liking it very much.", "errors": ["ing_overuse"] },
+    { "id": "e17", "question": "It's hot in here.", "text": "To open the window?", "errors": ["infinitive_offer"] },
+    { "id": "e18", "question": "What did you buy?", "text": "I bought new phone yesterday.", "errors": ["articles"] },
+    {
+      "id": "e19",
+      "question": "What do you think about life in the city?",
+      "text": "The life in the city is very expensive.",
+      "errors": ["articles"]
+    },
+    {
+      "id": "e20",
+      "question": "Will you take the job?",
+      "text": "It depends of the salary.",
+      "errors": ["prepositions"]
+    },
+    {
+      "id": "e21",
+      "question": "What are you good at?",
+      "text": "I'm good in marketing and in automation.",
+      "errors": ["prepositions"]
+    },
+    {
+      "id": "e22",
+      "question": "Are you interested in AI?",
+      "text": "Yes, I'm very interesting in AI.",
+      "errors": ["interested_interesting"]
+    },
+    { "id": "e23", "question": "Could you share the deck?", "text": "Send me the file now.", "errors": ["directness"] },
+    {
+      "id": "e24",
+      "question": "What did you do yesterday?",
+      "text": "Yesterday I go to the gym and after I meet friends.",
+      "errors": ["past_tense"]
+    },
+    {
+      "id": "e25",
+      "question": "When did you finish the army?",
+      "text": "I finished the army before two years.",
+      "errors": ["ago"]
+    },
+    {
+      "id": "e26",
+      "question": "What do you do in the evenings?",
+      "text": "In the evenings I am doing sport.",
+      "errors": ["ing_overuse", "do_sport"]
+    },
+    {
+      "id": "e27",
+      "question": "How was the meeting?",
+      "text": "It was very boring, everybody were tired.",
+      "errors": ["agreement"]
+    },
+    {
+      "id": "e28",
+      "question": "How many people came?",
+      "text": "There was a lot of peoples.",
+      "errors": ["agreement", "plural"]
+    },
+    {
+      "id": "e29",
+      "question": "Why are you learning English?",
+      "text": "Because I want to improve my english for to find a job.",
+      "errors": ["for_to"]
+    },
+    {
+      "id": "e30",
+      "question": "What's your plan for tomorrow?",
+      "text": "Tomorrow I will to call the client.",
+      "errors": ["modal_to"]
+    },
+    { "id": "e31", "question": "Did you see the email?", "text": "Yes, I saw it, I answered already.", "errors": [] },
+    {
+      "id": "e32",
+      "question": "What do you think of the idea?",
+      "text": "Honestly, I think it could work, but we'd need to test it first.",
+      "errors": []
+    },
+    {
+      "id": "e33",
+      "question": "How long have you been training?",
+      "text": "I've been training for about two years now.",
+      "errors": []
+    },
+    {
+      "id": "e34",
+      "question": "What's the hardest part of the exam?",
+      "text": "Probably the pricing questions, they're kind of tricky.",
+      "errors": []
+    },
+    {
+      "id": "e35",
+      "question": "Are you free on Thursday?",
+      "text": "I'm swamped on Thursday, but Friday morning works for me.",
+      "errors": []
+    },
+    {
+      "id": "e36",
+      "question": "Tell me about yourself.",
+      "text": "I'm 21, I'm from Israel, and right now I'm doing my military service.",
+      "errors": []
+    },
+    {
+      "id": "e37",
+      "question": "What do you do in your free time?",
+      "text": "I read a lot, mostly business books, and I work out most days.",
+      "errors": []
+    },
+    {
+      "id": "e38",
+      "question": "Why do you want this job?",
+      "text": "I've always been into automation, and this role would let me do it every day.",
+      "errors": []
+    },
+    {
+      "id": "e39",
+      "question": "What did you think of the book?",
+      "text": "I liked it, although some chapters felt a bit repetitive.",
+      "errors": []
+    },
+    {
+      "id": "e40",
+      "question": "Shall we touch base next week?",
+      "text": "Sure, let's touch base on Tuesday.",
+      "errors": []
+    },
+    {
+      "id": "e41",
+      "question": "Where are you from?",
+      "text": "I'm from Shoham, it's a small town near the airport.",
+      "errors": []
+    },
+    {
+      "id": "e42",
+      "question": "How did the interview go?",
+      "text": "I think it went well, they asked a lot about my experience.",
+      "errors": []
+    },
+    {
+      "id": "e43",
+      "question": "Do you prefer remote or office?",
+      "text": "I prefer hybrid, two days at home and three days in the office.",
+      "errors": []
+    },
+    {
+      "id": "e44",
+      "question": "What's AZ-900?",
+      "text": "It's a basic Microsoft certification about cloud concepts.",
+      "errors": []
+    },
+    {
+      "id": "e45",
+      "question": "Have you been to London?",
+      "text": "No, I never was in London, but I want.",
+      "errors": ["present_perfect_experience", "ellipsis"]
+    },
+    {
+      "id": "e46",
+      "question": "What would you change at work?",
+      "text": "If I would be the manager, I would change the meetings.",
+      "errors": ["conditional"]
+    },
+    {
+      "id": "e47",
+      "question": "How is your English?",
+      "text": "My English is not so good, I need to improve it more.",
+      "errors": []
+    },
+    {
+      "id": "e48",
+      "question": "What did the doctor say?",
+      "text": "He said me to take the pills two times in a day.",
+      "errors": ["say_tell", "prepositions"]
+    },
+    {
+      "id": "e49",
+      "question": "Did you enjoy the trip?",
+      "text": "It was amazing, we enjoyed very much.",
+      "errors": ["enjoy_ourselves"]
+    },
+    {
+      "id": "e50",
+      "question": "Why were you late?",
+      "text": "Sorry, I was stuck in traffic for forty minutes.",
+      "errors": []
+    }
+  ]
+}

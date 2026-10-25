@@ -33,4 +33,13 @@ npm test            # unit tests (Vitest)
 npm run test:e2e    # end-to-end (Playwright, builds and starts the app)
 ```
 
-CI runs all of the above on every pull request.
+CI runs all of the above on every push.
+
+## Model eval
+
+`npm run eval` runs the real analyzer prompt over 50 labeled sentences (`eval/sentences.json`) and reports, per
+model, how many mistakes it caught and how many already-natural sentences it "fixed" anyway. Costs a few cents.
+
+```bash
+OPENROUTER_API_KEY=... EVAL_MODELS="deepseek/deepseek-v3.2,moonshotai/kimi-k2" npm run eval
+```
