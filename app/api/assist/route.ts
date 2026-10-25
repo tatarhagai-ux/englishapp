@@ -19,7 +19,8 @@ export async function POST(req: Request) {
       model: chatModel,
       messages: buildAssistMessages(parsed.data),
       temperature: 0.4,
-      maxTokens: 300,
+      // A batch of definitions needs room; the live helpers stay short and fast.
+      maxTokens: parsed.data.mode === "define" ? 2500 : 300,
       json: true,
       signal: req.signal,
     });

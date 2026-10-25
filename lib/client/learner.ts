@@ -2,6 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 import {
+  addPhrases,
+  markPhrasesUsed,
+  removePhrase,
   applyAnalysis,
   reviewMistake,
   initialState,
@@ -112,6 +115,7 @@ export const learner = {
   },
 
   appendTurn(id: string, turn: Turn, speakingSeconds = 0) {
+    if (turn.role === "learner" && turn.input !== "stuck") set(markPhrasesUsed(get(), turn.text));
     learner.updateSession(id, (s) => ({
       ...s,
       turns: [...s.turns, turn],
@@ -191,6 +195,16 @@ export const learner = {
 
   addReviews(sessionId: string, count: number) {
     learner.updateSession(sessionId, (s) => ({ ...s, reviewsDone: (s.reviewsDone ?? 0) + count }));
+  },
+
+  addPhrases(items: { text: string; meaningEn: string; meaningHe: string; example?: string }[], tag?: string): number {
+    const { state, added } = addPhrases(get(), items, tag);
+    set(state);
+    return added;
+  },
+
+  removePhrase(text: string) {
+    set(removePhrase(get(), text));
   },
 
   exportJson(): string {

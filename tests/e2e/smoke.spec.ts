@@ -149,3 +149,39 @@ test("data can be exported and deleted from settings", async ({ page }) => {
   await page.getByRole("button", { name: "Yes, delete" }).click();
   await expect(page.getByRole("status").filter({ hasText: "deleted" })).toBeVisible();
 });
+
+test("phrase bank imports a list with meanings and Hebrew", async ({ page }) => {
+  await page.route("**/api/assist", async (route) => {
+    const body = route.request().postDataJSON() as { mode: string; items: string[] };
+    expect(body.mode).toBe("define");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        items: body.items.map((t) => ({
+          text: t,
+          meaning_en: `meaning of ${t}`,
+          meaning_he: `תרגום ${t}`,
+          example: `I use ${t}.`,
+        })),
+        model: "m",
+        usage: null,
+      }),
+    });
+  });
+  await page.goto("/progress");
+  await page.getByRole("link", { name: /Phrases saved/ }).click();
+  await expect(page.getByRole("heading", { name: "Phrase bank" })).toBeVisible();
+  await page.getByRole("button", { name: "Import a list" }).click();
+  await page.getByLabel("Paste words or phrases, one per line").fill("1. tactical empathy\n2. calibrated question");
+  await page.getByLabel("Where are they from? (optional)").fill("Never Split the Difference");
+  await expect(page.getByText("2 items detected")).toBeVisible();
+  await page.getByRole("button", { name: "Add 2" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Added 2 new phrases" })).toBeVisible();
+  await expect(page.getByText("meaning of tactical empathy")).toBeVisible();
+  await page.getByRole("button", { name: "Translate" }).first().click();
+  await expect(page.getByText(/תרגום/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Delete calibrated question" }).click();
+  await expect(page.getByText("meaning of calibrated question")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Never Split the Difference" })).toBeVisible();
+});

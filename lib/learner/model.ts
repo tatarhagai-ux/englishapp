@@ -40,6 +40,11 @@ export interface PhraseRecord {
   meaningHe: string;
   addedAt: string;
   card: Card;
+  /** Where it came from when imported, e.g. a book title or "AZ-900". */
+  tag?: string;
+  example?: string;
+  /** Times he used it in a conversation. */
+  usedCount?: number;
 }
 
 export interface SessionRecord {
@@ -365,4 +370,56 @@ export function averageWpm(state: LearnerState, wordsOf: (text: string) => numbe
       .reduce((n, t) => n + wordsOf(t.text), 0);
   }
   return seconds > 0 ? Math.round(words / (seconds / 60)) : null;
+}
+
+export function addPhrases(
+  state: LearnerState,
+  items: { text: string; meaningEn: string; meaningHe: string; example?: string }[],
+  tag: string | undefined,
+  now = new Date(),
+): { state: LearnerState; added: number } {
+  const known = new Set(state.phrases.map((p) => p.text.toLowerCase()));
+  const fresh: PhraseRecord[] = [];
+  for (const i of items) {
+    const text = i.text.trim();
+    if (!text || known.has(text.toLowerCase())) continue;
+    known.add(text.toLowerCase());
+    fresh.push({ ...i, text, tag: tag || undefined, addedAt: now.toISOString(), card: createEmptyCard(now) });
+  }
+  return { state: { ...state, phrases: [...state.phrases, ...fresh] }, added: fresh.length };
+}
+
+export function removePhrase(state: LearnerState, text: string): LearnerState {
+  return { ...state, phrases: state.phrases.filter((p) => p.text !== text) };
+}
+
+/**
+ * Phrases the tutor should give him chances to use: due ones first, then the newest he has
+ * used least. Imported phrases only become active vocabulary when he says them.
+ */
+export function phrasesToPractice(state: LearnerState, now = new Date(), max = 3): string[] {
+  const due = duePhrases(state, now, max).map((p) => p.text);
+  const rest = state.phrases
+    .filter((p) => !due.includes(p.text))
+    .sort((a, b) => (a.usedCount ?? 0) - (b.usedCount ?? 0) || b.addedAt.localeCompare(a.addedAt))
+    .map((p) => p.text);
+  return [...due, ...rest].slice(0, max);
+}
+
+/** Count phrases he actually used in his own turns. */
+export function markPhrasesUsed(state: LearnerState, learnerText: string): LearnerState {
+  const lower = learnerText.toLowerCase();
+  let changed = false;
+  const phrases = state.phrases.map((p) => {
+    const core = p.text
+      .toLowerCase()
+      .replace(/[….!?]+$/, "")
+      .trim();
+    if (core.length >= 3 && lower.includes(core)) {
+      changed = true;
+      return { ...p, usedCount: (p.usedCount ?? 0) + 1 };
+    }
+    return p;
+  });
+  return changed ? { ...state, phrases } : state;
 }

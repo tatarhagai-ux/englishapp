@@ -13,6 +13,10 @@ export const assistRequest = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("better"), text: z.string().trim().min(1).max(600) }),
   z.object({ mode: z.literal("simplify"), text: z.string().trim().min(1).max(800) }),
   z.object({ mode: z.literal("translate"), text: z.string().trim().min(1).max(800) }),
+  z.object({
+    mode: z.literal("define"),
+    items: z.array(z.string().trim().min(1).max(120)).min(1).max(30),
+  }),
 ]);
 export type AssistRequest = z.infer<typeof assistRequest>;
 
@@ -21,6 +25,18 @@ export const assistResult = {
   better: z.object({ better: z.string().min(1), why_en: z.string().default(""), why_he: z.string().default("") }),
   simplify: z.object({ simple: z.string().min(1), hebrew: z.string().default("") }),
   translate: z.object({ hebrew: z.string().min(1) }),
+  define: z.object({
+    items: z
+      .array(
+        z.object({
+          text: z.string().min(1),
+          meaning_en: z.string().default(""),
+          meaning_he: z.string().default(""),
+          example: z.string().default(""),
+        }),
+      )
+      .min(1),
+  }),
 } as const;
 
 export function buildAssistMessages(req: AssistRequest): ChatMessage[] {
@@ -54,6 +70,14 @@ export function buildAssistMessages(req: AssistRequest): ChatMessage[] {
           content: `${base}\nThe learner did not understand this. Say it again in simpler English (short sentences, common words), and give a natural Hebrew translation. Shape: {"simple":"","hebrew":""}`,
         },
         { role: "user", content: req.text },
+      ];
+    case "define":
+      return [
+        {
+          role: "system",
+          content: `${base}\nFor each English word or phrase, give a short plain-English meaning (max 12 words), a natural Hebrew translation, and one short example sentence he could say in conversation. Keep the original text exactly as given. Shape: {"items":[{"text":"","meaning_en":"","meaning_he":"","example":""}]}`,
+        },
+        { role: "user", content: req.items.map((i, n) => `${n + 1}. ${i}`).join("\n") },
       ];
     case "translate":
       return [

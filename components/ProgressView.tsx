@@ -115,12 +115,21 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
           { label: "Conversations", value: stats.sessions },
           { label: "Phrases saved", value: state.phrases.length },
           { label: "AI spend this month", value: `$${spent.toFixed(2)} / $${budgetUsd}` },
-        ].map((s) => (
-          <div key={s.label} className="tile p-3">
-            <p className="text-xs font-bold text-dim">{s.label}</p>
-            <p className="text-xl font-black">{s.value}</p>
-          </div>
-        ))}
+        ].map((s) =>
+          s.label === "Phrases saved" ? (
+            <Link key={s.label} href="/phrases" className="tile p-3 transition-colors hover:border-accent/60">
+              <p className="text-xs font-bold text-dim">{s.label}</p>
+              <p className="flex items-center justify-between text-xl font-black">
+                {s.value} <ChevronRight className="size-5 text-faint" aria-hidden />
+              </p>
+            </Link>
+          ) : (
+            <div key={s.label} className="tile p-3">
+              <p className="text-xs font-bold text-dim">{s.label}</p>
+              <p className="text-xl font-black">{s.value}</p>
+            </div>
+          ),
+        )}
       </div>
 
       {recent.length > 0 && (

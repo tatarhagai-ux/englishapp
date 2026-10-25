@@ -30,7 +30,7 @@ import { SentenceChunker } from "@/lib/text/sentences";
 import { wordCount } from "@/lib/text/compare";
 import { usageCostUsd } from "@/lib/cost/pricing";
 import { monthKey } from "@/lib/cost/budget";
-import { targetKeysForNext, warmupItems, type WarmupItem } from "@/lib/learner/model";
+import { phrasesToPractice, targetKeysForNext, warmupItems, type WarmupItem } from "@/lib/learner/model";
 import { Intro } from "./Intro";
 import { Warmup } from "./Warmup";
 import { Transcript } from "./Transcript";
@@ -258,6 +258,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
           history: turnsRef.current,
           correctionMode: prefs.correctionMode,
           targetKeys: targetKeysForNext(learner.get()),
+          practicePhrases: phrasesToPractice(learner.get()),
           tutorName,
           wrapUp,
         },

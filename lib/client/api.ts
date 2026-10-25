@@ -114,6 +114,7 @@ type AssistOut = {
   better: { better: string; why_en: string; why_he: string };
   simplify: { simple: string; hebrew: string };
   translate: { hebrew: string };
+  define: { items: { text: string; meaning_en: string; meaning_he: string; example: string }[] };
 };
 
 export function assist<M extends AssistRequest["mode"]>(

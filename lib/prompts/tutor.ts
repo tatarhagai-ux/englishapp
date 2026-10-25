@@ -19,6 +19,7 @@ export interface TutorPromptInput {
   tutorName: string;
   correctionMode: CorrectionMode;
   targetKeys: string[];
+  practicePhrases?: string[];
   wrapUp: boolean;
 }
 
@@ -37,6 +38,9 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
     scenario.tutorNotes ?? "",
     targets
       ? `Mistakes he is working on. Ask questions that naturally make him use these structures, without naming them:\n${targets}`
+      : "",
+    input.practicePhrases?.length
+      ? `Phrases he is learning: ${input.practicePhrases.map((p) => `"${p}"`).join(", ")}. Once or twice, steer the conversation so one of them fits naturally, and if he uses one well, react warmly in a few words.`
       : "",
     `How to talk:
 - This is a spoken conversation. Reply in 1 or 2 short sentences (at most about 35 words), then usually one open question.

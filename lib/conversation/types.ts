@@ -20,6 +20,8 @@ export const chatRequest = z.object({
   history: z.array(turn).max(80),
   correctionMode: correctionMode.default("gentle"),
   targetKeys: z.array(z.string().max(60)).max(5).default([]),
+  /** Phrases he is learning; the tutor creates chances to use them. */
+  practicePhrases: z.array(z.string().max(120)).max(5).default([]),
   tutorName: z.string().min(1).max(40).default("Ava"),
   /** Time is up: the tutor should close the conversation warmly. */
   wrapUp: z.boolean().default(false),
