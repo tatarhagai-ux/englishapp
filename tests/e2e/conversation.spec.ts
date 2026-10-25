@@ -40,6 +40,13 @@ const ANALYSIS = {
   praise_en: "You kept the conversation going.",
 };
 
+/** Fresh learners have warm-up items (placement mistakes); most tests skip straight past them. */
+async function startSkippingWarmup(page: Page) {
+  await page.getByRole("button", { name: /start/i }).click();
+  const skip = page.getByRole("button", { name: "Skip" });
+  if (await skip.isVisible().catch(() => false)) await skip.click();
+}
+
 async function mockApis(page: Page, chatBodies: unknown[]) {
   await page.route("**/api/tts", (route: Route) =>
     route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
@@ -78,7 +85,7 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await expect(page.getByRole("heading", { name: "Your week" })).toBeVisible();
   await expect(page.getByText("Talk about what you've been doing lately")).toBeVisible();
   await page.getByRole("button", { name: /Quiet mode/ }).click();
-  await page.getByRole("button", { name: "Start conversation" }).click();
+  await startSkippingWarmup(page);
 
   await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
   const box = page.getByLabel("Your reply");
@@ -128,7 +135,7 @@ test("ending before saying anything discards the session", async ({ page }) => {
   await mockApis(page, []);
   await page.goto("/session/free-your-week");
   await page.getByRole("button", { name: /Quiet mode/ }).click();
-  await page.getByRole("button", { name: "Start conversation" }).click();
+  await startSkippingWarmup(page);
   await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
   await page.getByRole("button", { name: "End conversation" }).click();
   await expect(page).toHaveURL("/practice");
@@ -158,7 +165,7 @@ test("a chat failure shows a retry that works", async ({ page }) => {
   });
   await page.goto("/session/free-your-week");
   await page.getByRole("button", { name: /Quiet mode/ }).click();
-  await page.getByRole("button", { name: "Start conversation" }).click();
+  await startSkippingWarmup(page);
   const box = page.getByLabel("Your reply");
   await box.fill("Hello there");
   await box.press("Enter");
@@ -177,4 +184,33 @@ test("practice library lists every category and opens a scenario", async ({ page
   await page.getByRole("link", { name: /Problem at the airport/ }).click();
   await expect(page.getByRole("heading", { name: "Problem at the airport" })).toBeVisible();
   await expect(page.getByText("Natasha · Australian accent")).toBeVisible();
+});
+
+test("warm-up: recall the correct sentence by typing, then the conversation starts", async ({ page }) => {
+  await mockApis(page, []);
+  await page.goto("/session/free-your-week");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: /Warm up \(2\) & start/ }).click();
+
+  await expect(page.getByText("Last time you said:")).toBeVisible();
+  await expect(page.getByText("I live in Shoham for ten years.")).toBeVisible();
+  // The answer is hidden until he tries.
+  await expect(page.getByText("I've been living in Shoham for ten years.")).toHaveCount(0);
+  await page.getByLabel("Your answer").fill("I have been living in Shoham for ten years");
+  await page.getByRole("button", { name: "Check" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Correct" })).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+
+  await expect(page.getByText("I'm looking forward to meet you.")).toBeVisible();
+  await page.getByRole("button", { name: "Show me the answer" }).click();
+  await expect(page.getByText("I'm looking forward to meeting you.")).toBeVisible();
+  await page.getByRole("button", { name: "Start the conversation" }).click();
+
+  await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
+
+  // Those two are scheduled for later; the next visit warms up on the next two mistakes.
+  await page.goto("/session/interview-about-you");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: /Warm up \(2\)/ }).click();
+  await expect(page.getByText("An Azure exam that called AZ-900.")).toBeVisible();
 });

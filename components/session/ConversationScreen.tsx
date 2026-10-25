@@ -29,8 +29,9 @@ import { SentenceChunker } from "@/lib/text/sentences";
 import { wordCount } from "@/lib/text/compare";
 import { usageCostUsd } from "@/lib/cost/pricing";
 import { monthKey } from "@/lib/cost/budget";
-import { targetKeysForNext } from "@/lib/learner/model";
+import { targetKeysForNext, warmupItems, type WarmupItem } from "@/lib/learner/model";
 import { Intro } from "./Intro";
+import { Warmup } from "./Warmup";
 import { Transcript } from "./Transcript";
 import { HelperPanel, type HelperState } from "./HelperPanel";
 import { Orb, type OrbState } from "./Orb";
@@ -64,7 +65,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const limitSeconds = (isTutor ? prefs.sessionMinutes : scenario.minutes) * 60;
   const spentThisMonth = state.spend[monthKey()] ?? 0;
 
-  const [phase, setPhase] = useState<"intro" | "live" | "finishing">("intro");
+  const [phase, setPhase] = useState<"intro" | "warmup" | "live" | "finishing">("intro");
+  const [warmup, setWarmup] = useState<WarmupItem[]>([]);
   const [mode, setMode] = useState<"voice" | "quiet">("voice");
   const [starting, setStarting] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -328,8 +330,19 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     }
     sessionRef.current = id;
     setSessionId(id);
-    setPhase("live");
     setStarting(false);
+    const items = resume ? [] : warmupItems(learner.get());
+    if (items.length) {
+      setWarmup(items);
+      setPhase("warmup");
+      return;
+    }
+    startConversation();
+  }
+
+  function startConversation() {
+    primeAudio();
+    setPhase("live");
     const last = turnsRef.current.at(-1);
     if (last?.role === "tutor") ensureQueue().speak(last.text);
     else void requestTutorRef.current();
@@ -448,6 +461,19 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         onResume={resumable ? () => void begin(true) : undefined}
         blockedReason={blockedReason}
         starting={starting}
+        warmupCount={hydrated ? warmupItems(state).length : 0}
+      />
+    );
+  }
+
+  if (phase === "warmup" && sessionId) {
+    return (
+      <Warmup
+        items={warmup}
+        mode={mode}
+        sessionId={sessionId}
+        hebrewHelp={prefs.hebrewHelp}
+        onDone={startConversation}
       />
     );
   }

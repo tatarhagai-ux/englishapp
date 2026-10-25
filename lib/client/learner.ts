@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import {
   applyAnalysis,
+  reviewMistake,
   initialState,
   minutesOnDay,
   reviewPhrase,
@@ -182,6 +183,14 @@ export const learner = {
 
   reviewPhrase(text: string, good: boolean) {
     set(reviewPhrase(get(), text, good));
+  },
+
+  reviewMistake(key: string, good: boolean) {
+    set(reviewMistake(get(), key, good));
+  },
+
+  addReviews(sessionId: string, count: number) {
+    learner.updateSession(sessionId, (s) => ({ ...s, reviewsDone: (s.reviewsDone ?? 0) + count }));
   },
 
   exportJson(): string {

@@ -5,10 +5,12 @@ import {
   initialState,
   rankedErrors,
   recommendScenario,
+  reviewMistake,
   reviewPhrase,
   sessionXp,
   statsFrom,
   targetKeysForNext,
+  warmupItems,
   type LearnerState,
   type SessionRecord,
 } from "@/lib/learner/model";
@@ -167,5 +169,35 @@ describe("learner model", () => {
     s = reviewPhrase(s, "touch base", true, NOW);
     expect(duePhrases(s, NOW)).toHaveLength(0);
     expect(new Date(s.phrases[0].card.due).getTime()).toBeGreaterThan(NOW.getTime());
+  });
+});
+
+describe("warm-up", () => {
+  it("starts with the top two sayable placement mistakes", () => {
+    const items = warmupItems(initialState(NOW), NOW);
+    expect(items.map((i) => i.id)).toEqual(["present_perfect_duration", "looking_forward_to_ing"]);
+    expect(items[0]).toMatchObject({ kind: "mistake", target: "I've been living in Shoham for ten years." });
+  });
+
+  it("skips explanations that are not one sentence", () => {
+    const s = initialState(NOW);
+    for (const k of Object.keys(s.errors))
+      if (k !== "office_idioms" && k !== "answer_all_parts") s.errors[k].status = "mastered";
+    expect(warmupItems(s, NOW)).toEqual([]);
+  });
+
+  it("does not repeat a mistake until its review is due, and adds due phrases", () => {
+    let s = reviewMistake(initialState(NOW), "present_perfect_duration", true, NOW);
+    s = reviewMistake(s, "looking_forward_to_ing", true, NOW);
+    s = applyAnalysis({ ...s, sessions: [session()] }, "s1", analysis({ phrases: [{ text: "a smart move" }] }), NOW);
+    const items = warmupItems(s, NOW);
+    expect(items.map((i) => i.id)).not.toContain("present_perfect_duration");
+    expect(items.some((i) => i.kind === "phrase" && i.target === "a smart move")).toBe(true);
+    const later = new Date(NOW.getTime() + 30 * 86_400_000);
+    expect(warmupItems(s, later).map((i) => i.id)).toContain("present_perfect_duration");
+  });
+
+  it("counts warm-up reviews in session XP", () => {
+    expect(sessionXp(session({ speakingSeconds: 60, reviewsDone: 3 }), 0, 12)).toBe(10 + 15);
   });
 });

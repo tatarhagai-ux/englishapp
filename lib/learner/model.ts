@@ -30,6 +30,8 @@ export interface ErrorRecord {
   cleanSessions: number;
   status: ErrorStatus;
   lastSeen: string;
+  /** Review schedule for the warm-up ("say the correct version"). Created on first review. */
+  card?: Card;
 }
 
 export interface PhraseRecord {
@@ -54,6 +56,8 @@ export interface SessionRecord {
   report?: Analysis;
   /** Mistakes he said correctly out loud from the report ("Say it again"). */
   fixedAloud: string[];
+  /** Warm-up items reviewed before the conversation. */
+  reviewsDone?: number;
   xp: number;
   costUsd: number;
 }
@@ -245,7 +249,7 @@ export function sessionXp(session: SessionRecord, minutesBefore: number, dailyGo
     speakingSeconds: session.speakingSeconds,
     missionComplete: Boolean(session.report?.task.completed),
     mistakesFixedAloud: session.fixedAloud.length,
-    reviewsDone: 0,
+    reviewsDone: session.reviewsDone ?? 0,
     dailyGoalMet: minutesBefore < dailyGoalMinutes && after >= dailyGoalMinutes,
   });
 }
@@ -280,4 +284,37 @@ export function reviewPhrase(state: LearnerState, text: string, good: boolean, n
         : p,
     ),
   };
+}
+
+export function reviewMistake(state: LearnerState, key: string, good: boolean, now = new Date()): LearnerState {
+  const e = state.errors[key];
+  if (!e) return state;
+  const card = scheduler.next(reviveCard(e.card ?? createEmptyCard(now)), now, good ? Rating.Good : Rating.Again).card;
+  return { ...state, errors: { ...state.errors, [key]: { ...e, card } } };
+}
+
+export type WarmupItem =
+  | { kind: "phrase"; id: string; target: string; meaning: string; hebrew: string }
+  | { kind: "mistake"; id: string; target: string; wrong: string; why: string; whyHe: string };
+
+/**
+ * The warm-up: up to `max` items, mistakes first (active recall: see the wrong sentence,
+ * say the right one), then phrases whose review is due. Mastered mistakes and mistakes
+ * reviewed recently (card not yet due) are skipped.
+ */
+export function warmupItems(state: LearnerState, now = new Date(), max = 3): WarmupItem[] {
+  const mistakes: WarmupItem[] = rankedErrors(state)
+    .filter((e) => !e.card || new Date(e.card.due) <= now)
+    // Skip entries that are explanations rather than one sayable sentence.
+    .filter((e) => e.better && !/[=…]/.test(e.better))
+    .slice(0, 2)
+    .map((e) => ({ kind: "mistake", id: e.key, target: e.better, wrong: e.example, why: e.why, whyHe: e.whyHe }));
+  const phrases: WarmupItem[] = duePhrases(state, now, max).map((p) => ({
+    kind: "phrase",
+    id: p.text,
+    target: p.text.replace(/[….]+$/, ""),
+    meaning: p.meaningEn,
+    hebrew: p.meaningHe,
+  }));
+  return [...mistakes, ...phrases].slice(0, max);
 }

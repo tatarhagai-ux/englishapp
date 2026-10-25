@@ -18,10 +18,23 @@ interface Props {
   onResume?: () => void;
   blockedReason?: string | null;
   starting: boolean;
+  /** Warm-up items due before this conversation (0 = straight into the conversation). */
+  warmupCount: number;
 }
 
 /** Before the conversation: who you'll talk to, your task, and phrases worth trying. */
-export function Intro({ scenario, voice, isTutor, mode, onMode, onStart, onResume, blockedReason, starting }: Props) {
+export function Intro({
+  scenario,
+  voice,
+  isTutor,
+  mode,
+  onMode,
+  onStart,
+  onResume,
+  blockedReason,
+  starting,
+  warmupCount,
+}: Props) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col gap-5 px-4 py-6">
       <Link
@@ -120,7 +133,7 @@ export function Intro({ scenario, voice, isTutor, mode, onMode, onStart, onResum
           disabled={starting || Boolean(blockedReason)}
           className="btn-3d btn-go w-full py-4 text-lg uppercase disabled:opacity-60"
         >
-          {starting ? "Starting…" : "Start conversation"}
+          {starting ? "Starting…" : warmupCount > 0 ? `Warm up (${warmupCount}) & start` : "Start conversation"}
         </button>
       </div>
     </div>
