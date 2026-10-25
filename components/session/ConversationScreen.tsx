@@ -24,6 +24,7 @@ import type { Turn, TurnInput } from "@/lib/conversation/types";
 import { usePrefs } from "@/lib/client/prefs";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { ApiError, API_ERROR_TEXT, assist, streamChat } from "@/lib/client/api";
+import { TtsRequestError } from "@/lib/client/tts";
 import { ensureMicrophone, Listener, primeAudio, SpeechQueue, SpeechSetupError } from "@/lib/client/speech";
 import { SentenceChunker } from "@/lib/text/sentences";
 import { wordCount } from "@/lib/text/compare";
@@ -178,6 +179,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         await listener.start({
           onPartial: (t) => setPartial(t),
           onFinal: (t, secs) => {
+            // A second segment can arrive before the first submit has stopped this listener.
+            if (listenerRef.current !== listener) return;
             // Hands-free (and Hebrew "stuck" turns) end on the first pause; push-to-talk collects until stopped.
             if (handsFreeRef.current || stuck) {
               void submitLearner(t, secs, stuck ? "stuck" : "voice");
@@ -223,6 +226,13 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         if (!pendingRef.current) afterTutorSpoke();
       },
       onChars: (chars) => learner.addSpeechUsage(sessionRef.current, { ttsChars: chars }),
+      onError: (err) =>
+        setError({
+          message:
+            err instanceof TtsRequestError && err.kind === "not_configured"
+              ? "The voice isn't connected yet (Azure). You can still read and reply."
+              : "Couldn't play the voice. You can still read and reply.",
+        }),
     });
     return queueRef.current;
   }, [voice.id, afterTutorSpoke]);
@@ -406,7 +416,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   async function onMic() {
     if (orb === "thinking" || endedRef.current) return;
-    interrupt();
+    if (orb === "speaking") {
+      // Hands-free starts listening by itself once the audio stops; tap-to-send needs a start.
+      interrupt();
+      if (!handsFree) await startListening();
+      return;
+    }
     if (orb === "listening") {
       if (!handsFree && pttBuffer.current.text) {
         const { text, seconds } = pttBuffer.current;

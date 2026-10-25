@@ -68,30 +68,34 @@ export interface ListenHandlers {
  */
 export class Listener {
   private recognizer: SpeechSdk.SpeechRecognizer | null = null;
-  private stopping = false;
+  /** Set by stop(), even if start() is still connecting, so a late start never runs on. */
+  private cancelled = false;
 
   constructor(
     private readonly language: string,
     private readonly silenceMs = 1200,
   ) {}
 
+  /** Each Listener is single-use: start once, stop once. */
   async start(h: ListenHandlers): Promise<void> {
-    await this.stop();
-    this.stopping = false;
     const { sdk, cfg } = await speechConfig(this.language);
+    if (this.cancelled) return;
     cfg.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, String(this.silenceMs));
     // Never mask words with asterisks: the analyzer needs exactly what he said.
     cfg.setProfanity(sdk.ProfanityOption.Raw);
     const recognizer = new sdk.SpeechRecognizer(cfg, sdk.AudioConfig.fromDefaultMicrophoneInput());
     this.recognizer = recognizer;
-    recognizer.recognizing = (_s, e) => h.onPartial(e.result.text);
+    recognizer.recognizing = (_s, e) => {
+      if (!this.cancelled) h.onPartial(e.result.text);
+    };
     recognizer.recognized = (_s, e) => {
+      if (this.cancelled) return;
       if (e.result.reason === sdk.ResultReason.RecognizedSpeech && e.result.text.trim()) {
         h.onFinal(e.result.text.trim(), e.result.duration / TICKS_PER_SECOND);
       }
     };
     recognizer.canceled = (_s, e) => {
-      if (this.stopping || e.reason !== sdk.CancellationReason.Error) return;
+      if (this.cancelled || e.reason !== sdk.CancellationReason.Error) return;
       const auth = e.errorCode === sdk.CancellationErrorCode.AuthenticationFailure;
       if (auth) cachedToken = null;
       h.onError(new SpeechSetupError(auth ? "unauthorized" : "network"));
@@ -101,13 +105,18 @@ export class Listener {
         reject(new SpeechSetupError(/mic|permission|NotAllowed/i.test(err) ? "mic_denied" : "unknown")),
       ),
     );
+    // stop() may have been called while we were connecting.
+    if (this.cancelled) await this.shutdown(recognizer);
   }
 
   async stop(): Promise<void> {
+    this.cancelled = true;
     const r = this.recognizer;
-    if (!r) return;
-    this.stopping = true;
     this.recognizer = null;
+    if (r) await this.shutdown(r);
+  }
+
+  private async shutdown(r: SpeechSdk.SpeechRecognizer) {
     await new Promise<void>((resolve) => r.stopContinuousRecognitionAsync(resolve, () => resolve()));
     r.close();
   }
