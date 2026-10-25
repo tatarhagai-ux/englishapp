@@ -133,3 +133,19 @@ test.describe("setup and APIs", () => {
     }
   });
 });
+
+test("data can be exported and deleted from settings", async ({ page }) => {
+  await page.goto("/settings");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export backup" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^speakwise-backup-\d{4}-\d{2}-\d{2}\.json$/);
+
+  await page.getByRole("button", { name: "Delete all" }).click();
+  await expect(page.getByRole("alertdialog")).toContainText("can't be undone");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Delete all" }).click();
+  await page.getByRole("button", { name: "Yes, delete" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "deleted" })).toBeVisible();
+});

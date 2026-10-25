@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, Download, ShieldCheck, Trash2 } from "lucide-react";
+import { learner } from "@/lib/client/learner";
 import { usePrefs, type Prefs } from "@/lib/client/prefs";
 import { voiceById } from "@/content/voices";
 import { Segmented } from "./Segmented";
@@ -126,7 +128,82 @@ export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
           at the cap and warns you at 80%. Change it with MONTHLY_BUDGET_USD in Vercel.
         </p>
       </Section>
+
+      <DataControls />
     </div>
+  );
+}
+
+/** Everything lives on this device for now, so export is the backup and delete is final. */
+function DataControls() {
+  const [confirming, setConfirming] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+
+  function exportData() {
+    const blob = new Blob([learner.exportJson()], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `speakwise-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setDone("Backup downloaded.");
+  }
+
+  function deleteAll() {
+    learner.reset();
+    setConfirming(false);
+    setDone("All conversations, reports and progress were deleted from this device.");
+  }
+
+  return (
+    <Section title="Your data">
+      <p className="text-sm text-dim">
+        Conversations, reports and progress are stored only on this device. Recordings are never stored: speech is
+        turned into text and the audio is discarded.
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={exportData}
+          className="btn-3d btn-ghost flex items-center justify-center gap-2 py-2.5 text-sm"
+        >
+          <Download className="size-4" aria-hidden /> Export backup
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="btn-3d btn-ghost flex items-center justify-center gap-2 py-2.5 text-sm text-bad"
+        >
+          <Trash2 className="size-4" aria-hidden /> Delete all
+        </button>
+      </div>
+      {confirming && (
+        <div role="alertdialog" aria-labelledby="del-title" className="space-y-3 rounded-xl border-2 border-bad/50 p-3">
+          <p id="del-title" className="font-extrabold">
+            Delete everything? This can&apos;t be undone.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={deleteAll}
+              className="btn-3d flex-1 bg-bad py-2 text-sm text-white"
+              style={{ boxShadow: "0 4px 0 #9c1c33" }}
+            >
+              Yes, delete
+            </button>
+            <button type="button" onClick={() => setConfirming(false)} className="btn-3d btn-ghost flex-1 py-2 text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {done && (
+        <p role="status" className="text-sm font-bold text-good">
+          {done}
+        </p>
+      )}
+    </Section>
   );
 }
 
