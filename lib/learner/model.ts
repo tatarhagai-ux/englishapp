@@ -77,6 +77,8 @@ export interface LearnerState {
   /** Azure usage per month, to know when the free tier runs out. */
   speechUsage?: Record<string, { ttsChars: number; sttSeconds: number }>;
   listening?: ListeningState;
+  /** Best pronunciation score per course unit. */
+  pronunciation?: Record<string, { best: number; attempts: number; lastAt: string }>;
 }
 
 export interface ListeningState {
@@ -492,4 +494,24 @@ export function pickListeningItems<T extends { id: string }>(
   const fresh = shuffled.filter((i) => !heard.includes(i.id));
   const old = shuffled.filter((i) => heard.includes(i.id));
   return [...fresh, ...old].slice(0, count);
+}
+
+export function recordPronunciation(
+  state: LearnerState,
+  unitId: string,
+  score: number,
+  now = new Date(),
+): LearnerState {
+  const prev = state.pronunciation?.[unitId];
+  return {
+    ...state,
+    pronunciation: {
+      ...state.pronunciation,
+      [unitId]: {
+        best: Math.max(prev?.best ?? 0, Math.round(score)),
+        attempts: (prev?.attempts ?? 0) + 1,
+        lastAt: now.toISOString(),
+      },
+    },
+  };
 }

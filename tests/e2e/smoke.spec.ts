@@ -185,3 +185,21 @@ test("phrase bank imports a list with meanings and Hebrew", async ({ page }) => 
   await expect(page.getByText("meaning of calibrated question")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Never Split the Difference" })).toBeVisible();
 });
+
+test("pronunciation course: open a unit, hear a minimal pair, read the Hebrew tip", async ({ page }) => {
+  const spoken: string[] = [];
+  await page.route("**/api/tts", async (route) => {
+    spoken.push((route.request().postDataJSON() as { text: string }).text);
+    await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' });
+  });
+  await page.goto("/practice");
+  await page.getByRole("link", { name: /Pronunciation for Hebrew speakers/ }).click();
+  await expect(page.getByText("0 / 10")).toBeVisible();
+  await page.getByRole("link", { name: /W is not V/ }).click();
+  await expect(page.getByRole("heading", { name: "W is not V" })).toBeVisible();
+  await page.getByRole("button", { name: "west" }).click();
+  await expect.poll(() => spoken).toContain("west");
+  await page.getByRole("button", { name: "Translate" }).click();
+  await expect(page.getByText(/דוברי עברית הופכים/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Next: Short i vs long ee/ })).toBeVisible();
+});

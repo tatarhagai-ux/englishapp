@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Check, Clock, Headphones } from "lucide-react";
+import { ArrowRight, AudioLines, Check, Clock, Headphones } from "lucide-react";
 import { CATEGORY_INFO, SCENARIOS, type Scenario, type ScenarioCategory } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import { useHydrated, useLearner } from "@/lib/client/learner";
@@ -52,6 +52,19 @@ export function PracticeLibrary() {
         <span className="flex-1">
           <span className="block font-extrabold">Listening gym</span>
           <span className="block text-sm text-dim">Dictation and shadowing in 4 accents. Speed adapts to you.</span>
+        </span>
+        <ArrowRight className="size-5 text-faint" aria-hidden />
+      </Link>
+
+      <Link href="/pronounce" className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent">
+          <AudioLines className="size-6" aria-hidden />
+        </span>
+        <span className="flex-1">
+          <span className="block font-extrabold">Pronunciation for Hebrew speakers</span>
+          <span className="block text-sm text-dim">
+            TH, W/V, ship/sheep, stress and a friendlier melody. 10 short units.
+          </span>
         </span>
         <ArrowRight className="size-5 text-faint" aria-hidden />
       </Link>

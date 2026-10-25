@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import {
   addPhrases,
+  recordPronunciation,
   finishListeningRound,
   recordListening,
   markPhrasesUsed,
@@ -215,6 +216,10 @@ export const learner = {
 
   finishListeningRound(round: Parameters<typeof finishListeningRound>[1]) {
     set(finishListeningRound(get(), round));
+  },
+
+  recordPronunciation(unitId: string, score: number) {
+    set(recordPronunciation(get(), unitId, score));
   },
 
   exportJson(): string {
