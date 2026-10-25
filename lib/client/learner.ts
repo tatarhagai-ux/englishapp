@@ -3,6 +3,8 @@
 import { useSyncExternalStore } from "react";
 import {
   addPhrases,
+  finishListeningRound,
+  recordListening,
   markPhrasesUsed,
   removePhrase,
   applyAnalysis,
@@ -205,6 +207,14 @@ export const learner = {
 
   removePhrase(text: string) {
     set(removePhrase(get(), text));
+  },
+
+  recordListening(itemId: string, correct: boolean) {
+    set(recordListening(get(), itemId, correct));
+  },
+
+  finishListeningRound(round: Parameters<typeof finishListeningRound>[1]) {
+    set(finishListeningRound(get(), round));
   },
 
   exportJson(): string {

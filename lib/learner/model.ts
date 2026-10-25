@@ -76,7 +76,23 @@ export interface LearnerState {
   spend: Record<string, number>;
   /** Azure usage per month, to know when the free tier runs out. */
   speechUsage?: Record<string, { ttsChars: number; sttSeconds: number }>;
+  listening?: ListeningState;
 }
+
+export interface ListeningState {
+  /** Playback speed he currently handles; the gym adapts it (i+1). */
+  rate: number;
+  correctStreak: number;
+  xp: number;
+  /** One entry per finished round. */
+  rounds: { day: string; mode: "dictation" | "shadowing"; correct: number; total: number; rate: number }[];
+  /** Item ids already heard, so rounds prefer new sentences. */
+  heard: string[];
+}
+
+export const LISTENING_START: ListeningState = { rate: 0.9, correctStreak: 0, xp: 0, rounds: [], heard: [] };
+export const LISTENING_RATE_MIN = 0.7;
+export const LISTENING_RATE_MAX = 1.3;
 
 export function initialState(now = new Date()): LearnerState {
   const iso = now.toISOString();
@@ -222,7 +238,7 @@ export function minutesOnDay(state: LearnerState, day: string): number {
 
 export function statsFrom(state: LearnerState, today: string): LearnerStats {
   const real = state.sessions.filter(isRealSession);
-  if (real.length === 0 && state.sessions.length === 0) return { ...EMPTY_STATS };
+  if (real.length === 0 && state.sessions.length === 0 && !state.listening?.xp) return { ...EMPTY_STATS };
   const days = real.map((s) => s.day);
   const interviewDone = new Set(
     real
@@ -244,7 +260,7 @@ export function statsFrom(state: LearnerState, today: string): LearnerStats {
     stuckFreeSessions: real.filter((s) => s.stuckCount === 0 && s.endedAt).length,
     interviewScenariosDone: interviewDone.size,
     accentsHeard: accents.size,
-    xp: real.reduce((sum, s) => sum + s.xp, 0),
+    xp: real.reduce((sum, s) => sum + s.xp, 0) + (state.listening?.xp ?? 0),
   };
 }
 
@@ -422,4 +438,58 @@ export function markPhrasesUsed(state: LearnerState, learnerText: string): Learn
     return p;
   });
   return changed ? { ...state, phrases } : state;
+}
+
+/**
+ * Adaptive speed: three right in a row at the current speed moves it up 0.05; a miss moves
+ * it down 0.05. That keeps listening a little above comfortable, which is where it improves.
+ */
+export function recordListening(state: LearnerState, itemId: string, correct: boolean): LearnerState {
+  const l = state.listening ?? LISTENING_START;
+  let rate = l.rate;
+  let streak = correct ? l.correctStreak + 1 : 0;
+  if (correct && streak >= 3) {
+    rate = Math.min(LISTENING_RATE_MAX, Math.round((rate + 0.05) * 100) / 100);
+    streak = 0;
+  } else if (!correct) {
+    rate = Math.max(LISTENING_RATE_MIN, Math.round((rate - 0.05) * 100) / 100);
+  }
+  return {
+    ...state,
+    listening: {
+      ...l,
+      rate,
+      correctStreak: streak,
+      xp: l.xp + (correct ? 5 : 0),
+      heard: l.heard.includes(itemId) ? l.heard : [...l.heard, itemId],
+    },
+  };
+}
+
+export function finishListeningRound(
+  state: LearnerState,
+  round: { day: string; mode: "dictation" | "shadowing"; correct: number; total: number; rate: number },
+): LearnerState {
+  const l = state.listening ?? LISTENING_START;
+  return { ...state, listening: { ...l, rounds: [...l.rounds, round] } };
+}
+
+/** Pick sentences for a round: unheard first, near his level, in a stable shuffled order. */
+export function pickListeningItems<T extends { id: string }>(
+  items: readonly T[],
+  heard: string[],
+  count: number,
+  seed: number,
+): T[] {
+  const rand = (i: number) => {
+    const x = Math.sin(seed * 9301 + i * 49297) * 233280;
+    return x - Math.floor(x);
+  };
+  const shuffled = items
+    .map((it, i) => ({ it, r: rand(i) }))
+    .sort((a, b) => a.r - b.r)
+    .map((x) => x.it);
+  const fresh = shuffled.filter((i) => !heard.includes(i.id));
+  const old = shuffled.filter((i) => heard.includes(i.id));
+  return [...fresh, ...old].slice(0, count);
 }
