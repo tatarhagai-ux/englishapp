@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PRONUNCIATION } from "@/content/pronunciation";
+import { HEBREW_PATTERNS } from "@/content/l1/he";
 import { speakable } from "@/lib/text/speakable";
 import { initialState, recordPronunciation } from "@/lib/learner/model";
 
@@ -37,4 +38,16 @@ describe("pronunciation progress", () => {
     s = recordPronunciation(s, "w-v", 64);
     expect(s.pronunciation!["w-v"]).toMatchObject({ best: 72, attempts: 2 });
   });
+});
+
+describe("Hebrew-speaker patterns", () => {
+  it.each(HEBREW_PATTERNS.map((p) => [p.key, p] as const))(
+    "%s has a tip, a Hebrew why, and a valid unit link",
+    (_k, p) => {
+      expect(p.tip.length).toBeGreaterThan(15);
+      expect(p.whyHe).toMatch(/[֐-׿]/);
+      if (p.unit) expect(PRONUNCIATION.some((u) => u.id === p.unit)).toBe(true);
+      if (p.example && p.area !== "pronunciation") expect(p.fix).toBeTruthy();
+    },
+  );
 });

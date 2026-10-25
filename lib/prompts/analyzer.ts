@@ -69,7 +69,7 @@ export type Analysis = z.infer<typeof analysisSchema>;
 export function buildAnalyzerMessages(scenario: Scenario, history: Turn[]): ChatMessage[] {
   const known = SEED_ERRORS.map((e) => `${e.key}: ${e.title}`).join("\n");
   const patterns = HEBREW_PATTERNS.filter((p) => p.area !== "pronunciation" && p.area !== "prosody")
-    .map((p) => `${p.key}: ${p.pattern}${p.example ? ` (e.g. ${p.example})` : ""}`)
+    .map((p) => `${p.key}: ${p.pattern}${p.example ? ` (e.g. "${p.example}"${p.fix ? ` → "${p.fix}"` : ""})` : ""}`)
     .join("\n");
   const transcript = history
     .map((t) =>

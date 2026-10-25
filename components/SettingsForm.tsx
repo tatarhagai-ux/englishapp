@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronRight, Download, ShieldCheck, Trash2 } from "lucide-react";
+import { BookOpen, ChevronRight, Download, ShieldCheck, Trash2 } from "lucide-react";
 import { learner } from "@/lib/client/learner";
 import { usePrefs, type Prefs } from "@/lib/client/prefs";
 import { voiceById } from "@/content/voices";
@@ -22,6 +22,17 @@ export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
 
   return (
     <div className="space-y-5">
+      <Link href="/guide" className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
+        <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
+          <BookOpen className="size-5" aria-hidden />
+        </span>
+        <span className="flex-1">
+          <span className="block font-extrabold">How Speakwise works</span>
+          <span className="block text-sm text-dim">The method, a weekly plan, and Hebrew-speaker traps</span>
+        </span>
+        <ChevronRight className="size-5 text-faint" aria-hidden />
+      </Link>
+
       <Section title="Tutor">
         <Link
           href="/settings/voice"

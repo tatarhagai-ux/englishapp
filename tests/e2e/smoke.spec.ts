@@ -203,3 +203,14 @@ test("pronunciation course: open a unit, hear a minimal pair, read the Hebrew ti
   await expect(page.getByText(/דוברי עברית הופכים/)).toBeVisible();
   await expect(page.getByRole("link", { name: /Next: Short i vs long ee/ })).toBeVisible();
 });
+
+test("guide explains the method and links to pronunciation practice", async ({ page }) => {
+  await page.goto("/settings");
+  await page.getByRole("link", { name: /How Speakwise works/ }).click();
+  await expect(page.getByRole("heading", { name: "The method" })).toBeVisible();
+  await expect(page.getByText("I've been living here for ten years.")).toBeVisible();
+  await page.getByRole("button", { name: "Why (in Hebrew)" }).first().click();
+  await expect(page.getByText(/בעברית יש הווה אחד/)).toBeVisible();
+  await page.getByRole("link", { name: "Practice it" }).first().click();
+  await expect(page).toHaveURL(/\/pronounce\//);
+});
