@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Flame, Headphones, MessageCircle, Sparkles, Target, Wrench } from "lucide-react";
+import { ArrowRight, Flame, MessageCircle, Sparkles, Target, Wrench } from "lucide-react";
 import { setupStatus } from "@/lib/env";
 import { ProgressRing } from "@/components/ProgressRing";
-import { Greeting, TutorBadge } from "@/components/HomeClient";
+import { ChooseVoicePrompt, Greeting, TutorBadge } from "@/components/HomeClient";
 import { PLACEMENT, SEED_ERRORS } from "@/content/learner-seed";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ const SESSION_STEPS = [
 
 export default function HomePage() {
   const status = setupStatus();
-  const ready = status.azure && status.openrouter;
+  const ready = status.azure && status.llm;
   const minutesToday = 0;
   const goal = 12;
   const streak = 0;
@@ -25,7 +25,6 @@ export default function HomePage() {
       <header className="flex items-start justify-between gap-4">
         <div>
           <Greeting />
-          <p className="mt-1 text-sm text-dim">Ten minutes of speaking beats an hour of reading about it.</p>
         </div>
         <div className="flex items-center gap-1.5 rounded-full border border-line bg-elev px-3 py-1.5 text-sm font-semibold">
           <Flame className="size-4 text-warn" aria-hidden />
@@ -121,19 +120,7 @@ export default function HomePage() {
         </ul>
       </section>
 
-      <Link
-        href="/settings/voice"
-        className="card flex items-center gap-3 p-4 transition-colors hover:border-accent/60"
-      >
-        <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
-          <Headphones className="size-5" aria-hidden />
-        </span>
-        <span className="flex-1">
-          <span className="block font-semibold">Choose your tutor&apos;s voice</span>
-          <span className="block text-sm text-dim">Listen to 8 voices and pick the one you like.</span>
-        </span>
-        <ArrowRight className="size-5 text-dim" aria-hidden />
-      </Link>
+      <ChooseVoicePrompt />
     </div>
   );
 }

@@ -23,11 +23,11 @@ const STEPS = [
     },
   },
   {
-    key: "openrouter" as const,
-    title: "OpenRouter",
-    vars: ["OPENROUTER_API_KEY"],
-    why: "The tutor's brain. One key gives access to DeepSeek and other models. $10 of credit lasts months.",
-    link: { href: "https://openrouter.ai/settings/keys", label: "Get an API key" },
+    key: "llm" as const,
+    title: "AI model (OpenRouter or DeepSeek)",
+    vars: ["OPENROUTER_API_KEY", "or DEEPSEEK_API_KEY"],
+    why: "The tutor's brain. OpenRouter: one key for many models, good while comparing. DeepSeek direct: a bit cheaper.",
+    link: { href: "https://openrouter.ai/settings/keys", label: "Get an OpenRouter key" },
   },
   {
     key: "supabase" as const,

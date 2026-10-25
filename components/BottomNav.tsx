@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Home, Mic, Settings } from "lucide-react";
+import { Home, Mic, Settings } from "lucide-react";
 import clsx from "clsx";
 
 const ITEMS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/practice", label: "Practice", icon: Mic },
-  { href: "/progress", label: "Progress", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

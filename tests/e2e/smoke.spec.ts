@@ -14,7 +14,6 @@ test.describe("app shell", () => {
     const nav = page.getByRole("navigation", { name: "Main" });
     for (const [label, heading] of [
       ["Practice", "Practice"],
-      ["Progress", "Progress"],
       ["Settings", "Settings"],
       ["Home", /Hagai/],
     ] as const) {
@@ -25,7 +24,7 @@ test.describe("app shell", () => {
   });
 
   test("no horizontal scrolling on any main screen", async ({ page }) => {
-    for (const path of ["/", "/practice", "/progress", "/settings", "/settings/voice", "/setup"]) {
+    for (const path of ["/", "/practice", "/settings", "/settings/voice", "/setup"]) {
       await page.goto(path);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `horizontal overflow on ${path}`).toBeLessThanOrEqual(0);
@@ -80,7 +79,7 @@ test.describe("setup and APIs", () => {
     expect(res.ok()).toBe(true);
     expect(await res.json()).toEqual({
       ok: true,
-      services: { accessGate: false, azure: false, openrouter: false, supabase: false },
+      services: { accessGate: false, azure: false, llm: false, supabase: false },
     });
   });
 

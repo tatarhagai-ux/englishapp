@@ -13,9 +13,11 @@ const schema = z.object({
   AZURE_SPEECH_KEY: z.string().min(10).optional(),
   AZURE_SPEECH_REGION: z.string().min(2).optional(),
 
+  LLM_PROVIDER: z.enum(["openrouter", "deepseek"]).optional(),
   OPENROUTER_API_KEY: z.string().min(10).optional(),
-  LLM_CHAT_MODEL: z.string().default("deepseek/deepseek-v3.2"),
-  LLM_ANALYZER_MODEL: z.string().default("deepseek/deepseek-v3.2"),
+  DEEPSEEK_API_KEY: z.string().min(10).optional(),
+  LLM_CHAT_MODEL: z.string().optional(),
+  LLM_ANALYZER_MODEL: z.string().optional(),
 
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(10).optional(),
@@ -46,9 +48,26 @@ export function requireAzure() {
   return { key: env.AZURE_SPEECH_KEY, region: env.AZURE_SPEECH_REGION };
 }
 
-export function requireOpenRouter() {
-  if (!env.OPENROUTER_API_KEY) throw new NotConfiguredError("OpenRouter");
-  return { apiKey: env.OPENROUTER_API_KEY };
+const DEFAULT_MODELS = {
+  openrouter: { chat: "deepseek/deepseek-v3.2", analyzer: "deepseek/deepseek-v3.2" },
+  deepseek: { chat: "deepseek-chat", analyzer: "deepseek-chat" },
+} as const;
+
+/**
+ * Which LLM provider to use. LLM_PROVIDER wins; otherwise whichever key is present, with
+ * OpenRouter preferred when both are (it can reach every model the eval compares).
+ */
+export function llmConfig() {
+  const provider =
+    env.LLM_PROVIDER ?? (env.OPENROUTER_API_KEY ? "openrouter" : env.DEEPSEEK_API_KEY ? "deepseek" : "openrouter");
+  const apiKey = provider === "deepseek" ? env.DEEPSEEK_API_KEY : env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new NotConfiguredError(provider === "deepseek" ? "DeepSeek" : "OpenRouter");
+  return {
+    provider,
+    apiKey,
+    chatModel: env.LLM_CHAT_MODEL ?? DEFAULT_MODELS[provider].chat,
+    analyzerModel: env.LLM_ANALYZER_MODEL ?? DEFAULT_MODELS[provider].analyzer,
+  } as const;
 }
 
 /** Which services are configured. Booleans only, never values. */
@@ -56,7 +75,7 @@ export function setupStatus() {
   return {
     accessGate: Boolean(env.APP_ACCESS_CODE && env.APP_SESSION_SECRET),
     azure: Boolean(env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION),
-    openrouter: Boolean(env.OPENROUTER_API_KEY),
+    llm: Boolean(env.OPENROUTER_API_KEY || env.DEEPSEEK_API_KEY),
     supabase: Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
   };
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowRight, Headphones } from "lucide-react";
 import { usePrefs } from "@/lib/client/prefs";
 import { voiceById } from "@/content/voices";
 import { Avatar } from "./Avatar";
@@ -31,5 +33,23 @@ export function TutorBadge() {
         <p className="text-[11px] text-dim">{prefs.tutorChosen ? "Your tutor" : "Default tutor"}</p>
       </div>
     </div>
+  );
+}
+
+/** Shown only until a tutor voice has been picked; after that it is noise. */
+export function ChooseVoicePrompt() {
+  const [prefs] = usePrefs();
+  if (prefs.tutorChosen) return null;
+  return (
+    <Link href="/settings/voice" className="card flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
+      <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent">
+        <Headphones className="size-5" aria-hidden />
+      </span>
+      <span className="flex-1">
+        <span className="block font-semibold">Choose your tutor&apos;s voice</span>
+        <span className="block text-sm text-dim">Listen to 8 voices and pick the one you like.</span>
+      </span>
+      <ArrowRight className="size-5 text-dim" aria-hidden />
+    </Link>
   );
 }

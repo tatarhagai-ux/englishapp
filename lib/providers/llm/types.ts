@@ -18,6 +18,8 @@ export interface ChatRequest {
 export interface Usage {
   promptTokens: number;
   completionTokens: number;
+  /** Prompt tokens served from the provider's cache (cheaper). */
+  cachedPromptTokens?: number;
   /** Provider-reported cost in USD when available (OpenRouter returns it). */
   costUsd?: number;
 }
