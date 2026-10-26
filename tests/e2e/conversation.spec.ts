@@ -690,3 +690,29 @@ test("a conversation cut off midway shows on Home: resume it or get the report",
   await page.goto("/");
   await expect(page.getByRole("region", { name: "Unfinished conversation" })).toHaveCount(0);
 });
+
+test("plan days start by learning three of the week's words, then the next three", async ({ page }) => {
+  await mockApis(page, []);
+  await page.goto("/session/free-your-week?plan=w1d1");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: /start/i }).click();
+  await expect(page.getByText("Week 1 words · learn")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "routine" })).toBeVisible();
+  await expect(page.getByText("My morning routine starts with a run.")).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("heading", { name: "demanding" })).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("heading", { name: "flexible" })).toBeVisible();
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
+  await page.getByLabel("Your reply").fill("My routine is busy");
+  await page.getByLabel("Your reply").press("Enter");
+  await endEarly(page);
+  await expect(page).toHaveURL(/\/report\//);
+
+  // Next plan day: the next words of the week.
+  await page.goto("/session/plan-w1d2?plan=w1d2");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: /start/i }).click();
+  await expect(page.getByRole("heading", { name: "to juggle" })).toBeVisible();
+});

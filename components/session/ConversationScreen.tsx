@@ -40,12 +40,14 @@ import {
   type WarmupItem,
 } from "@/lib/learner/model";
 import { planDayByKey, planWeek } from "@/content/plan";
-import { weekWordsToPractice } from "@/lib/learner/plan";
+import { weekWordsToPractice, wordsToLearn } from "@/lib/learner/plan";
+import type { StretchWord } from "@/content/plan";
 import { adaptation, paceFor } from "@/lib/learner/adapt";
 import { dayKey } from "@/lib/game/streak";
 import { useWakeLock } from "@/lib/client/wake-lock";
 import { Intro } from "./Intro";
 import { Warmup } from "./Warmup";
+import { LearnWords } from "./LearnWords";
 import { Transcript } from "./Transcript";
 import { MissionBar } from "./MissionBar";
 import { demoReply } from "@/lib/client/demo";
@@ -96,7 +98,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const limitSeconds = (isTutor && !scenario.hidden ? prefs.sessionMinutes : scenario.minutes) * 60;
   const spentThisMonth = state.spend[monthKey()] ?? 0;
 
-  const [phase, setPhase] = useState<"intro" | "warmup" | "live" | "finishing">("intro");
+  const [phase, setPhase] = useState<"intro" | "learn" | "warmup" | "live" | "finishing">("intro");
+  const [learnWords, setLearnWords] = useState<StretchWord[]>([]);
   const [warmup, setWarmup] = useState<WarmupItem[]>([]);
   const [mode, setMode] = useState<"voice" | "quiet">("voice");
   const [starting, setStarting] = useState(false);
@@ -475,8 +478,19 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     setSessionId(id);
     setStarting(false);
     const items = resume || demo ? [] : warmupItems(learner.get());
+    setWarmup(items);
+    // Plan days: meet a few of the week's new words first, then the warm-up, then talk.
+    const learn = planWeekInfo && !resume && !demo ? wordsToLearn(learner.get(), planWeekInfo) : [];
+    if (learn.length) {
+      setLearnWords(learn);
+      setPhase("learn");
+      return;
+    }
+    afterLearn(items);
+  }
+
+  function afterLearn(items: WarmupItem[]) {
     if (items.length) {
-      setWarmup(items);
       setPhase("warmup");
       return;
     }
@@ -614,6 +628,17 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         blockedReason={blockedReason}
         starting={starting}
         warmupCount={hydrated ? warmupItems(state).length : 0}
+      />
+    );
+  }
+
+  if (phase === "learn" && planWeekInfo) {
+    return (
+      <LearnWords
+        words={learnWords}
+        week={planWeekInfo.week}
+        mode={mode}
+        onDone={() => afterLearn(warmup.filter((i) => !learnWords.some((w) => w.text === i.id)))}
       />
     );
   }

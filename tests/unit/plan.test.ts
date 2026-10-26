@@ -144,3 +144,17 @@ describe("phraseUsedIn", () => {
     expect(phraseUsedIn("hi", "ok")).toBe(false);
   });
 });
+
+describe("wordsToLearn", () => {
+  it("introduces the week's words three at a time, skipping ones already met or used", async () => {
+    const { wordsToLearn } = await import("@/lib/learner/plan");
+    const { ratePhrase, initialState, addPhrases } = await import("@/lib/learner/model");
+    const { PLAN } = await import("@/content/plan");
+    const week = PLAN[0];
+    let s = initialState();
+    expect(wordsToLearn(s, week).map((w) => w.text)).toEqual(week.words.slice(0, 3).map((w) => w.text));
+    s = addPhrases(s, week.words, "Week 1").state;
+    for (const w of week.words.slice(0, 3)) s = ratePhrase(s, w.text, 2);
+    expect(wordsToLearn(s, week)[0].text).toBe(week.words[3].text);
+  });
+});
