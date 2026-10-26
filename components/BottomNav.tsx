@@ -9,7 +9,7 @@ import clsx from "clsx";
 const ITEMS = [
   { href: "/", label: "Home", icon: Home, also: [] },
   { href: "/practice", label: "Practice", icon: Mic, also: ["/listen", "/pronounce", "/review", "/words"] },
-  { href: "/progress", label: "Progress", icon: BarChart3, also: ["/phrases"] },
+  { href: "/progress", label: "Progress", icon: BarChart3, also: ["/phrases", "/mistakes"] },
   { href: "/settings", label: "Settings", icon: Settings, also: ["/guide"] },
 ] as const;
 

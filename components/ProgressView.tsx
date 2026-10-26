@@ -243,23 +243,29 @@ function Achievements({ stats }: { stats: ReturnType<typeof statsFrom> }) {
 
 function MistakeRow({ e }: { e: ErrorRecord }) {
   return (
-    <li className="tile p-3.5">
-      <div className="flex items-start justify-between gap-2">
-        <p className="font-extrabold">{e.title}</p>
-        <span
-          className={clsx(
-            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-extrabold uppercase",
-            STATUS_STYLE[e.status],
-          )}
-        >
-          {e.status}
-        </span>
-      </div>
-      <p className="mt-1 text-sm text-bad line-through decoration-bad/60">{e.example}</p>
-      <p className="text-sm font-bold text-good">{e.better}</p>
-      <p className="mt-2 text-xs font-bold text-dim">
-        Seen {e.occurrences}× · used correctly {e.correctUses}×{e.mission ? ` · Mission: ${e.mission}` : ""}
-      </p>
+    <li>
+      <Link
+        href={`/mistakes/${encodeURIComponent(e.key)}`}
+        className="tile block p-3.5 transition-colors hover:border-accent/60"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-extrabold">{e.title}</p>
+          <span
+            className={clsx(
+              "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-extrabold uppercase",
+              STATUS_STYLE[e.status],
+            )}
+          >
+            {e.status}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-bad line-through decoration-bad/60">{e.example}</p>
+        <p className="text-sm font-bold text-good">{e.better}</p>
+        <p className="mt-2 text-xs font-bold text-dim">
+          Seen {e.occurrences}× · used correctly {e.correctUses}×{e.mission ? ` · Mission: ${e.mission}` : ""}
+        </p>
+        <p className="mt-1.5 text-xs font-extrabold text-accent">Rule, examples and a drill →</p>
+      </Link>
     </li>
   );
 }

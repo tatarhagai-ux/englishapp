@@ -211,6 +211,12 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           <p className="mt-3 font-bold text-bad line-through decoration-bad/60">{boss.example}</p>
           <p className="font-extrabold text-good">{boss.better}</p>
           <p className="mt-2 text-sm text-dim">{boss.why}</p>
+          <Link
+            href={`/mistakes/${encodeURIComponent(boss.key)}`}
+            className="mt-2 inline-block text-sm font-extrabold text-accent"
+          >
+            Practice it: rule and drill →
+          </Link>
         </section>
       )}
 

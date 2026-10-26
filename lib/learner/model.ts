@@ -510,7 +510,8 @@ export function reviewMistake(state: LearnerState, key: string, good: boolean, n
  * the first sentence, then his own later sentences, then prepared ones with the same
  * pattern. Saying a different sentence each time trains the rule, not one memorized line.
  */
-export function practiceSentence(e: ErrorRecord): { wrong: string; better: string; own: boolean } {
+/** Every sentence for practicing a mistake: his first, his later ones, then prepared ones. */
+export function mistakeSentences(e: ErrorRecord): { wrong: string; better: string; own: boolean }[] {
   const pool = [
     { wrong: e.example, better: e.better, own: true },
     ...(e.examples ?? []).map((x) => ({ ...x, own: true })),
@@ -519,7 +520,11 @@ export function practiceSentence(e: ErrorRecord): { wrong: string; better: strin
     if (!pool.some((p) => p.better.toLowerCase() === better.toLowerCase())) pool.push({ wrong, better, own: false });
   }
   const sayable = pool.filter((p) => p.better && !/[=…]/.test(p.better));
-  const list = sayable.length ? sayable : pool;
+  return sayable.length ? sayable : pool;
+}
+
+export function practiceSentence(e: ErrorRecord): { wrong: string; better: string; own: boolean } {
+  const list = mistakeSentences(e);
   return list[(e.card?.reps ?? 0) % list.length];
 }
 

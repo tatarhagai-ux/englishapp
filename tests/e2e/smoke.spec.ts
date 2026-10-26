@@ -382,3 +382,19 @@ test("android: a one-time Home card opens the steps for natural voices", async (
   await page.goto("/");
   await expect(page.getByRole("link", { name: /Make the voices sound natural/ })).toHaveCount(0);
 });
+
+test("mistake mini-lesson: the rule, wrong and right, and a drill that doesn't move reviews", async ({ page }) => {
+  await page.goto("/progress");
+  await page.getByRole("link", { name: /Present perfect for “how long”/ }).click();
+  await expect(page).toHaveURL(/\/mistakes\/present_perfect_duration/);
+  await expect(page.getByRole("heading", { name: "Present perfect for “how long”" })).toBeVisible();
+  await expect(page.getByText("The rule")).toBeVisible();
+  await expect(page.getByText("I've known him for five years.")).toBeVisible();
+  await expect(page.getByText("You said this")).toHaveCount(1);
+  await page.getByRole("button", { name: /Type it/ }).click();
+  await page.getByRole("button", { name: /Drill 4 sentences/ }).click();
+  await page.getByLabel("Your answer").fill("something wrong");
+  await page.getByRole("button", { name: "Check" }).click();
+  await page.getByRole("button", { name: "Skip" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "1 done" })).toBeVisible();
+});

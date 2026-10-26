@@ -21,6 +21,10 @@ interface Props {
   onDone: (reviewed: number) => void;
   /** Inside a page with the bottom bar: leave room for it so the buttons stay visible. */
   embedded?: boolean;
+  /** False for extra drills: answers don't move the review schedule. */
+  schedule?: boolean;
+  /** The small label above the card. */
+  label?: string;
 }
 
 type Attempt = { status: "idle" | "checked" | "error"; said?: string; ok?: boolean; error?: string };
@@ -30,7 +34,16 @@ type Attempt = { status: "idle" | "checked" | "error"; said?: string; ok?: boole
  * said wrong last time and produce the right version yourself before seeing it. Phrases
  * are said out loud from their meaning. Every answer schedules the next review (FSRS).
  */
-export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = false }: Props) {
+export function Warmup({
+  items,
+  mode,
+  sessionId,
+  hebrewHelp,
+  onDone,
+  embedded = false,
+  schedule = true,
+  label = "Warm-up",
+}: Props) {
   const [index, setIndex] = useState(0);
   useWakeLock(true);
   const [revealed, setRevealed] = useState(false);
@@ -46,6 +59,10 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
   function record(ok: boolean) {
     if (recorded) return;
     setRecorded(true);
+    if (!schedule) {
+      setReviewed((n) => n + 1);
+      return;
+    }
     if (item.kind === "phrase") learner.reviewPhrase(item.id, ok);
     else learner.reviewMistake(item.id, ok);
     setReviewed((n) => n + 1);
@@ -120,7 +137,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
       <header className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-faint">
-            <Sparkles className="size-4 text-xp" aria-hidden /> Warm-up
+            <Sparkles className="size-4 text-xp" aria-hidden /> {label}
           </p>
           <button type="button" onClick={finish} className="text-sm font-extrabold text-dim hover:text-text">
             Skip
