@@ -21,8 +21,9 @@ import { CATEGORY_INFO, SCENARIOS, characterName, type Scenario, type ScenarioCa
 import { voiceById } from "@/content/voices";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
-import { recommendScenario, warmupItems } from "@/lib/learner/model";
+import { warmupItems } from "@/lib/learner/model";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
+import { HowItWorks } from "./HowItWorks";
 import { Avatar } from "./Avatar";
 
 type TrackId = "interview" | "work" | "abroad" | "everyday";
@@ -83,17 +84,12 @@ function trackScenarios(track: Track): Scenario[] {
   return track.id === "interview" ? list : [...list].sort((a, b) => a.minutes - b.minutes);
 }
 
-function trackOf(category: ScenarioCategory): Track {
-  return TRACKS.find((t) => t.categories.includes(category)) ?? TRACKS[0];
-}
-
 const TRACK_KEY = "sw_practice_track";
 
 export function PracticeLibrary() {
   const state = useLearner();
   const hydrated = useHydrated();
   const [prefs] = usePrefs();
-  const recommended = recommendScenario(state);
   const done = new Set(state.sessions.filter((s) => !s.demo && s.report?.task.completed).map((s) => s.scenarioId));
   const tutorName = voiceById(prefs.tutorVoiceId)?.displayName ?? "Your tutor";
   const due = hydrated ? warmupItems(state, new Date(), QUICK_REVIEW_MAX).length : 0;
@@ -119,40 +115,27 @@ export function PracticeLibrary() {
   const scenarios = trackScenarios(track);
   const nextId = scenarios.find((s) => !done.has(s.id))?.id;
 
-  // The third step alternates ear and mouth by day, so both get practice through the week.
-  const earDay = new Date().getDate() % 2 === 0;
-
   return (
     <div className="space-y-7">
       <h1 className="text-2xl font-black tracking-tight">Practice</h1>
 
-      {hydrated && (
-        <section aria-labelledby="today-title" className="tile space-y-3 p-4">
-          <h2 id="today-title" className="text-xs font-extrabold uppercase tracking-wider text-faint">
-            Today&apos;s plan
-          </h2>
-          <ol className="space-y-2">
-            {due > 0 && (
-              <PlanStep n={1} href="/review" title="Quick review" detail={`${due} due · 2 min`} icon={RotateCcw} />
-            )}
-            <PlanStep
-              n={due > 0 ? 2 : 1}
-              href={`/session/${recommended.id}`}
-              title={recommended.title}
-              detail={`${trackOf(recommended.category).label} · ${recommended.minutes} min`}
-              icon={trackOf(recommended.category).icon}
-              main
-            />
-            <PlanStep
-              n={due > 0 ? 3 : 2}
-              href={earDay ? "/listen" : "/pronounce"}
-              title={earDay ? "Listening gym" : "Pronunciation"}
-              detail="3 min"
-              icon={earDay ? Headphones : AudioLines}
-            />
-          </ol>
-        </section>
-      )}
+      <div className="space-y-2">
+        <p className="text-sm text-dim">
+          Free practice. Your step-by-step plan is on{" "}
+          <Link href="/" className="font-extrabold text-accent">
+            Home
+          </Link>
+          ; here you pick anything you like, and it all counts toward today&apos;s minutes.
+        </p>
+        <HowItWorks
+          steps={[
+            "Skills are short drills (2 to 5 minutes): train your ear, your sounds, or review your mistakes.",
+            "Conversations are 5 to 15 minutes. Pick a goal, then a conversation. Numbered ones go from easier to harder.",
+            "Every conversation ends with a report: your top fixes to say again, and new phrases.",
+          ]}
+          why="The plan keeps you moving forward; this is for the days you want more, or something specific."
+        />
+      </div>
 
       <section aria-labelledby="skills-title" className="space-y-2.5">
         <h2 id="skills-title" className="font-black">
@@ -241,50 +224,6 @@ export function PracticeLibrary() {
         </div>
       </section>
     </div>
-  );
-}
-
-function PlanStep({
-  n,
-  href,
-  title,
-  detail,
-  icon: Icon,
-  main,
-}: {
-  n: number;
-  href: string;
-  title: string;
-  detail: string;
-  icon: LucideIcon;
-  main?: boolean;
-}) {
-  return (
-    <li>
-      <Link
-        href={href}
-        className={clsx(
-          "flex items-center gap-3 rounded-2xl p-3 transition-colors",
-          main ? "bg-accent text-white" : "bg-elev-2 hover:bg-line",
-        )}
-        style={main ? { boxShadow: "0 4px 0 var(--accent-deep)" } : undefined}
-      >
-        <span
-          className={clsx(
-            "grid size-7 shrink-0 place-items-center rounded-full text-sm font-black",
-            main ? "bg-white/20" : "bg-elev text-dim",
-          )}
-          aria-hidden
-        >
-          {n}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-extrabold">{title}</span>
-          <span className={clsx("block text-xs font-bold", main ? "opacity-90" : "text-faint")}>{detail}</span>
-        </span>
-        <Icon className={clsx("size-5 shrink-0", main ? "" : "text-faint")} aria-hidden />
-      </Link>
-    </li>
   );
 }
 

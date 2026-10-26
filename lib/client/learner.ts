@@ -1,5 +1,7 @@
 "use client";
 
+import { planDayByKey, planWeek } from "@/content/plan";
+import { addWeekWords } from "@/lib/learner/plan";
 import { useSyncExternalStore } from "react";
 import {
   addPhrases,
@@ -102,7 +104,13 @@ export function useHydrated(): boolean {
 export const learner = {
   get,
 
-  startSession(scenarioId: string, mode: SessionRecord["mode"], opener: string, demo = false): string {
+  startSession(
+    scenarioId: string,
+    mode: SessionRecord["mode"],
+    opener: string,
+    demo = false,
+    planDay?: string,
+  ): string {
     const now = new Date();
     const id = `${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const session: SessionRecord = {
@@ -118,8 +126,13 @@ export const learner = {
       xp: 0,
       costUsd: 0,
       ...(demo ? { demo: true } : {}),
+      ...(planDay && !demo ? { planDay } : {}),
     };
-    set({ ...get(), sessions: [...get().sessions, session] });
+    let next: LearnerState = { ...get(), sessions: [...get().sessions, session] };
+    // A plan day brings its week's words into the phrase bank (once), for review and counting.
+    const week = planDay ? planWeek(planDayByKey(planDay)?.week ?? 0) : undefined;
+    if (week && !demo) next = addWeekWords(next, week, now);
+    set(next);
     return id;
   },
 

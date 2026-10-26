@@ -36,6 +36,8 @@ import {
   warmupItems,
   type WarmupItem,
 } from "@/lib/learner/model";
+import { planDayByKey, planWeek } from "@/content/plan";
+import { weekWordsToPractice } from "@/lib/learner/plan";
 import { Intro } from "./Intro";
 import { Warmup } from "./Warmup";
 import { Transcript } from "./Transcript";
@@ -69,7 +71,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const scenario = scenarioById(scenarioId)!;
   const router = useRouter();
   // Demo mode: a scripted tutor so the flow can be tried before an AI key is connected.
-  const demo = useSearchParams().get("demo") === "1";
+  const params = useSearchParams();
+  const demo = params.get("demo") === "1";
+  // Started from the 12-week plan: the day must belong to this scenario.
+  const planParam = params.get("plan");
+  const planDay = planParam && planDayByKey(planParam)?.scenarioId === scenarioId ? planParam : undefined;
+  const planWeekInfo = planDay ? planWeek(planDayByKey(planDay)!.week) : undefined;
   const hydrated = useHydrated();
   const state = useLearner();
   const [prefs, setPrefs] = usePrefs();
@@ -334,8 +341,15 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
           scenarioId,
           history: turnsRef.current,
           correctionMode: prefs.correctionMode,
-          targetKeys: targetKeysForNext(learner.get()),
-          practicePhrases: phrasesToPractice(learner.get()),
+          targetKeys: planWeekInfo
+            ? [...new Set([...planWeekInfo.targets, ...targetKeysForNext(learner.get())])].slice(0, 3)
+            : targetKeysForNext(learner.get()),
+          // Plan days push the week's words first, then whatever is due in the phrase bank.
+          practicePhrases: planWeekInfo
+            ? [
+                ...new Set([...weekWordsToPractice(learner.get(), planWeekInfo), ...phrasesToPractice(learner.get())]),
+              ].slice(0, 4)
+            : phrasesToPractice(learner.get()),
           memory: memoryForTutor(learner.get()),
           tutorName,
           wrapUp,
@@ -369,6 +383,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   }, [
     ensureQueue,
     limitSeconds,
+    planWeekInfo,
     scenarioId,
     scenario,
     demo,
@@ -426,7 +441,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       setTurnsBoth(resumable.turns);
       elapsedRef.current = Math.min(resumable.speakingSeconds * 2, limitSeconds - 60);
     } else {
-      id = learner.startSession(scenarioId, chosen, scenario.opener, demo);
+      id = learner.startSession(scenarioId, chosen, scenario.opener, demo, planDay);
       setTurnsBoth([{ role: "tutor", text: scenario.opener }]);
     }
     sessionRef.current = id;

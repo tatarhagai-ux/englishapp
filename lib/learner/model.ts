@@ -67,6 +67,8 @@ export interface SessionRecord {
   costUsd: number;
   /** A demo conversation (scripted tutor, no AI key). Never counts toward progress. */
   demo?: boolean;
+  /** Started from the 12-week plan: which day ("w3d2"). See lib/learner/plan.ts. */
+  planDay?: string;
 }
 
 export interface LearnerState {
@@ -489,16 +491,31 @@ export function phrasesToPractice(state: LearnerState, now = new Date(), max = 3
   return [...due, ...rest].slice(0, max);
 }
 
+/**
+ * Did he say this phrase? Verbs saved as "to juggle" also count as "juggling", "juggled",
+ * "juggles" (irregular forms like "took" are missed, which only undercounts).
+ */
+export function phraseUsedIn(text: string, phrase: string): boolean {
+  const lower = text.toLowerCase();
+  const core = phrase
+    .toLowerCase()
+    .replace(/[….!?]+$/, "")
+    .trim();
+  if (core.length < 3) return false;
+  if (!core.startsWith("to ")) return lower.includes(core);
+  const [verb, ...rest] = core.slice(3).split(/\s+/);
+  const stem = verb.replace(/e$/, "");
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const forms = `(?:${esc(verb)}|${esc(verb)}s|${esc(verb)}es|${esc(stem)}ed|${esc(stem)}ing|${esc(verb)}d|${esc(verb)}ing)`;
+  const tail = rest.length ? `\\s+${rest.map(esc).join("\\s+")}` : "";
+  return new RegExp(`\\b${forms}${tail}\\b`).test(lower);
+}
+
 /** Count phrases he actually used in his own turns. */
 export function markPhrasesUsed(state: LearnerState, learnerText: string): LearnerState {
-  const lower = learnerText.toLowerCase();
   let changed = false;
   const phrases = state.phrases.map((p) => {
-    const core = p.text
-      .toLowerCase()
-      .replace(/[….!?]+$/, "")
-      .trim();
-    if (core.length >= 3 && lower.includes(core)) {
+    if (phraseUsedIn(learnerText, p.text)) {
       changed = true;
       return { ...p, usedCount: (p.usedCount ?? 0) + 1 };
     }

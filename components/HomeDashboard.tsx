@@ -4,20 +4,13 @@ import Link from "next/link";
 import { ArrowRight, Clock, Flame, Gauge, MessageCircle, Sparkles, Target, Trophy, Wrench, Zap } from "lucide-react";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
-import {
-  hasPlacement,
-  levelHistory,
-  minutesOnDay,
-  rankedErrors,
-  recommendScenario,
-  statsFrom,
-  warmupItems,
-} from "@/lib/learner/model";
+import { hasPlacement, levelHistory, minutesOnDay, rankedErrors, statsFrom, warmupItems } from "@/lib/learner/model";
 import { PLACEMENT_ID } from "@/content/scenarios";
 import { dayKey } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/xp";
 import { ChooseVoicePrompt, Greeting, TutorBadge } from "./HomeClient";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
+import { PlanToday } from "./PlanToday";
 
 const SESSION_STEPS = [
   { icon: Sparkles, title: "Warm-up", detail: "Say phrases from past sessions out loud" },
@@ -36,9 +29,6 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
   const { level } = levelFromXp(stats.xp);
   const ranked = rankedErrors(state);
   const boss = ranked[0];
-  const rest = ranked.slice(1, 4);
-  const next = recommendScenario(state);
-  const mission = boss?.mission ?? next.task;
   const goalMet = minutesToday >= goal;
   const lastReport = [...state.sessions].reverse().find((s) => s.report && !s.demo);
   // A brand-new learner gets one clear first step, the level check, instead of two competing ones.
@@ -111,51 +101,33 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
         </Link>
       )}
 
-      <section
-        aria-labelledby="mission-title"
-        className="rounded-3xl bg-accent p-5 text-white"
-        style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}
-      >
-        <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">
-          {firstTime ? "Start here" : goalMet ? "Daily goal reached" : "Today's mission"}
-        </p>
-        <h2 id="mission-title" className="mt-1 text-2xl font-black leading-tight">
-          {firstTime ? "Find your speaking level" : next.title}
-        </h2>
-        <p className="mt-1.5 font-bold opacity-95">
-          {firstTime
-            ? "A relaxed 4-minute chat, 5 questions. No corrections during it. Your plan starts from here."
-            : mission}
-        </p>
-        {!firstTime && (
-          <>
-            <div
-              className="mt-4 h-3 overflow-hidden rounded-full bg-white/25"
-              role="progressbar"
-              aria-label="Minutes spoken today"
-              aria-valuemin={0}
-              aria-valuemax={goal}
-              aria-valuenow={minutesToday}
-            >
-              <div
-                className="h-full rounded-full bg-xp"
-                style={{ width: `${Math.min(1, minutesToday / goal) * 100}%` }}
-              />
-            </div>
-            <p className="mt-1.5 text-xs font-extrabold">
-              {minutesToday} of {goal} minutes
+      {firstTime ? (
+        <>
+          <section
+            aria-labelledby="mission-title"
+            className="rounded-3xl bg-accent p-5 text-white"
+            style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}
+          >
+            <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">Start here</p>
+            <h2 id="mission-title" className="mt-1 text-2xl font-black leading-tight">
+              Find your speaking level
+            </h2>
+            <p className="mt-1.5 font-bold opacity-95">
+              A relaxed 4-minute chat, 5 questions. No corrections during it. Your 12-week plan starts right after.
             </p>
-          </>
-        )}
-      </section>
+          </section>
+          <Link
+            href={`/session/${PLACEMENT_ID}`}
+            className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 text-lg uppercase"
+          >
+            Start <ArrowRight className="size-5" aria-hidden />
+          </Link>
+        </>
+      ) : (
+        <PlanToday ready={ready} minutesToday={minutesToday} goal={goal} />
+      )}
 
-      <div className="space-y-3">
-        <Link
-          href={!ready ? "/setup" : firstTime ? `/session/${PLACEMENT_ID}` : `/session/${next.id}`}
-          className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 text-lg uppercase"
-        >
-          {firstTime ? "Start" : goalMet ? "Keep going" : "Start talking"} <ArrowRight className="size-5" aria-hidden />
-        </Link>
+      <div className="space-y-2">
         <div className="flex justify-center">
           <TutorBadge />
         </div>
@@ -227,28 +199,6 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           <p className="mt-3 font-bold text-bad line-through decoration-bad/60">{boss.example}</p>
           <p className="font-extrabold text-good">{boss.better}</p>
           <p className="mt-2 text-sm text-dim">{boss.why}</p>
-        </section>
-      )}
-
-      {rest.length > 0 && (
-        <section className="tile p-4" aria-labelledby="focus-title">
-          <div className="flex items-center justify-between">
-            <h2 id="focus-title" className="font-black">
-              Also on your list
-            </h2>
-            <Link href="/progress" className="text-sm font-extrabold text-accent">
-              See all {ranked.length}
-            </Link>
-          </div>
-          <ul className="mt-3 space-y-2.5">
-            {rest.map((e) => (
-              <li key={e.key} className="rounded-xl bg-elev-2 p-3">
-                <p className="text-sm font-extrabold">{e.title}</p>
-                <p className="mt-0.5 text-sm text-bad line-through decoration-bad/60">{e.example}</p>
-                <p className="text-sm font-bold text-good">{e.better}</p>
-              </li>
-            ))}
-          </ul>
         </section>
       )}
 
