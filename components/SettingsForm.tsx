@@ -10,6 +10,7 @@ import { Segmented } from "./Segmented";
 import { Avatar } from "./Avatar";
 import { SyncSettings } from "./SyncSettings";
 import { ReminderSettings } from "./ReminderSettings";
+import { MemorySettings } from "./MemorySettings";
 import { syncConfigured } from "@/lib/client/sync";
 
 const CORRECTION_HELP: Record<Prefs["correctionMode"], string> = {
@@ -147,6 +148,10 @@ export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
         </p>
       </Section>
 
+      <Section title="What your tutor remembers" id="memory">
+        <MemorySettings />
+      </Section>
+
       <Section title="Sync across devices">
         <SyncSettings />
       </Section>
@@ -234,9 +239,9 @@ function DataControls() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
-    <section aria-label={title} className="tile space-y-4 p-4">
+    <section id={id} aria-label={title} className="tile scroll-mt-4 space-y-4 p-4">
       <h2 className="text-xs font-extrabold uppercase tracking-wider text-faint">{title}</h2>
       {children}
     </section>

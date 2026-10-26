@@ -20,6 +20,8 @@ export interface TutorPromptInput {
   correctionMode: CorrectionMode;
   targetKeys: string[];
   practicePhrases?: string[];
+  /** What he told the app in earlier conversations, newest first. */
+  memory?: string[];
   wrapUp: boolean;
 }
 
@@ -41,6 +43,9 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
       : "",
     targets
       ? `Mistakes he is working on. Ask questions that naturally make him use these structures, without naming them:\n${targets}`
+      : "",
+    input.memory?.length && !roleplay
+      ? `What you remember about him from earlier conversations (newest first):\n${input.memory.map((m) => `- ${m}`).join("\n")}\nLike a real coach, early in the conversation pick up one of these naturally (for example, ask how it went). Mention at most one or two, never list them, and don't repeat a question he has already answered.`
       : "",
     input.practicePhrases?.length
       ? `Phrases he is learning: ${input.practicePhrases.map((p) => `"${p}"`).join(", ")}. Once or twice, steer the conversation so one of them fits naturally, and if he uses one well, react warmly in a few words.`

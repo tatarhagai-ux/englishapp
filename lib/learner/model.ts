@@ -81,11 +81,21 @@ export interface LearnerState {
   listening?: ListeningState;
   /** Best pronunciation score per course unit. */
   pronunciation?: Record<string, { best: number; attempts: number; lastAt: string }>;
+  /** Facts he shared in conversations, so the tutor can pick up where they left off. */
+  memory?: MemoryItem[];
   /** Set by "Delete all". Sync drops anything older from other devices. */
   resetAt?: string;
   /** Deletions, kept so sync doesn't bring them back: phrase (lowercased) → when, and session ids. */
   removed?: { phrases?: Record<string, string>; sessions?: string[] };
 }
+
+export interface MemoryItem {
+  text: string;
+  day: string;
+}
+
+/** How many remembered facts are kept; older ones fall off. */
+export const MEMORY_MAX = 12;
 
 export interface ListeningState {
   /** Playback speed he currently handles; the gym adapts it (i+1). */
@@ -209,7 +219,29 @@ export function applyAnalysis(
   }
 
   const sessions = state.sessions.map((s) => (s.id === sessionId ? { ...s, report: analysis } : s));
-  return { ...state, errors, phrases, sessions };
+  const day = sessions.find((s) => s.id === sessionId)?.day ?? iso.slice(0, 10);
+  return { ...state, errors, phrases, sessions, memory: rememberFacts(state.memory ?? [], analysis.memory, day) };
+}
+
+/** Add new facts (newest last), replacing an older copy of the same fact, capped at MEMORY_MAX. */
+export function rememberFacts(memory: MemoryItem[], facts: string[], day: string): MemoryItem[] {
+  const fresh = facts.map((f) => f.trim()).filter(Boolean);
+  if (!fresh.length) return memory;
+  const keys = new Set(fresh.map((f) => f.toLowerCase()));
+  const kept = memory.filter((m) => !keys.has(m.text.toLowerCase()));
+  return [...kept, ...fresh.map((text) => ({ text, day }))].slice(-MEMORY_MAX);
+}
+
+/** What the tutor gets: the newest few facts, newest first. */
+export function memoryForTutor(state: LearnerState, max = 4): string[] {
+  return (state.memory ?? [])
+    .slice(-max)
+    .reverse()
+    .map((m) => m.text);
+}
+
+export function forgetFact(state: LearnerState, text: string): LearnerState {
+  return { ...state, memory: (state.memory ?? []).filter((m) => m.text !== text) };
 }
 
 /** Errors ranked by how much they need work: frequent, recent, and not yet mastered. */

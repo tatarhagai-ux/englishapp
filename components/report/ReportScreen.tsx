@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowRight,
+  Brain,
   Check,
   Circle,
   Clock,
@@ -22,6 +24,7 @@ import { usePrefs } from "@/lib/client/prefs";
 import { analyzeSession, ApiError, API_ERROR_TEXT } from "@/lib/client/api";
 import { usageCostUsd } from "@/lib/cost/pricing";
 import { criterionMet, wordCount } from "@/lib/text/compare";
+import { recommendScenario } from "@/lib/learner/model";
 import { CorrectionCard } from "./CorrectionCard";
 import { InterviewCard } from "./InterviewCard";
 import { demoAnalysis } from "@/lib/client/demo";
@@ -85,6 +88,8 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
   const words = englishTurns.reduce((n, t) => n + wordCount(t.text), 0);
   const voiceSeconds = session.speakingSeconds;
   const wpm = session.mode === "voice" && voiceSeconds > 20 ? Math.round(words / (voiceSeconds / 60)) : null;
+  // Chosen after this report is saved, so it already reflects today's mistakes.
+  const next = recommendScenario(state);
   const isMet = (c: string) => criterionMet(report?.task.met ?? [], c);
 
   return (
@@ -164,6 +169,19 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
               </span>
             )}
           </div>
+
+          {!session.demo && (report.memory?.length ?? 0) > 0 && (
+            <p className="flex gap-2 rounded-xl bg-elev-2 p-3 text-sm">
+              <Brain className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+              <span>
+                <span className="font-extrabold">Your tutor will remember: </span>
+                {report.memory?.join(" ")}{" "}
+                <Link href="/settings#memory" className="font-bold text-accent">
+                  Manage
+                </Link>
+              </span>
+            </p>
+          )}
 
           <section aria-labelledby="fixes-title" className="space-y-3">
             <h2 id="fixes-title" className="font-black">
@@ -254,6 +272,20 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
           ))}
         </ol>
       </details>
+
+      {report && !session.demo && next.id !== scenario.id && (
+        <Link
+          href={`/session/${next.id}`}
+          className="tile flex items-center gap-3 border-accent/50 p-4 transition-colors hover:border-accent"
+        >
+          <span className="flex-1">
+            <span className="block text-xs font-extrabold uppercase tracking-wider text-faint">Up next</span>
+            <span className="block font-extrabold">{next.title}</span>
+            <span className="block text-sm text-dim">{next.summary}</span>
+          </span>
+          <ArrowRight className="size-5 text-accent" aria-hidden />
+        </Link>
+      )}
 
       <div className="grid grid-cols-2 gap-3 pb-6">
         <Link href={`/session/${scenario.id}`} className="btn-3d btn-ghost flex items-center justify-center gap-2 py-3">

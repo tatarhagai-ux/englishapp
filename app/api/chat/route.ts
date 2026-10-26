@@ -35,6 +35,7 @@ export async function POST(req: Request) {
       correctionMode: body.correctionMode,
       targetKeys: body.targetKeys,
       practicePhrases: body.practicePhrases,
+      memory: body.memory,
       wrapUp: body.wrapUp,
     });
     iterator = llm()

@@ -60,6 +60,15 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     })),
   );
   if (pronunciation) out.pronunciation = pronunciation;
+  const memory = mergeBy(
+    [...(a.memory ?? []), ...(b.memory ?? [])],
+    (m) => m.text.toLowerCase(),
+    (x, y) => (x.day >= y.day ? x : y),
+  )
+    .filter((m) => after(`${m.day}T23:59:59`))
+    .sort((x, y) => x.day.localeCompare(y.day) || x.text.localeCompare(y.text))
+    .slice(-12);
+  if (memory.length) out.memory = memory;
   if (resetAt) out.resetAt = resetAt;
   if (Object.keys(removedPhrases).length || removedSessions.length) {
     out.removed = {};

@@ -62,6 +62,8 @@ export const analysisSchema = z.object({
     })
     .optional()
     .catch(undefined),
+  /** Short facts about his life worth remembering for the next conversation. */
+  memory: z.array(z.string().trim().min(3).max(160)).max(3).catch([]).default([]),
   /** Interview scenarios only: how each answer was built, and overall readiness. */
   interview: z
     .object({
@@ -156,10 +158,11 @@ ${
     ? `- interview: for each main interview question he answered (at most 5), judge his answer like a hiring manager: direct = he answered the actual question in his first sentence or two; example = he gave a concrete, real situation; actions = he said what HE did ("I", not only "we"); result = he ended with an outcome, a number, or a lesson. tip_en: the one change that would most improve that answer. better_start: a strong opening sentence in his own content, natural and spoken. readiness: 1 to 5, how ready these answers would sound in a real English interview (language and structure; 5 = ready). note_en: one sentence on what to practice next.
 `
     : ""
-}- level: his SPEAKING level as shown here (A1, A2, B1, B1+, B2, B2+, C1, C2), judged on range, accuracy, fluency and how well he handles harder questions. confidence is "low" if he said little. note_en: one sentence on what would move him up.
+}- memory: up to 3 short facts about his life, plans or work that a good teacher would remember and ask about next time, written in English in the third person ("He has an AZ-900 exam in two weeks."). Only things he actually said; skip anything sensitive (health, religion, money details). Empty if nothing new.
+- level: his SPEAKING level as shown here (A1, A2, B1, B1+, B2, B2+, C1, C2), judged on range, accuracy, fluency and how well he handles harder questions. confidence is "low" if he said little. note_en: one sentence on what would move him up.
 
 JSON shape:
-{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","level":{"cefr":"B1+","confidence":"medium","note_en":""}${
+{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","memory":[""],"level":{"cefr":"B1+","confidence":"medium","note_en":""}${
     scenario.category === "interview"
       ? `,"interview":{"answers":[{"question":"","direct":true,"example":false,"actions":true,"result":false,"tip_en":"","better_start":""}],"readiness":3,"note_en":""}`
       : ""

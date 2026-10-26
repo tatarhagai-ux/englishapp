@@ -9,6 +9,7 @@ import {
   markPhrasesUsed,
   removePhrase,
   removeSession,
+  forgetFact,
   applyAnalysis,
   reviewMistake,
   initialState,
@@ -220,6 +221,10 @@ export const learner = {
     const { state, added } = addPhrases(get(), items, tag);
     set(state);
     return added;
+  },
+
+  forgetFact(text: string) {
+    set(forgetFact(get(), text));
   },
 
   removePhrase(text: string) {

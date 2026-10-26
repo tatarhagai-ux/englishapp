@@ -23,6 +23,8 @@ export const chatRequest = z.object({
   /** Phrases he is learning; the tutor creates chances to use them. */
   practicePhrases: z.array(z.string().max(120)).max(5).default([]),
   tutorName: z.string().min(1).max(40).default("Ava"),
+  /** Facts from earlier conversations, so the tutor can pick up where they left off. */
+  memory: z.array(z.string().max(160)).max(6).default([]),
   /** Time is up: the tutor should close the conversation warmly. */
   wrapUp: z.boolean().default(false),
 });
