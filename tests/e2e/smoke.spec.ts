@@ -220,3 +220,21 @@ test("guide explains the method and links to pronunciation practice", async ({ p
   await page.getByRole("link", { name: "Practice it" }).first().click();
   await expect(page).toHaveURL(/\/pronounce\//);
 });
+
+test("daily reminder: download a calendar event or open Google Calendar", async ({ page }) => {
+  await page.goto("/settings");
+  const section = page.getByRole("region", { name: "Daily reminder" });
+  await section.getByLabel("Time").fill("13:15");
+  const download = page.waitForEvent("download");
+  await section.getByRole("button", { name: "Other calendar" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("speakwise-daily-reminder.ics");
+  const ics = await (await file.createReadStream()).toArray();
+  expect(Buffer.concat(ics).toString()).toContain("RRULE:FREQ=DAILY");
+  await expect(section.getByRole("status")).toContainText("every day at 13:15");
+
+  await page.context().route("https://calendar.google.com/**", (r) => r.fulfill({ status: 200, body: "ok" }));
+  const popup = page.waitForEvent("popup");
+  await section.getByRole("button", { name: "Google Calendar" }).click();
+  expect((await popup).url()).toContain("calendar.google.com");
+});

@@ -9,6 +9,7 @@ import { voiceById } from "@/content/voices";
 import { Segmented } from "./Segmented";
 import { Avatar } from "./Avatar";
 import { SyncSettings } from "./SyncSettings";
+import { ReminderSettings } from "./ReminderSettings";
 import { syncConfigured } from "@/lib/client/sync";
 
 const CORRECTION_HELP: Record<Prefs["correctionMode"], string> = {
@@ -123,6 +124,10 @@ export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
             ]}
           />
         </Field>
+      </Section>
+
+      <Section title="Daily reminder">
+        <ReminderSettings />
       </Section>
 
       <Section title="Services">
