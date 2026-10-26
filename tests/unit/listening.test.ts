@@ -9,6 +9,16 @@ describe("listening content", () => {
     expect(new Set(LISTENING.map((l) => l.level))).toEqual(new Set(["B1", "B2", "C1"]));
     expect(new Set(LISTENING.map((l) => l.topic)).size).toBe(5);
   });
+
+  it("has enough sentences for months of rounds, each one scorable", () => {
+    expect(LISTENING.length).toBeGreaterThanOrEqual(100);
+    for (const l of LISTENING) expect(diffWords(l.text, l.text).accuracy, l.id).toBe(1);
+  });
+
+  it("accepts the full form of spoken shortcuts", () => {
+    expect(diffWords("I do not know, I am kind of tired", "I dunno, I'm kinda tired").accuracy).toBe(1);
+    expect(diffWords("let me know", "Lemme know").accuracy).toBe(1);
+  });
 });
 
 describe("dictation diff", () => {
