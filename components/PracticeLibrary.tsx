@@ -1,7 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, AudioLines, Check, Clock, Headphones, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ArrowRight,
+  AudioLines,
+  BookMarked,
+  Briefcase,
+  Check,
+  Clock,
+  Headphones,
+  MessageCircle,
+  Plane,
+  RotateCcw,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import clsx from "clsx";
 import { CATEGORY_INFO, SCENARIOS, characterName, type Scenario, type ScenarioCategory } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import { useHydrated, useLearner } from "@/lib/client/learner";
@@ -10,7 +25,69 @@ import { recommendScenario, warmupItems } from "@/lib/learner/model";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { Avatar } from "./Avatar";
 
-const ORDER: ScenarioCategory[] = ["interview", "free", "work", "abroad", "world"];
+type TrackId = "interview" | "work" | "abroad" | "everyday";
+
+interface Track {
+  id: TrackId;
+  label: string;
+  /** What finishing the track gives you, in one line. */
+  builds: string;
+  icon: LucideIcon;
+  categories: ScenarioCategory[];
+  /** Static class names, so Tailwind keeps them. */
+  tone: { text: string; soft: string; solid: string; ink: string };
+}
+
+/**
+ * Conversations grouped by goal, each with its own color and an order to follow. Interview
+ * scenarios keep their written order (they build to the full mock); the others go from
+ * shorter to longer.
+ */
+const TRACKS: readonly Track[] = [
+  {
+    id: "interview",
+    label: "Job interview",
+    builds: "The classic questions with a clear structure, then a full 15-minute mock.",
+    icon: Briefcase,
+    categories: ["interview"],
+    tone: { text: "text-accent", soft: "bg-accent/15", solid: "bg-accent", ink: "text-white" },
+  },
+  {
+    id: "work",
+    label: "At work",
+    builds: "Updates, meetings, feedback and tricky calls with colleagues and clients.",
+    icon: Users,
+    categories: ["work"],
+    tone: { text: "text-accent-2", soft: "bg-accent-2/15", solid: "bg-accent-2", ink: "text-go-ink" },
+  },
+  {
+    id: "abroad",
+    label: "Life abroad",
+    builds: "Get things done in English: travel, housing, health, banks and neighbors.",
+    icon: Plane,
+    categories: ["abroad"],
+    tone: { text: "text-streak", soft: "bg-streak/15", solid: "bg-streak", ink: "text-go-ink" },
+  },
+  {
+    id: "everyday",
+    label: "Everyday talk",
+    builds: "Talk about your life, then hold an opinion on bigger topics.",
+    icon: MessageCircle,
+    categories: ["free", "world"],
+    tone: { text: "text-xp", soft: "bg-xp/15", solid: "bg-xp", ink: "text-go-ink" },
+  },
+];
+
+function trackScenarios(track: Track): Scenario[] {
+  const list = track.categories.flatMap((c) => SCENARIOS.filter((s) => s.category === c && !s.hidden));
+  return track.id === "interview" ? list : [...list].sort((a, b) => a.minutes - b.minutes);
+}
+
+function trackOf(category: ScenarioCategory): Track {
+  return TRACKS.find((t) => t.categories.includes(category)) ?? TRACKS[0];
+}
+
+const TRACK_KEY = "sw_practice_track";
 
 export function PracticeLibrary() {
   const state = useLearner();
@@ -21,106 +98,263 @@ export function PracticeLibrary() {
   const tutorName = voiceById(prefs.tutorVoiceId)?.displayName ?? "Your tutor";
   const due = hydrated ? warmupItems(state, new Date(), QUICK_REVIEW_MAX).length : 0;
 
+  const [trackId, setTrackId] = useState<TrackId>("interview");
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(TRACK_KEY);
+      if (TRACKS.some((t) => t.id === saved)) setTrackId(saved as TrackId);
+    } catch {
+      // Storage unavailable: start on the first track.
+    }
+  }, []);
+  function pickTrack(id: TrackId) {
+    setTrackId(id);
+    try {
+      window.localStorage.setItem(TRACK_KEY, id);
+    } catch {
+      // Only a convenience.
+    }
+  }
+  const track = TRACKS.find((t) => t.id === trackId)!;
+  const scenarios = trackScenarios(track);
+  const nextId = scenarios.find((s) => !done.has(s.id))?.id;
+
+  // The third step alternates ear and mouth by day, so both get practice through the week.
+  const earDay = new Date().getDate() % 2 === 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <h1 className="text-2xl font-black tracking-tight">Practice</h1>
 
       {hydrated && (
-        <section aria-labelledby="rec-title">
-          <p className="mb-2 text-xs font-extrabold uppercase tracking-wider text-faint">Recommended for you</p>
-          <Link
-            href={`/session/${recommended.id}`}
-            className="block rounded-3xl bg-accent p-5 text-white"
-            style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}
-          >
-            <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">
-              {CATEGORY_INFO[recommended.category].label} · {recommended.minutes} min
-            </p>
-            <h2 id="rec-title" className="mt-1 text-xl font-black">
-              {recommended.title}
-            </h2>
-            <p className="mt-1 text-sm font-bold opacity-95">{recommended.summary}</p>
-            <span className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-white/20 px-3 py-1.5 text-sm font-extrabold">
-              Start <ArrowRight className="size-4" aria-hidden />
-            </span>
-          </Link>
+        <section aria-labelledby="today-title" className="tile space-y-3 p-4">
+          <h2 id="today-title" className="text-xs font-extrabold uppercase tracking-wider text-faint">
+            Today&apos;s plan
+          </h2>
+          <ol className="space-y-2">
+            {due > 0 && (
+              <PlanStep n={1} href="/review" title="Quick review" detail={`${due} due · 2 min`} icon={RotateCcw} />
+            )}
+            <PlanStep
+              n={due > 0 ? 2 : 1}
+              href={`/session/${recommended.id}`}
+              title={recommended.title}
+              detail={`${trackOf(recommended.category).label} · ${recommended.minutes} min`}
+              icon={trackOf(recommended.category).icon}
+              main
+            />
+            <PlanStep
+              n={due > 0 ? 3 : 2}
+              href={earDay ? "/listen" : "/pronounce"}
+              title={earDay ? "Listening gym" : "Pronunciation"}
+              detail="3 min"
+              icon={earDay ? Headphones : AudioLines}
+            />
+          </ol>
         </section>
       )}
 
-      <Link href="/listen" className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent">
-          <Headphones className="size-6" aria-hidden />
-        </span>
-        <span className="flex-1">
-          <span className="block font-extrabold">Listening gym</span>
-          <span className="block text-sm text-dim">Dictation and shadowing in 4 accents. Speed adapts to you.</span>
-        </span>
-        <ArrowRight className="size-5 text-faint" aria-hidden />
-      </Link>
+      <section aria-labelledby="skills-title" className="space-y-2.5">
+        <h2 id="skills-title" className="font-black">
+          Skills
+        </h2>
+        <div className="grid grid-cols-2 gap-2.5">
+          <SkillTile
+            href="/listen"
+            icon={Headphones}
+            title="Listening gym"
+            detail="Dictation and shadowing, 4 accents"
+          />
+          <SkillTile href="/pronounce" icon={AudioLines} title="Pronunciation" detail="10 units for Hebrew speakers" />
+          <SkillTile
+            href="/review"
+            icon={RotateCcw}
+            title="Quick review"
+            detail={due > 0 ? `${due} due now` : "Mistakes and phrases"}
+          />
+          <SkillTile href="/phrases" icon={BookMarked} title="Phrase bank" detail="Everything you saved" />
+        </div>
+      </section>
 
-      <Link href="/pronounce" className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent">
-          <AudioLines className="size-6" aria-hidden />
-        </span>
-        <span className="flex-1">
-          <span className="block font-extrabold">Pronunciation for Hebrew speakers</span>
-          <span className="block text-sm text-dim">
-            TH, W/V, ship/sheep, stress and a friendlier melody. 10 short units.
-          </span>
-        </span>
-        <ArrowRight className="size-5 text-faint" aria-hidden />
-      </Link>
+      <section aria-labelledby="conv-title" className="space-y-3">
+        <h2 id="conv-title" className="font-black">
+          Conversations
+        </h2>
+        <div role="tablist" aria-label="Goals" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {TRACKS.map((t) => {
+            const list = trackScenarios(t);
+            const count = list.filter((s) => done.has(s.id)).length;
+            const selected = t.id === trackId;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls="track-panel"
+                onClick={() => pickTrack(t.id)}
+                className={clsx(
+                  "flex items-center gap-2 rounded-2xl border-2 p-2.5 text-left transition-colors",
+                  selected ? "border-current bg-elev" : "border-line bg-elev-2 hover:border-line",
+                  selected && t.tone.text,
+                )}
+              >
+                <span className={clsx("grid size-8 shrink-0 place-items-center rounded-xl", t.tone.soft, t.tone.text)}>
+                  <t.icon className="size-4" aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className={clsx("block truncate text-sm font-extrabold", !selected && "text-text")}>
+                    {t.label}
+                  </span>
+                  <span className="block text-xs font-bold text-faint">
+                    {hydrated ? `${count}/${list.length}` : list.length} done
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      <Link href="/review" className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent">
-          <RotateCcw className="size-6" aria-hidden />
-        </span>
-        <span className="flex-1">
-          <span className="block font-extrabold">Quick review</span>
-          <span className="block text-sm text-dim">
-            {due > 0 ? `${due} due · ` : ""}Two minutes on your mistakes and phrases, no conversation.
-          </span>
-        </span>
-        <ArrowRight className="size-5 text-faint" aria-hidden />
-      </Link>
-
-      {ORDER.map((cat) => (
-        <section key={cat} aria-labelledby={`cat-${cat}`} className="space-y-2.5">
-          <div>
-            <h2 id={`cat-${cat}`} className="font-black">
-              {CATEGORY_INFO[cat].label}
-            </h2>
-            <p className="text-xs font-bold text-faint">Goal: {CATEGORY_INFO[cat].goal}</p>
+        <div id="track-panel" role="tabpanel" aria-label={track.label} className="space-y-3">
+          <div className={clsx("rounded-2xl p-4", track.tone.soft)}>
+            <p className={clsx("flex items-center gap-2 font-black", track.tone.text)}>
+              <track.icon className="size-5" aria-hidden />
+              {track.label}
+            </p>
+            <p className="mt-1 text-sm font-bold text-dim">{track.builds}</p>
+            <p className="mt-1 text-xs font-bold text-faint">Goal: {CATEGORY_INFO[track.categories[0]].goal}</p>
           </div>
-          <ul className="space-y-2.5">
-            {SCENARIOS.filter((s) => s.category === cat && !s.hidden).map((s) => (
+          <ol className="space-y-2.5">
+            {scenarios.map((s, i) => (
               <li key={s.id}>
-                <ScenarioCard scenario={s} done={done.has(s.id)} tutorName={tutorName} />
+                <ScenarioCard
+                  scenario={s}
+                  step={i + 1}
+                  done={done.has(s.id)}
+                  next={hydrated && s.id === nextId}
+                  tutorName={tutorName}
+                  tone={track.tone}
+                />
               </li>
             ))}
-          </ul>
-        </section>
-      ))}
+          </ol>
+        </div>
+      </section>
     </div>
   );
 }
 
-function ScenarioCard({ scenario, done, tutorName }: { scenario: Scenario; done: boolean; tutorName: string }) {
+function PlanStep({
+  n,
+  href,
+  title,
+  detail,
+  icon: Icon,
+  main,
+}: {
+  n: number;
+  href: string;
+  title: string;
+  detail: string;
+  icon: LucideIcon;
+  main?: boolean;
+}) {
+  return (
+    <li>
+      <Link
+        href={href}
+        className={clsx(
+          "flex items-center gap-3 rounded-2xl p-3 transition-colors",
+          main ? "bg-accent text-white" : "bg-elev-2 hover:bg-line",
+        )}
+        style={main ? { boxShadow: "0 4px 0 var(--accent-deep)" } : undefined}
+      >
+        <span
+          className={clsx(
+            "grid size-7 shrink-0 place-items-center rounded-full text-sm font-black",
+            main ? "bg-white/20" : "bg-elev text-dim",
+          )}
+          aria-hidden
+        >
+          {n}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-extrabold">{title}</span>
+          <span className={clsx("block text-xs font-bold", main ? "opacity-90" : "text-faint")}>{detail}</span>
+        </span>
+        <Icon className={clsx("size-5 shrink-0", main ? "" : "text-faint")} aria-hidden />
+      </Link>
+    </li>
+  );
+}
+
+function SkillTile({
+  href,
+  icon: Icon,
+  title,
+  detail,
+}: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Link href={href} className="tile flex flex-col gap-2 p-3.5 transition-colors hover:border-accent/60">
+      <span className="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent">
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <span>
+        <span className="block font-extrabold leading-tight">{title}</span>
+        <span className="block text-xs font-bold text-dim">{detail}</span>
+      </span>
+    </Link>
+  );
+}
+
+function ScenarioCard({
+  scenario,
+  step,
+  done,
+  next,
+  tutorName,
+  tone,
+}: {
+  scenario: Scenario;
+  step: number;
+  done: boolean;
+  next: boolean;
+  tutorName: string;
+  tone: Track["tone"];
+}) {
   const voice = scenario.voiceId ? voiceById(scenario.voiceId) : null;
   const name = characterName(scenario) ?? voice?.displayName;
   const who = voice ? `${name} · ${voice.accent}` : `With ${tutorName}`;
   return (
     <Link
       href={`/session/${scenario.id}`}
-      className="tile flex items-center gap-3 p-3.5 transition-colors hover:border-accent/60"
+      className={clsx(
+        "tile flex items-center gap-3 p-3.5 transition-colors hover:border-accent/60",
+        next && "border-current",
+        next && tone.text,
+      )}
     >
-      <Avatar name={name ?? tutorName} size={44} />
-      <span className="min-w-0 flex-1">
+      <span
+        className={clsx(
+          "grid size-7 shrink-0 place-items-center rounded-full text-sm font-black",
+          done ? "bg-go text-go-ink" : next ? clsx(tone.solid, tone.ink) : "bg-elev-2 text-dim",
+        )}
+        aria-label={done ? "Completed" : `Step ${step}`}
+      >
+        {done ? <Check className="size-4" strokeWidth={3} aria-hidden /> : step}
+      </span>
+      <Avatar name={name ?? tutorName} size={40} />
+      <span className="min-w-0 flex-1 text-text">
         <span className="flex items-center gap-1.5 font-extrabold">
           {scenario.title}
-          {done && (
-            <span className="grid size-5 place-items-center rounded-full bg-go text-go-ink" aria-label="Completed">
-              <Check className="size-3.5" strokeWidth={3} aria-hidden />
+          {next && (
+            <span className={clsx("rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase", tone.soft, tone.text)}>
+              Next
             </span>
           )}
         </span>

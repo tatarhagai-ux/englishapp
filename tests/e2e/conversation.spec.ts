@@ -194,10 +194,24 @@ test("a chat failure shows a retry that works", async ({ page }) => {
 
 test("practice library lists every category and opens a scenario", async ({ page }) => {
   await page.goto("/practice");
-  for (const h of ["Job interview", "Free talk", "At work", "Life abroad", "World & ideas"]) {
-    await expect(page.getByRole("heading", { name: h })).toBeVisible();
+  await expect(page.getByText("Today's plan")).toBeVisible();
+  const goals = page.getByRole("tablist", { name: "Goals" });
+  for (const g of ["Job interview", "At work", "Life abroad", "Everyday talk"]) {
+    await expect(goals.getByRole("tab", { name: new RegExp(g) })).toBeVisible();
   }
-  await expect(page.getByText("Recommended for you")).toBeVisible();
+  // Interview is first, in order, ending with the full mock; the first step is marked next.
+  const panel = page.getByRole("tabpanel");
+  await expect(panel.getByRole("link").first()).toContainText("Tell me about yourself");
+  await expect(panel.getByRole("link").first()).toContainText("Next");
+  await expect(panel.getByRole("link").last()).toContainText("Full mock interview");
+  // Everyday talk joins free talk and world topics.
+  await goals.getByRole("tab", { name: /Everyday talk/ }).click();
+  await expect(panel.getByRole("link", { name: /Your week/ })).toBeVisible();
+  await expect(panel.getByRole("link", { name: /Will AI take our jobs/ })).toBeVisible();
+  // The chosen goal is remembered.
+  await goals.getByRole("tab", { name: /Life abroad/ }).click();
+  await page.reload();
+  await expect(goals.getByRole("tab", { name: /Life abroad/ })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("link", { name: /Problem at the airport/ }).click();
   await expect(page.getByRole("heading", { name: "Problem at the airport" })).toBeVisible();
   await expect(page.getByText("Kate · Australian accent")).toBeVisible();
@@ -466,7 +480,10 @@ test("quick review: two minutes on due items without a conversation", async ({ p
   await expect(page).toHaveURL(/\/report\//);
 
   await page.goto("/practice");
-  await page.getByRole("link", { name: /Quick review/ }).click();
+  await page
+    .getByRole("link", { name: /Quick review/ })
+    .first()
+    .click();
   await page.getByRole("button", { name: /Type it/ }).click();
   await page.getByRole("button", { name: /Review \d items/ }).click();
   await expect(page.getByText("Earlier you said:")).toBeVisible();

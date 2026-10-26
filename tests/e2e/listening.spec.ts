@@ -27,7 +27,10 @@ test("dictation round: type what you hear, see the diff, finish with a score", a
     await route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() });
   });
   await page.goto("/practice");
-  await page.getByRole("link", { name: /Listening gym/ }).click();
+  await page
+    .getByRole("link", { name: /Listening gym/ })
+    .first()
+    .click();
   await expect(page.getByText("Your listening speed")).toBeVisible();
   // Screens reached from Practice keep the Practice tab lit.
   await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Practice" })).toHaveAttribute(
