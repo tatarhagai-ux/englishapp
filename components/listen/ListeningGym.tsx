@@ -8,7 +8,9 @@ import { LISTENING, type ListeningItem } from "@/content/listening";
 import { VOICES, type Accent, type Voice } from "@/content/voices";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { useClipPlayer } from "@/lib/client/tts";
-import { assessPronunciation, primeAudio, SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
+import { primeAudio, SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
+import { useMicAttempt } from "@/lib/client/use-mic-attempt";
+import { MicBusyLabel, MicHeard } from "@/components/MicLive";
 import { LISTENING_START, pickListeningItems } from "@/lib/learner/model";
 import { diffWords, type DiffToken } from "@/lib/text/diff";
 import { saidCorrectly } from "@/lib/text/compare";
@@ -36,7 +38,7 @@ export function ListeningGym() {
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [score, setScore] = useState(0);
-  const [listeningNow, setListeningNow] = useState(false);
+  const mic = useMicAttempt();
   const [micError, setMicError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const player = useClipPlayer();
@@ -92,11 +94,11 @@ export function ListeningGym() {
 
   async function shadow() {
     if (!item) return;
+    if (mic.busy) return mic.stop();
     player.stop();
     setMicError(null);
-    setListeningNow(true);
     try {
-      const pron = await assessPronunciation(item.text);
+      const pron = await mic.run(item.text);
       learner.addSpeechUsage(null, { sttSeconds: pron.seconds });
       settle(saidCorrectly(pron.text, item.text) && (!pron.scored || pron.pronunciation >= 60), { pron });
     } catch (err) {
@@ -104,12 +106,12 @@ export function ListeningGym() {
       setMicError(
         kind === "mic_denied"
           ? "The microphone is blocked. Use dictation instead."
-          : kind === "not_configured"
-            ? "Speech isn't connected yet. Finish setup first."
-            : "Couldn't listen. Try again.",
+          : kind === "no_speech"
+            ? "I didn't hear anything. Tap and repeat it once the red dot shows."
+            : kind === "not_configured"
+              ? "Speech isn't connected yet. Finish setup first."
+              : "Couldn't listen. Try again.",
       );
-    } finally {
-      setListeningNow(false);
     }
   }
 
@@ -322,19 +324,18 @@ export function ListeningGym() {
             <button
               type="button"
               onClick={() => void shadow()}
-              disabled={listeningNow}
+              disabled={mic.phase === "opening"}
               className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 uppercase disabled:opacity-70"
             >
-              {listeningNow ? (
-                <>
-                  <Loader2 className="size-5 animate-spin" aria-hidden /> Listening… say it now
-                </>
+              {mic.busy ? (
+                <MicBusyLabel phase={mic.phase} />
               ) : (
                 <>
                   <Mic className="size-5" aria-hidden /> Repeat it
                 </>
               )}
             </button>
+            <MicHeard phase={mic.phase} heard={mic.heard} />
             {micError && <p className="text-sm font-bold text-bad">{micError}</p>}
             <button type="button" onClick={() => settle(false, {})} className="btn-3d btn-ghost w-full py-3 text-sm">
               Show me the sentence

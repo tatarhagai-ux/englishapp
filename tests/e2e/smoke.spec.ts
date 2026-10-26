@@ -244,6 +244,54 @@ test("pronunciation course: open a unit, hear a minimal pair, read the Hebrew ti
   await expect(page.getByRole("link", { name: /Next: Short i vs long ee/ })).toBeVisible();
 });
 
+test("say it: the mic shows when it is really open, the words as they come, and stops on a tap", async ({ page }) => {
+  // A fake microphone and recognizer: it opens a moment after start, like Chrome after its beep.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      value: { getUserMedia: async () => ({ getTracks: () => [] }) },
+    });
+    class FakeRecognition {
+      lang = "";
+      continuous = false;
+      interimResults = false;
+      onresult: ((e: unknown) => void) | null = null;
+      onerror: ((e: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      onaudiostart: (() => void) | null = null;
+      start() {
+        (window as unknown as { __rec: FakeRecognition }).__rec = this;
+      }
+      stop() {
+        setTimeout(() => this.onend?.(), 10);
+      }
+      abort() {}
+    }
+    Object.assign(window, { SpeechRecognition: FakeRecognition });
+  });
+  await page.route("**/api/tts", (route) =>
+    route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' }),
+  );
+  await page.goto("/practice");
+  await page.getByRole("link", { name: /^Pronunciation 10 units/ }).click();
+  await page.getByRole("link", { name: /W is not V/ }).click();
+  const first = page.getByRole("article").first();
+  const sentence = (await first.locator("p").first().innerText()).trim();
+  await first.getByRole("button", { name: "Say it" }).click();
+  await expect(first.getByRole("button", { name: /Opening the mic/ })).toBeVisible();
+  await page.waitForFunction(() => "__rec" in window);
+  await page.evaluate(() => (window as unknown as { __rec: { onaudiostart: () => void } }).__rec.onaudiostart());
+  await expect(first.getByRole("button", { name: /Listening · tap when done/ })).toBeVisible();
+  await expect(first.getByText("Speak now…")).toBeVisible();
+  await page.evaluate((t) => {
+    const rec = (window as unknown as { __rec: { onresult: (e: unknown) => void } }).__rec;
+    rec.onresult({ resultIndex: 0, results: [Object.assign([{ transcript: t }], { isFinal: false })] });
+  }, sentence);
+  await expect(first.getByText(`“${sentence}”`)).toBeVisible();
+  await first.getByRole("button", { name: /Listening · tap when done/ }).click();
+  await expect(first.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(first.getByText("Word check only.")).toBeVisible();
+});
+
 test("guide explains the method and links to pronunciation practice", async ({ page }) => {
   await page.goto("/settings");
   await page.getByRole("link", { name: /How Speakwise works/ }).click();

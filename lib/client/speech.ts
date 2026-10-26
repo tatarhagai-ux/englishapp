@@ -30,7 +30,8 @@ function loadSdk(): Promise<Sdk> {
 
 export class SpeechSetupError extends Error {
   constructor(
-    public readonly kind: "not_configured" | "unauthorized" | "network" | "mic_denied" | "unsupported" | "unknown",
+    public readonly kind:
+      "not_configured" | "unauthorized" | "network" | "mic_denied" | "unsupported" | "no_speech" | "unknown",
   ) {
     super(kind);
   }
@@ -238,28 +239,65 @@ export interface PronunciationResult {
  * Browser fallback for one attempt: no sound scores, but each target word is marked heard or
  * not. A word the recognizer missed is often a sound to work on ("vest" for "west").
  */
-function recognizeOnceInBrowser(reference: string, language: string): Promise<PronunciationResult> {
+function recognizeOnceInBrowser(
+  reference: string,
+  language: string,
+  opts: AttemptOptions,
+): Promise<PronunciationResult> {
   const rec = createRecognition();
   if (!rec) return Promise.reject(new SpeechSetupError("unsupported"));
   rec.lang = language;
   rec.continuous = false;
-  rec.interimResults = false;
+  rec.interimResults = true;
   const started = Date.now();
   return new Promise((resolve, reject) => {
-    let text = "";
+    const finals: string[] = [];
+    let interim = "";
+    let failed = false;
+    // A tap on "done" ends it; so does a long attempt nobody stops.
+    const stop = () => {
+      try {
+        rec.stop();
+      } catch {
+        // Already ended.
+      }
+    };
+    opts.signal?.addEventListener("abort", stop, { once: true });
+    const guard = setTimeout(stop, MAX_ATTEMPT_MS);
+    // Tell the screen once the microphone is really capturing, so the first words aren't lost.
+    let announced = false;
+    const listening = () => {
+      if (announced) return;
+      announced = true;
+      opts.onListening?.();
+    };
+    rec.onaudiostart = listening;
+    rec.onstart = listening;
     rec.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) text += `${e.results[i][0].transcript} `;
+      interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finals[i] = r[0].transcript.trim();
+        else interim += `${r[0].transcript} `;
+      }
+      opts.onPartial?.(`${finals.filter(Boolean).join(" ")} ${interim}`.trim());
     };
     rec.onerror = (e) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
+      failed = true;
       reject(
         new SpeechSetupError(/not-allowed|service-not-allowed|audio-capture/.test(e.error) ? "mic_denied" : "network"),
       );
     };
     rec.onend = () => {
+      clearTimeout(guard);
+      if (failed) return;
+      // Words still on screen when "done" was tapped count too.
+      const text = `${finals.filter(Boolean).join(" ")} ${interim}`.trim();
+      if (!text) return reject(new SpeechSetupError("no_speech"));
       const { tokens, accuracy } = diffWords(text, reference);
       resolve({
-        text: text.trim(),
+        text,
         seconds: Math.max(1, (Date.now() - started) / 1000),
         pronunciation: 0,
         accuracy: Math.round(accuracy * 100),
@@ -280,15 +318,31 @@ function recognizeOnceInBrowser(reference: string, language: string): Promise<Pr
   });
 }
 
+/** A single attempt never runs longer than this; most sentences take a few seconds. */
+const MAX_ATTEMPT_MS = 20_000;
+
+export interface AttemptOptions {
+  /** The microphone is really open now (not just requested), so the learner can start talking. */
+  onListening?: () => void;
+  /** Words heard so far, while still talking. */
+  onPartial?: (text: string) => void;
+  /** Abort to finish the attempt now ("done"); what was heard is still scored. */
+  signal?: AbortSignal;
+}
+
 /** Score one attempt at a known sentence ("Say it again"). Resolves after one utterance. */
-export async function assessPronunciation(reference: string, language = "en-US"): Promise<PronunciationResult> {
-  if (browserSpeechActive()) return recognizeOnceInBrowser(reference, language);
+export async function assessPronunciation(
+  reference: string,
+  language = "en-US",
+  opts: AttemptOptions = {},
+): Promise<PronunciationResult> {
+  if (browserSpeechActive()) return recognizeOnceInBrowser(reference, language, opts);
   let config: Awaited<ReturnType<typeof speechConfig>>;
   try {
     config = await speechConfig(language);
   } catch (err) {
     if (err instanceof SpeechSetupError && err.kind === "not_configured")
-      return recognizeOnceInBrowser(reference, language);
+      return recognizeOnceInBrowser(reference, language, opts);
     throw err;
   }
   const { sdk, cfg } = config;
@@ -301,6 +355,8 @@ export async function assessPronunciation(reference: string, language = "en-US")
   pa.enableProsodyAssessment = true;
   const recognizer = new sdk.SpeechRecognizer(cfg, sdk.AudioConfig.fromDefaultMicrophoneInput());
   pa.applyTo(recognizer);
+  recognizer.sessionStarted = () => opts.onListening?.();
+  recognizer.recognizing = (_s, e) => opts.onPartial?.(e.result.text);
   try {
     const result = await new Promise<SpeechSdk.SpeechRecognitionResult>((resolve, reject) =>
       recognizer.recognizeOnceAsync(resolve, (err) =>
