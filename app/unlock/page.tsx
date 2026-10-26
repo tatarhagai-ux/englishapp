@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Lock } from "lucide-react";
 
 function UnlockForm() {
   const router = useRouter();
@@ -31,9 +30,8 @@ function UnlockForm() {
 
   return (
     <form onSubmit={submit} className="card w-full max-w-sm p-6">
-      <div className="accent-gradient mb-5 grid size-12 place-items-center rounded-2xl">
-        <Lock className="size-6 text-white" aria-hidden />
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static SVG */}
+      <img src="/icon.svg" alt="" width={56} height={56} className="mb-5" />
       <h1 className="text-2xl font-semibold">Welcome back</h1>
       <p className="mt-1 text-sm text-dim">Enter your access code to open Speakwise.</p>
       <label htmlFor="code" className="sr-only">
