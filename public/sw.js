@@ -1,6 +1,6 @@
 // Speakwise service worker. Kept deliberately small: it makes the app installable and
 // shows a friendly offline page. It never caches API responses or audio.
-const CACHE = "sw-shell-v1";
+const CACHE = "sw-shell-v2";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
