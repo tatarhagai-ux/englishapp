@@ -159,6 +159,26 @@ export function isRealSession(s: SessionRecord): boolean {
   return !s.demo && s.turns.some((t) => t.role === "learner");
 }
 
+/** An interrupted conversation can be picked up where it stopped for this long. */
+export const RESUME_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * The latest conversation that was cut off (a call, a locked phone, the app closed) after
+ * he said enough to learn from. Without this it would never get a report, its plan day
+ * would not count, and its mistakes would not reach the warm-up.
+ */
+export function unfinishedSession(
+  state: LearnerState,
+  now = new Date(),
+): { session: SessionRecord; resumable: boolean } | null {
+  const last = [...state.sessions].reverse().find((s) => !s.demo);
+  if (!last || last.endedAt || last.report) return null;
+  if (last.turns.filter((t) => t.role === "learner").length < 2) return null;
+  const age = now.getTime() - new Date(last.startedAt).getTime();
+  if (age > 7 * 24 * 60 * 60 * 1000) return null;
+  return { session: last, resumable: age < RESUME_WINDOW_MS };
+}
+
 /**
  * Fold a finished conversation's analysis into the learner model. Pure: returns a new
  * state. Mistake status moves new → practicing (used correctly once) → mastered (two clean

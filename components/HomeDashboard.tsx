@@ -9,6 +9,7 @@ import { PLACEMENT_ID } from "@/content/scenarios";
 import { dayKey } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/xp";
 import { ChooseVoicePrompt, Greeting, TutorBadge } from "./HomeClient";
+import { UnfinishedCard } from "./UnfinishedCard";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { PlanToday } from "./PlanToday";
 import { CoachCard } from "./CoachCard";
@@ -101,6 +102,8 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           <ArrowRight className="size-5 text-dim" aria-hidden />
         </Link>
       )}
+
+      {hydrated && <UnfinishedCard />}
 
       {firstTime ? (
         <>

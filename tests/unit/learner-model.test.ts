@@ -8,6 +8,7 @@ import {
   levelHistory,
   duePhrases,
   initialState,
+  unfinishedSession,
   rankedErrors,
   recommendScenario,
   reviewMistake,
@@ -279,5 +280,45 @@ describe("quick review size", () => {
     expect(short.filter((i) => i.kind === "mistake")).toHaveLength(2);
     expect(long.filter((i) => i.kind === "mistake").length).toBeGreaterThan(2);
     expect(long.find((i) => i.kind === "phrase")).toMatchObject({ interview: true });
+  });
+});
+
+describe("unfinishedSession", () => {
+  const start = new Date("2026-10-26T10:00:00Z");
+  function withTurns(n: number, extra: Partial<SessionRecord> = {}) {
+    const s = initialState(start);
+    const turns = Array.from({ length: n }, (_, i) => ({ role: "learner" as const, text: `answer ${i}` }));
+    return {
+      ...s,
+      sessions: [
+        {
+          id: "s1",
+          scenarioId: "free-your-week",
+          mode: "voice" as const,
+          startedAt: start.toISOString(),
+          day: "2026-10-26",
+          turns,
+          speakingSeconds: 30,
+          stuckCount: 0,
+          fixedAloud: [],
+          xp: 0,
+          costUsd: 0,
+          ...extra,
+        },
+      ],
+    };
+  }
+
+  it("finds a cut-off conversation with something to learn from", () => {
+    expect(unfinishedSession(withTurns(2), new Date("2026-10-26T10:30:00Z"))).toMatchObject({ resumable: true });
+    expect(unfinishedSession(withTurns(2), new Date("2026-10-26T15:00:00Z"))).toMatchObject({ resumable: false });
+  });
+
+  it("ignores ended, demo, too short and old ones", () => {
+    const soon = new Date("2026-10-26T10:30:00Z");
+    expect(unfinishedSession(withTurns(1), soon)).toBeNull();
+    expect(unfinishedSession(withTurns(3, { endedAt: soon.toISOString() }), soon)).toBeNull();
+    expect(unfinishedSession(withTurns(3, { demo: true }), soon)).toBeNull();
+    expect(unfinishedSession(withTurns(3), new Date("2026-11-05T10:00:00Z"))).toBeNull();
   });
 });

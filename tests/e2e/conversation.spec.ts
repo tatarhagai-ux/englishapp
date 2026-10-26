@@ -645,3 +645,44 @@ test("the coach: a weekly check-in after 3 days, and the tutor adapts to the ans
     "Simpler and a bit slower, because you said the week felt hard",
   );
 });
+
+test("a conversation cut off midway shows on Home: resume it or get the report", async ({ page }) => {
+  await page.addInitScript(() => {
+    const now = new Date();
+    const state = {
+      v: 1,
+      errors: {},
+      phrases: [],
+      spend: {},
+      sessions: [
+        {
+          id: "cut1",
+          scenarioId: "free-your-week",
+          mode: "quiet",
+          startedAt: new Date(now.getTime() - 10 * 60 * 1000).toISOString(),
+          day: now.toISOString().slice(0, 10),
+          turns: [
+            { role: "tutor", text: "Hey! So, what have you been up to this week?" },
+            { role: "learner", text: "I worked a lot this week.", input: "text" },
+            { role: "tutor", text: "What kept you busy?" },
+            { role: "learner", text: "Many reports in the office.", input: "text" },
+          ],
+          speakingSeconds: 40,
+          stuckCount: 0,
+          fixedAloud: [],
+          xp: 0,
+          costUsd: 0,
+        },
+      ],
+    };
+    if (!localStorage.getItem("sw_learner_v1")) localStorage.setItem("sw_learner_v1", JSON.stringify(state));
+  });
+  await page.goto("/");
+  const card = page.getByRole("region", { name: "Unfinished conversation" });
+  await expect(card).toContainText("2 replies");
+  await expect(card.getByRole("link", { name: "Resume" })).toHaveAttribute("href", "/session/free-your-week");
+  await card.getByRole("button", { name: "Get the report" }).click();
+  await expect(page).toHaveURL(/\/report\/cut1/);
+  await page.goto("/");
+  await expect(page.getByRole("region", { name: "Unfinished conversation" })).toHaveCount(0);
+});

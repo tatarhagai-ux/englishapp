@@ -34,6 +34,7 @@ import { monthKey } from "@/lib/cost/budget";
 import {
   memoryForTutor,
   phrasesToPractice,
+  RESUME_WINDOW_MS,
   targetKeysForNext,
   warmupItems,
   type WarmupItem,
@@ -150,7 +151,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   // An unfinished conversation for this scenario from the last two hours can be resumed.
   const resumable = useMemo(() => {
     if (!hydrated) return null;
-    const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+    const cutoff = Date.now() - RESUME_WINDOW_MS;
     return (
       state.sessions
         .filter((s) => !s.demo && s.scenarioId === scenarioId && !s.endedAt && new Date(s.startedAt).getTime() > cutoff)
