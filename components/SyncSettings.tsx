@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Cloud, CloudOff, LogOut, RefreshCw } from "lucide-react";
-import { sendSignInEmail, signOut, syncNow, useSyncStatus, verifySignInCode } from "@/lib/client/sync";
+import {
+  sendSignInEmail,
+  setPassword,
+  signInWithPassword,
+  signOut,
+  syncNow,
+  useSyncStatus,
+  verifySignInCode,
+} from "@/lib/client/sync";
 
 /** Sign in once on each device and progress follows you between phone and computer. */
 export function SyncSettings() {
@@ -49,6 +57,7 @@ export function SyncSettings() {
         Sign in with the same email on your other devices. Conversations, mistakes, phrases and listening progress merge
         automatically.
       </p>
+      <PasswordForm />
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
@@ -70,8 +79,70 @@ export function SyncSettings() {
   );
 }
 
+/** Lets a signed-in user pick a password, so other devices can sign in without an email. */
+function PasswordForm() {
+  const [open, setOpen] = useState(false);
+  const [password, setPasswordText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    try {
+      await setPassword(password);
+      setPasswordText("");
+      setMessage({ ok: true, text: "Password saved. Use it with your email on any device." });
+    } catch (err) {
+      setMessage({ ok: false, text: (err as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="text-sm font-extrabold text-accent">
+        Set a password for other devices
+      </button>
+    );
+  }
+  return (
+    <form onSubmit={save} className="space-y-2">
+      <label htmlFor="sync-new-password" className="text-sm font-extrabold">
+        Password for signing in
+      </label>
+      <div className="flex gap-2">
+        <input
+          id="sync-new-password"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPasswordText(e.target.value)}
+          placeholder="At least 8 characters"
+          className="min-w-0 flex-1 rounded-xl border-2 border-line bg-elev-2 px-3 py-2 text-sm outline-none focus:border-accent"
+        />
+        <button type="submit" disabled={busy || password.length === 0} className="btn-3d btn-accent px-4 py-2 text-sm">
+          Save
+        </button>
+      </div>
+      {message && (
+        <p
+          role={message.ok ? "status" : "alert"}
+          className={`text-sm font-bold ${message.ok ? "text-good" : "text-bad"}`}
+        >
+          {message.text}
+        </p>
+      )}
+    </form>
+  );
+}
+
 function SignIn() {
+  const [method, setMethod] = useState<"password" | "link">("password");
   const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -84,6 +155,19 @@ function SignIn() {
     try {
       await sendSignInEmail(email.trim());
       setSentTo(email.trim());
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function signInPw(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await signInWithPassword(email.trim(), pw);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -107,11 +191,9 @@ function SignIn() {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-dim">
-        Sign in with your email to keep the same progress on your phone and computer. No password: we email you a link.
-      </p>
-      {!sentTo ? (
-        <form onSubmit={send} className="flex gap-2">
+      <p className="text-sm text-dim">Sign in to keep the same progress on your phone and computer.</p>
+      {method === "password" ? (
+        <form onSubmit={signInPw} className="space-y-2">
           <label htmlFor="sync-email" className="sr-only">
             Email
           </label>
@@ -123,10 +205,52 @@ function SignIn() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="min-w-0 flex-1 rounded-xl border-2 border-line bg-elev-2 px-3 py-2 text-sm outline-none focus:border-accent"
+            className="w-full rounded-xl border-2 border-line bg-elev-2 px-3 py-2 text-sm outline-none focus:border-accent"
           />
-          <button type="submit" disabled={busy} className="btn-3d btn-accent px-4 py-2 text-sm">
-            Send link
+          <label htmlFor="sync-password" className="sr-only">
+            Password
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="sync-password"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              placeholder="Password"
+              className="min-w-0 flex-1 rounded-xl border-2 border-line bg-elev-2 px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <button type="submit" disabled={busy} className="btn-3d btn-accent px-4 py-2 text-sm">
+              Sign in
+            </button>
+          </div>
+          <button type="button" onClick={() => setMethod("link")} className="text-sm font-extrabold text-accent">
+            First time, or no password yet? Email me a link
+          </button>
+        </form>
+      ) : !sentTo ? (
+        <form onSubmit={send} className="space-y-2">
+          <div className="flex gap-2">
+            <label htmlFor="sync-email" className="sr-only">
+              Email
+            </label>
+            <input
+              id="sync-email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="min-w-0 flex-1 rounded-xl border-2 border-line bg-elev-2 px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <button type="submit" disabled={busy} className="btn-3d btn-accent px-4 py-2 text-sm">
+              Send link
+            </button>
+          </div>
+          <button type="button" onClick={() => setMethod("password")} className="text-sm font-extrabold text-accent">
+            Sign in with a password instead
           </button>
         </form>
       ) : (
@@ -157,6 +281,16 @@ function SignIn() {
           </div>
           <button type="button" onClick={() => setSentTo(null)} className="text-sm font-extrabold text-accent">
             Use a different email
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSentTo(null);
+              setMethod("password");
+            }}
+            className="block text-sm font-extrabold text-accent"
+          >
+            Sign in with a password instead
           </button>
         </form>
       )}
