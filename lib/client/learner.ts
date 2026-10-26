@@ -19,7 +19,9 @@ import {
   reviewPhrase,
   sessionXp,
   type LearnerState,
+  type HelpKind,
   type SessionRecord,
+  type WeekFeeling,
 } from "@/lib/learner/model";
 import type { Turn } from "@/lib/conversation/types";
 import type { Analysis } from "@/lib/prompts/analyzer";
@@ -134,6 +136,18 @@ export const learner = {
     if (week && !demo) next = addWeekWords(next, week, now);
     set(next);
     return id;
+  },
+
+  /** He asked for help in a conversation (Repeat, Slower, Hint...). */
+  noteHelp(id: string | null, kind: HelpKind) {
+    if (!id) return;
+    learner.updateSession(id, (s) => ({ ...s, help: { ...s.help, [kind]: (s.help?.[kind] ?? 0) + 1 } }));
+  },
+
+  /** His answer to "How did this week feel?" */
+  setFeeling(week: string, feeling: WeekFeeling) {
+    const state = get();
+    set({ ...state, feelings: { ...state.feelings, [week]: feeling } });
   },
 
   updateSession(id: string, patch: (s: SessionRecord) => SessionRecord) {

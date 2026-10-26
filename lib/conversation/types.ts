@@ -27,5 +27,7 @@ export const chatRequest = z.object({
   memory: z.array(z.string().max(160)).max(6).default([]),
   /** Time is up: the tutor should close the conversation warmly. */
   wrapUp: z.boolean().default(false),
+  /** How hard to pitch the English, from his recent conversations (lib/learner/adapt.ts). */
+  level: z.enum(["easier", "steady", "stretch"]).default("steady"),
 });
 export type ChatRequest = z.infer<typeof chatRequest>;

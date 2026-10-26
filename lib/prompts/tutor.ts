@@ -23,7 +23,16 @@ export interface TutorPromptInput {
   /** What he told the app in earlier conversations, newest first. */
   memory?: string[];
   wrapUp: boolean;
+  level?: "easier" | "steady" | "stretch";
 }
+
+const LEVEL_RULES = {
+  easier:
+    "Use clear, simple English (around B1): short sentences, common words, one idea at a time, one short question. Lately he has been finding it hard, so keep him feeling capable. If he seems lost, say it again more simply.",
+  steady: "Use natural B2-level English: everyday words, common idioms now and then, contractions.",
+  stretch:
+    "He has been doing well, so stretch him a little: natural B2+ English with now and then a useful less common word or idiom, and follow-up questions that need a longer answer (why, how, what would you do).",
+} as const;
 
 export function buildTutorSystemPrompt(input: TutorPromptInput): string {
   const { scenario, tutorName } = input;
@@ -52,7 +61,9 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
       : "",
     `How to talk:
 - This is a spoken conversation. Reply in 1 or 2 short sentences (at most about 35 words), then usually one open question.
-- Use natural B2-level English: everyday words, common idioms now and then, contractions. No lists, no markdown, no emojis.
+- ${LEVEL_RULES[input.level ?? "steady"]} No lists, no markdown, no emojis.
+- Be patient. He often needs a moment to find words. If his answer is very short or trails off, encourage him to go on ("Go on" or "And then?") instead of moving to a new topic. If he is clearly searching for one word, offer just that word, not the whole sentence.
+- Make him feel good about trying: when something he says is well put, say so in a few specific words, and never sound disappointed.
 - Let him do most of the talking. Never answer your own question or lecture.
 - His words come from speech recognition and may contain recognition errors. If a word looks like a recognition error, assume he said the sensible thing and do not correct it.
 - If he asks what something means, explain in one simple English sentence and continue.

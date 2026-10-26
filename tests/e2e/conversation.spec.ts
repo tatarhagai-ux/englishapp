@@ -585,3 +585,53 @@ test("demo mode: a full conversation and sample report with no keys at all", asy
   await page.goto("/progress");
   await expect(page.getByRole("heading", { name: "Recent conversations" })).toHaveCount(0);
 });
+
+test("the coach: a weekly check-in after 3 days, and the tutor adapts to the answer", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-28T12:00:00"));
+  await page.addInitScript(() => {
+    const report = { corrections: [], other_errors: [], correct_uses: [], phrases: [], task: { completed: true } };
+    const session = (id: string, day: string) => ({
+      id,
+      scenarioId: "free-your-week",
+      mode: "voice",
+      startedAt: `${day}T15:00:00.000Z`,
+      endedAt: `${day}T15:10:00.000Z`,
+      day,
+      turns: [
+        { role: "tutor", text: "How was your day?" },
+        { role: "learner", text: "I went to the gym", input: "voice" },
+      ],
+      speakingSeconds: 300,
+      stuckCount: 0,
+      fixedAloud: [],
+      xp: 20,
+      costUsd: 0,
+      report,
+    });
+    const state = {
+      v: 1,
+      errors: {},
+      phrases: [],
+      spend: {},
+      sessions: [session("c1", "2026-10-25"), session("c2", "2026-10-26"), session("c3", "2026-10-27")],
+    };
+    if (!localStorage.getItem("sw_learner_v1")) localStorage.setItem("sw_learner_v1", JSON.stringify(state));
+  });
+
+  await page.goto("/");
+  const ask = page.getByRole("region", { name: "How did this week feel?" });
+  await expect(ask).toBeVisible();
+  await ask.getByRole("button", { name: "Too hard" }).click();
+  await expect(page.getByText("Your tutor will slow down and keep it simpler")).toBeVisible();
+
+  // Asked once a week; after that, a tip from how he practices, and the tutor's new pace.
+  await page.reload();
+  await expect(page.getByRole("region", { name: "How did this week feel?" })).toHaveCount(0);
+  const tip = page.getByRole("region", { name: "Add one more sentence" });
+  await expect(tip).toContainText("Your tutor right now: simpler and a bit slower.");
+
+  await page.goto("/progress");
+  await expect(page.getByRole("region", { name: "How your tutor adapts" })).toContainText(
+    "Simpler and a bit slower, because you said the week felt hard",
+  );
+});

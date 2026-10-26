@@ -40,6 +40,8 @@ import {
 } from "@/lib/learner/model";
 import { planDayByKey, planWeek } from "@/content/plan";
 import { weekWordsToPractice } from "@/lib/learner/plan";
+import { adaptation, paceFor } from "@/lib/learner/adapt";
+import { dayKey } from "@/lib/game/streak";
 import { Intro } from "./Intro";
 import { Warmup } from "./Warmup";
 import { Transcript } from "./Transcript";
@@ -131,8 +133,13 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   /** True while a tutor reply is still streaming, so the audio queue going idle isn't "done". */
   const pendingRef = useRef(false);
+  // How hard to pitch it today, from his recent conversations; fixed for this conversation.
+  const tutorLevel = useMemo(
+    () => (hydrated ? adaptation(learner.get(), dayKey(new Date())).level : "steady"),
+    [hydrated],
+  );
   const rateRef = useRef(prefs.speechRate);
-  rateRef.current = prefs.speechRate;
+  rateRef.current = prefs.speechRate * paceFor(tutorLevel);
   modeRef.current = mode;
   handsFreeRef.current = handsFree;
 
@@ -366,6 +373,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
           memory: memoryForTutor(learner.get()),
           tutorName,
           wrapUp,
+          level: tutorLevel,
         },
         (delta) => {
           shown += delta;
@@ -395,6 +403,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     }
   }, [
     ensureQueue,
+    tutorLevel,
     limitSeconds,
     planWeekInfo,
     scenarioId,
@@ -486,6 +495,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   async function replay(rate: number) {
     if (!lastTutor || busy) return;
     await stopListening();
+    learner.noteHelp(sessionRef.current, "replay");
     const previous = rateRef.current;
     rateRef.current = rate;
     ensureQueue().speak(lastTutor);
@@ -497,6 +507,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       kind: "loading",
       title: kind === "hint" ? "Finding ideas…" : kind === "better" ? "Rephrasing…" : "Simplifying…",
     });
+    learner.noteHelp(sessionRef.current, kind);
     try {
       if (kind === "hint") {
         const r = await assist({ mode: "hint", history: turnsRef.current, task: scenario.task });

@@ -11,6 +11,7 @@ import { levelFromXp } from "@/lib/game/xp";
 import { ChooseVoicePrompt, Greeting, TutorBadge } from "./HomeClient";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { PlanToday } from "./PlanToday";
+import { CoachCard } from "./CoachCard";
 
 const SESSION_STEPS = [
   { icon: Sparkles, title: "Warm-up", detail: "Say phrases from past sessions out loud" },
@@ -124,7 +125,10 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           </Link>
         </>
       ) : (
-        <PlanToday ready={ready} minutesToday={minutesToday} goal={goal} />
+        <>
+          <PlanToday ready={ready} minutesToday={minutesToday} goal={goal} />
+          <CoachCard />
+        </>
       )}
 
       <div className="space-y-2">

@@ -69,7 +69,13 @@ export interface SessionRecord {
   demo?: boolean;
   /** Started from the 12-week plan: which day ("w3d2"). See lib/learner/plan.ts. */
   planDay?: string;
+  /** Help asked for during the conversation; the tutor adapts to it (lib/learner/adapt.ts). */
+  help?: Partial<Record<HelpKind, number>>;
 }
+
+/** "replay" covers Repeat and Slower; the rest are the help chips. */
+export type HelpKind = "replay" | "simplify" | "hint" | "better";
+export type WeekFeeling = "easy" | "right" | "hard";
 
 export interface LearnerState {
   v: 1;
@@ -85,6 +91,8 @@ export interface LearnerState {
   pronunciation?: Record<string, { best: number; attempts: number; lastAt: string }>;
   /** Facts he shared in conversations, so the tutor can pick up where they left off. */
   memory?: MemoryItem[];
+  /** How each week felt to him, by the Sunday it started ("2026-10-25"). */
+  feelings?: Record<string, WeekFeeling>;
   /** Set by "Delete all". Sync drops anything older from other devices. */
   resetAt?: string;
   /** Deletions, kept so sync doesn't bring them back: phrase (lowercased) → when, and session ids. */
