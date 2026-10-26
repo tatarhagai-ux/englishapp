@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { CheckCircle2, Headphones, Layers, MessageCircle, PartyPopper } from "lucide-react";
 import clsx from "clsx";
-import { useLearner } from "@/lib/client/learner";
+import { learner, useLearner } from "@/lib/client/learner";
+import { perfectWeekStrip } from "@/lib/learner/model";
 import { dailyQuests, type Quest } from "@/lib/learner/quests";
 
 const ICONS: Record<Quest["id"], typeof Layers> = { talk: MessageCircle, words: Layers, listen: Headphones };
@@ -14,6 +16,13 @@ export function DailyQuests({ today, goal }: { today: string; goal: number }) {
   const quests = dailyQuests(state, today, goal);
   const finished = quests.filter((q) => q.done >= q.target).length;
   const perfect = finished === quests.length;
+  const week = perfectWeekStrip(state, today);
+  const perfectThisWeek = week.filter((d) => d.perfect).length;
+
+  // Keep the day, so the week strip and the "Perfect week" badge remember it.
+  useEffect(() => {
+    if (perfect) learner.markPerfectDay(today);
+  }, [perfect, today]);
 
   return (
     <section aria-labelledby="quests-title" className={clsx("tile space-y-3 p-4", perfect && "border-go")}>
@@ -60,6 +69,23 @@ export function DailyQuests({ today, goal }: { today: string; goal: number }) {
           );
         })}
       </ul>
+      <div className="flex items-center gap-2 border-t border-line pt-3">
+        <ol className="flex gap-1.5" aria-label={`Perfect days: ${perfectThisWeek} of 7`}>
+          {week.map((d) => (
+            <li
+              key={d.day}
+              title={d.day}
+              className={clsx(
+                "size-6 rounded-full border-2",
+                d.perfect ? "border-go bg-go" : d.day === today ? "border-accent" : "border-line",
+              )}
+            />
+          ))}
+        </ol>
+        <p className="flex-1 text-right text-xs font-bold text-dim">
+          {perfectThisWeek >= 5 ? "Perfect week!" : `${perfectThisWeek}/5 for a perfect week`}
+        </p>
+      </div>
     </section>
   );
 }

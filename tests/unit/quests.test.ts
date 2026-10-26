@@ -31,3 +31,19 @@ describe("daily quests", () => {
     expect(dailyQuests(s, "2026-10-27", 12).find((x) => x.id === "words")!.done).toBe(0);
   });
 });
+
+describe("perfect week", () => {
+  it("keeps perfect days, shows this week's strip, and counts the best week", async () => {
+    const { markPerfectDay, perfectWeekStrip, statsFrom } = await import("@/lib/learner/model");
+    let s = initialState(NOW);
+    // Sunday 25 Oct 2026 to Saturday 31 Oct.
+    for (const d of ["2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29"]) s = markPerfectDay(s, d);
+    s = markPerfectDay(s, "2026-10-26");
+    expect(s.perfectDays).toHaveLength(5);
+    const strip = perfectWeekStrip(s, TODAY);
+    expect(strip).toHaveLength(7);
+    expect(strip[0]).toEqual({ day: "2026-10-25", perfect: true });
+    expect(strip[6]).toEqual({ day: "2026-10-31", perfect: false });
+    expect(statsFrom(s, TODAY).bestPerfectWeek).toBe(5);
+  });
+});

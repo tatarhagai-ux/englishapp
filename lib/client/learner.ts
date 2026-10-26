@@ -26,6 +26,7 @@ import {
   ratePhrase,
   recordStory,
   recordReading,
+  markPerfectDay,
   type CardRating,
 } from "@/lib/learner/model";
 import type { Turn } from "@/lib/conversation/types";
@@ -244,6 +245,11 @@ export const learner = {
 
   recordStory(id: string, correct: number) {
     set(recordStory(get(), id, correct));
+  },
+
+  markPerfectDay(day: string) {
+    const next = markPerfectDay(get(), day);
+    if (next !== get()) set(next);
   },
 
   recordReading(id: string, correct: number) {

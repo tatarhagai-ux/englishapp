@@ -30,9 +30,9 @@ test.describe("app shell", () => {
     await expect(page.getByRole("heading", { name: "Level 1" })).toBeVisible();
     await expect(page.getByText("new", { exact: true })).toHaveCount(8);
     // Earned plus the two closest; the rest behind "Show all".
-    await expect(page.getByText("0 of 11")).toBeVisible();
+    await expect(page.getByText("0 of 12")).toBeVisible();
     await expect(page.getByText("Interview ready")).toHaveCount(0);
-    await page.getByRole("button", { name: "Show all 11" }).click();
+    await page.getByRole("button", { name: "Show all 12" }).click();
     await expect(page.getByText("Interview ready")).toBeVisible();
     await expect(page.getByText("First words")).toBeVisible();
   });

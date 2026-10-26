@@ -113,6 +113,8 @@ export interface LearnerState {
   stories?: Record<string, { best: number; at: string }>;
   /** Short reads, the same way. */
   readings?: Record<string, { best: number; at: string }>;
+  /** Days when all three daily quests were done ("YYYY-MM-DD"). */
+  perfectDays?: string[];
   /** Best pronunciation score per course unit. */
   pronunciation?: Record<string, { best: number; attempts: number; lastAt: string }>;
   /** Facts he shared in conversations, so the tutor can pick up where they left off. */
@@ -372,7 +374,8 @@ export function minutesOnDay(state: LearnerState, day: string): number {
 
 export function statsFrom(state: LearnerState, today: string): LearnerStats {
   const real = state.sessions.filter(isRealSession);
-  if (real.length === 0 && state.sessions.length === 0 && !state.listening?.xp) return { ...EMPTY_STATS };
+  if (real.length === 0 && state.sessions.length === 0 && !state.listening?.xp && !state.perfectDays?.length)
+    return { ...EMPTY_STATS };
   const days = real.map((s) => s.day);
   const interviewDone = new Set(
     real
@@ -396,7 +399,38 @@ export function statsFrom(state: LearnerState, today: string): LearnerStats {
     interviewScenariosDone: interviewDone.size,
     accentsHeard: accents.size,
     xp: real.reduce((sum, s) => sum + s.xp, 0) + (state.listening?.xp ?? 0),
+    bestPerfectWeek: bestPerfectWeek(state.perfectDays ?? []),
   };
+}
+
+/** Sunday-to-Saturday week of a day, like the weekly summary. */
+function sundayOf(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  const t = Date.UTC(y, m - 1, d);
+  return new Date(t - new Date(t).getUTCDay() * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** The most perfect days in any one week. */
+export function bestPerfectWeek(days: string[]): number {
+  const perWeek = new Map<string, number>();
+  for (const d of new Set(days)) perWeek.set(sundayOf(d), (perWeek.get(sundayOf(d)) ?? 0) + 1);
+  return Math.max(0, ...perWeek.values());
+}
+
+/** This week's days (Sunday first) and which of them were perfect. */
+export function perfectWeekStrip(state: LearnerState, today: string): { day: string; perfect: boolean }[] {
+  const start = sundayOf(today);
+  const [y, m, d] = start.split("-").map(Number);
+  const set = new Set(state.perfectDays ?? []);
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(Date.UTC(y, m - 1, d) + i * 86_400_000).toISOString().slice(0, 10);
+    return { day, perfect: set.has(day) };
+  });
+}
+
+export function markPerfectDay(state: LearnerState, day: string): LearnerState {
+  if (state.perfectDays?.includes(day)) return state;
+  return { ...state, perfectDays: [...(state.perfectDays ?? []), day].sort() };
 }
 
 /** XP for a finished session, given the day's minutes before it (for the goal bonus). */

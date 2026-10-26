@@ -78,6 +78,10 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     mergeRecords(x, y, (u, v) => ({ best: Math.max(u.best, v.best), at: later(u.at, v.at)! })),
   );
   if (readings) out.readings = readings;
+  const perfectDays = [...new Set([...(a.perfectDays ?? []), ...(b.perfectDays ?? [])])]
+    .filter((d) => after(`${d}T23:59:59`))
+    .sort();
+  if (perfectDays.length) out.perfectDays = perfectDays;
   const feelings = mergeOptional(a.feelings, b.feelings, (x, y) => mergeRecords(x, y, (u) => u));
   if (feelings) out.feelings = feelings;
   const memory = mergeBy(
