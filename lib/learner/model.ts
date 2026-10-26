@@ -543,7 +543,7 @@ export interface InterviewReadiness {
   /** Average readiness (1–5) over the last three interview reports that scored it. */
   readiness: number | null;
   /** The answer part he leaves out most often in his last ten answers, if any is below 70%. */
-  weakest: { key: (typeof ANSWER_PARTS)[number]["key"]; label: string; rate: number } | null;
+  weakest: { key: (typeof ANSWER_PARTS)[number]["key"]; label: string; missing: string; rate: number } | null;
   answers: number;
 }
 
@@ -557,7 +557,8 @@ export function interviewReadiness(state: LearnerState): InterviewReadiness {
   if (answers.length >= 2) {
     for (const part of ANSWER_PARTS) {
       const rate = answers.filter((a) => a[part.key]).length / answers.length;
-      if (rate < 0.7 && (!weakest || rate < weakest.rate)) weakest = { key: part.key, label: part.label, rate };
+      if (rate < 0.7 && (!weakest || rate < weakest.rate))
+        weakest = { key: part.key, label: part.label, missing: part.missing, rate };
     }
   }
   return {

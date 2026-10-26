@@ -322,4 +322,6 @@ test("interview reports show answer structure, and progress shows readiness", as
   const ready = page.getByRole("region", { name: "Interview readiness" });
   await expect(ready).toContainText("1 of 6 interview scenarios practiced");
   await expect(ready).toContainText("3/5");
+  // One answer isn't enough to call a pattern yet.
+  await expect(ready).toContainText("Each interview report checks four things");
 });

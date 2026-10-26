@@ -75,6 +75,6 @@ describe("interview feedback", () => {
     const r = interviewReadiness(s);
     expect(r.practiced).toBe(2);
     expect(r.readiness).toBe(3);
-    expect(r.weakest).toMatchObject({ key: "result", rate: 0.25 });
+    expect(r.weakest).toMatchObject({ key: "result", missing: "how it ended (result or lesson)", rate: 0.25 });
   });
 });

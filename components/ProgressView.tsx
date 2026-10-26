@@ -265,7 +265,7 @@ function InterviewReadinessCard({ state }: { state: Parameters<typeof interviewR
       <p className="text-sm text-dim">
         {r.practiced} of {r.total} interview scenarios practiced.{" "}
         {r.weakest
-          ? `Most often missing: ${r.weakest.label.toLowerCase()} (in ${Math.round((1 - r.weakest.rate) * 100)}% of your last answers).`
+          ? `Most often missing: ${r.weakest.missing}, in ${Math.round((1 - r.weakest.rate) * 100)}% of your recent answers.`
           : r.answers >= 2
             ? "Your answers have all four parts most of the time. Keep it up."
             : "Each interview report checks four things: a direct answer, a real example, what you did, and the result."}

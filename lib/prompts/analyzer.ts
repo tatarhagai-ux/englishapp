@@ -88,10 +88,10 @@ export const analysisSchema = z.object({
 
 /** The four parts of a strong interview answer, in the order an interviewer listens for them. */
 export const ANSWER_PARTS = [
-  { key: "direct", label: "Answered directly" },
-  { key: "example", label: "Real example" },
-  { key: "actions", label: "Your actions (I)" },
-  { key: "result", label: "Result or lesson" },
+  { key: "direct", label: "Answered directly", missing: "a direct answer up front" },
+  { key: "example", label: "Real example", missing: "a real example" },
+  { key: "actions", label: "Your actions (I)", missing: "what you did yourself" },
+  { key: "result", label: "Result or lesson", missing: "how it ended (result or lesson)" },
 ] as const;
 
 export type Analysis = z.infer<typeof analysisSchema>;
