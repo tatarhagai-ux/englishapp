@@ -263,7 +263,7 @@ function InterviewReadinessCard({ state }: { state: Parameters<typeof interviewR
         <div className="h-full rounded-full bg-accent" style={{ width: `${(r.practiced / r.total) * 100}%` }} />
       </div>
       <p className="text-sm text-dim">
-        {r.practiced} of {r.total} interview questions practiced.{" "}
+        {r.practiced} of {r.total} interview scenarios practiced.{" "}
         {r.weakest
           ? `Most often missing: ${r.weakest.label.toLowerCase()} (in ${Math.round((1 - r.weakest.rate) * 100)}% of your last answers).`
           : r.answers >= 2

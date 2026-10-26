@@ -66,7 +66,7 @@ export const SCENARIOS: readonly Scenario[] = [
 Do not correct anything. React in a few words, then ask the next question. After his fifth answer, thank him and say his report is ready.`,
   },
 
-  // Job interview track (5). Completing all five unlocks "Interview ready".
+  // Job interview track (6). Completing all six unlocks "Interview ready".
   {
     id: "interview-about-you",
     category: "interview",
@@ -171,6 +171,35 @@ Do not correct anything. React in a few words, then ask the next question. After
     ],
     opener: "We're nearly done. Before your questions, what are your salary expectations for this role?",
     minutes: 10,
+  },
+  {
+    id: "interview-mock",
+    category: "interview",
+    title: "Full mock interview",
+    summary: "15 minutes, start to finish: the five questions you're most likely to get, in order.",
+    voiceId: "brian",
+    role: "Michael, a hiring manager running a full first-round interview for a junior cloud support role",
+    setting: "Full first-round interview",
+    task: "Get through a whole interview: introduce yourself, explain why this role, tell one real story, handle a weakness, and ask your own question.",
+    successCriteria: [
+      "Answers all five questions without switching to Hebrew",
+      "Tells at least one real story with a clear result",
+      "Asks the interviewer at least one question at the end",
+    ],
+    targets: ["answer_all_parts", "present_perfect_duration", "looking_forward_to_ing"],
+    phrases: [
+      "Sure. I'm currently…",
+      "What drew me to this role is…",
+      "A good example is when I…",
+      "Something I'm working on is…",
+      "Could you tell me more about the team?",
+    ],
+    opener:
+      "Hi Hagai, thanks for coming in. I'm Michael, I lead the support team. Let's start with the classic: could you tell me a bit about yourself?",
+    minutes: 15,
+    tutorNotes: `Run a realistic first-round interview with exactly five main questions, one at a time, in this order:
+1 (already asked) tell me about yourself. 2 why this role and this company. 3 tell me about a time you solved a difficult problem. 4 what's one weakness you're working on. 5 do you have any questions for me?
+After each answer, react briefly like a real interviewer (a few words, no teaching), ask at most one follow-up if something is missing, then move to the next question. Keep track of which question you are on. After his questions, close the interview warmly.`,
   },
 
   // Free talk with your own tutor (3).

@@ -320,6 +320,6 @@ test("interview reports show answer structure, and progress shows readiness", as
 
   await page.goto("/progress");
   const ready = page.getByRole("region", { name: "Interview readiness" });
-  await expect(ready).toContainText("1 of 5 interview questions practiced");
+  await expect(ready).toContainText("1 of 6 interview scenarios practiced");
   await expect(ready).toContainText("3/5");
 });

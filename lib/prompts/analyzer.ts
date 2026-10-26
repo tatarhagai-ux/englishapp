@@ -77,7 +77,7 @@ export const analysisSchema = z.object({
             better_start: z.string().default(""),
           }),
         )
-        .max(4)
+        .max(5)
         .default([]),
       readiness: z.coerce.number().int().min(1).max(5).catch(3),
       note_en: z.string().default(""),
@@ -129,7 +129,7 @@ Rules:
 - praise_en: one specific thing he did well, quoting him if possible.
 ${
   scenario.category === "interview"
-    ? `- interview: for each main interview question he answered (at most 4), judge his answer like a hiring manager: direct = he answered the actual question in his first sentence or two; example = he gave a concrete, real situation; actions = he said what HE did ("I", not only "we"); result = he ended with an outcome, a number, or a lesson. tip_en: the one change that would most improve that answer. better_start: a strong opening sentence in his own content, natural and spoken. readiness: 1 to 5, how ready these answers would sound in a real English interview (language and structure; 5 = ready). note_en: one sentence on what to practice next.
+    ? `- interview: for each main interview question he answered (at most 5), judge his answer like a hiring manager: direct = he answered the actual question in his first sentence or two; example = he gave a concrete, real situation; actions = he said what HE did ("I", not only "we"); result = he ended with an outcome, a number, or a lesson. tip_en: the one change that would most improve that answer. better_start: a strong opening sentence in his own content, natural and spoken. readiness: 1 to 5, how ready these answers would sound in a real English interview (language and structure; 5 = ready). note_en: one sentence on what to practice next.
 `
     : ""
 }- level: his SPEAKING level as shown here (A1, A2, B1, B1+, B2, B2+, C1, C2), judged on range, accuracy, fluency and how well he handles harder questions. confidence is "low" if he said little. note_en: one sentence on what would move him up.

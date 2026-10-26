@@ -85,7 +85,7 @@ describe("achievements", () => {
 
   it("report partial progress for locked badges", () => {
     const a = ACHIEVEMENTS.find((x) => x.key === "interview_ready")!;
-    expect(a.progress({ ...EMPTY_STATS, interviewScenariosDone: 2 })).toBeCloseTo(0.4);
+    expect(a.progress({ ...EMPTY_STATS, interviewScenariosDone: 3 })).toBeCloseTo(0.5);
   });
 
   it("have unique keys", () => {

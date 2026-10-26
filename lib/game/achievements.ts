@@ -93,8 +93,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     key: "interview_ready",
     title: "Interview ready",
-    detail: "Complete all 5 job interview scenarios",
-    progress: (s) => ratio(s.interviewScenariosDone, 5),
+    detail: "Complete all 6 job interview scenarios, including the full mock interview",
+    progress: (s) => ratio(s.interviewScenariosDone, 6),
   },
   {
     key: "accents_4",

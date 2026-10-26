@@ -64,7 +64,7 @@ describe("interview feedback", () => {
     const full = { direct: true, example: true, actions: true, result: true };
     const noResult = { ...full, result: false };
     let s: LearnerState = initialState();
-    expect(interviewReadiness(s)).toMatchObject({ practiced: 0, total: 5, readiness: null, weakest: null });
+    expect(interviewReadiness(s)).toMatchObject({ practiced: 0, total: 6, readiness: null, weakest: null });
     s = {
       ...s,
       sessions: [

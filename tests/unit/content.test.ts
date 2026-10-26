@@ -10,8 +10,8 @@ describe("scenario library", () => {
     expect(new Set(SCENARIOS.map((s) => s.id)).size).toBe(SCENARIOS.length);
   });
 
-  it("has exactly 5 interview scenarios (the Interview ready achievement counts them)", () => {
-    expect(SCENARIOS.filter((s) => s.category === "interview")).toHaveLength(5);
+  it("has exactly 6 interview scenarios (the Interview ready achievement counts them)", () => {
+    expect(SCENARIOS.filter((s) => s.category === "interview")).toHaveLength(6);
   });
 
   it.each(SCENARIOS.map((s) => [s.id, s] as const))("%s is complete and useful", (_id, s) => {

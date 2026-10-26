@@ -31,7 +31,7 @@ const METHOD = [
 
 const WEEK = [
   { day: "Sun", plan: "Free talk with your tutor (10 min)" },
-  { day: "Mon", plan: "Job interview scenario + its report (12 min)" },
+  { day: "Mon", plan: "Job interview: one question, or the full mock every other week (12 to 15 min)" },
   { day: "Tue", plan: "Listening gym: dictation, mixed accents (8 min)" },
   { day: "Wed", plan: "At work scenario (10 min)" },
   { day: "Thu", plan: "Pronunciation unit + shadowing (10 min)" },
