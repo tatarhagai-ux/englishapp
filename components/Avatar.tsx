@@ -14,8 +14,8 @@ function hash(s: string) {
 }
 
 /** Initial on a stable gradient. Characters get a recognizable look without stock photos. */
-export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
-  const [a, b] = GRADIENTS[hash(name) % GRADIENTS.length];
+export function Avatar({ name, size = 40, seed }: { name: string; size?: number; seed?: string }) {
+  const [a, b] = GRADIENTS[hash(seed ?? name) % GRADIENTS.length];
   return (
     <span
       aria-hidden

@@ -179,7 +179,7 @@ export function ListeningGym() {
           </section>
         )}
 
-        <section aria-labelledby="stories-title" className="space-y-2.5">
+        <section id="stories" aria-labelledby="stories-title" className="scroll-mt-4 space-y-2.5">
           <div>
             <h2 id="stories-title" className="font-black">
               Stories

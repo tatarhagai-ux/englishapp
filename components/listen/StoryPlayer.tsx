@@ -34,6 +34,8 @@ export function StoryPlayer({ story }: { story: Story }) {
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const best = hydrated ? state.stories?.[story.id]?.best : undefined;
+  // Each speaker gets their own color (seeds that differ in the last letter never collide).
+  const speakers = [...new Set(story.lines.map((l) => l.name))];
   const correct = answers.filter((a, i) => a === story.questions[i].answer).length;
   const allAnswered = answers.every((a) => a !== null);
 
@@ -110,7 +112,7 @@ export function StoryPlayer({ story }: { story: Story }) {
               playing?.line === i && "bg-accent-soft",
             )}
           >
-            <Avatar name={l.name} size={30} />
+            <Avatar name={l.name} size={30} seed={`speaker-${speakers.indexOf(l.name)}`} />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-extrabold text-dim">{l.name}</p>
               {phase === "review" ? (

@@ -187,3 +187,52 @@ export function MistakeLesson({ mistakeKey }: { mistakeKey: string }) {
     </div>
   );
 }
+
+/** All his mistakes, the ones to work on first, each opening its mini-lesson. */
+export function MistakeList() {
+  const hydrated = useHydrated();
+  const state = useLearner();
+  if (!hydrated) return <p className="text-dim">Loading…</p>;
+  const open = Object.values(state.errors)
+    .filter((e) => e.status !== "mastered")
+    .sort((a, b) => b.occurrences - a.occurrences || b.lastSeen.localeCompare(a.lastSeen));
+  const mastered = Object.values(state.errors).filter((e) => e.status === "mastered");
+  return (
+    <div className="space-y-5">
+      <header className="flex items-start gap-2">
+        <Link
+          href="/practice"
+          aria-label="Back to practice"
+          className="-ml-2 rounded-full p-2 text-dim hover:text-text"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-black tracking-tight">Your mistakes</h1>
+          <p className="text-sm text-dim">
+            The ones that come back most are first. Each has the rule, examples and a short drill.
+          </p>
+        </div>
+      </header>
+      <ul className="space-y-2">
+        {open.map((e) => (
+          <li key={e.key}>
+            <Link
+              href={`/mistakes/${encodeURIComponent(e.key)}`}
+              className="tile flex items-center gap-3 p-3.5 transition-colors hover:border-accent/60"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-extrabold">{e.title}</p>
+                <p className="truncate text-sm text-good">{e.better}</p>
+              </div>
+              <span className="shrink-0 text-xs font-bold text-dim">{e.occurrences}×</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {mastered.length > 0 && (
+        <p className="text-sm font-bold text-good">Fixed: {mastered.map((e) => e.title).join(" · ")}</p>
+      )}
+    </div>
+  );
+}
