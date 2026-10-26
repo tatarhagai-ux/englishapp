@@ -21,6 +21,7 @@ export default defineConfig({
     port: PORT,
     timeout: 180_000,
     reuseExistingServer: !process.env.CI,
-    env: { APP_ACCESS_CODE: "", APP_SESSION_SECRET: "" },
+    // A fixed build id, so the update check has something to compare.
+    env: { APP_ACCESS_CODE: "", APP_SESSION_SECRET: "", VERCEL_GIT_COMMIT_SHA: "e2ebuild0000" },
   },
 });

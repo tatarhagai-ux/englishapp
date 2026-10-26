@@ -23,6 +23,8 @@ export interface Prefs {
    * "handsfree": the turn goes out by itself after a short silence.
    */
   micMode: "tap" | "handsfree";
+  /** "system" follows the phone's light or dark setting. */
+  theme: "dark" | "light" | "system";
 }
 
 const KEY = "sw_prefs_v1";
@@ -35,6 +37,7 @@ const DEFAULTS: Prefs = {
   hebrewHelp: false,
   sessionMinutes: 10,
   micMode: "tap",
+  theme: "dark",
 };
 
 const listeners = new Set<() => void>();
