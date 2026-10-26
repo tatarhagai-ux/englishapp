@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { learner, onLearnerChange } from "@/lib/client/learner";
 import { mergeStates } from "@/lib/learner/merge";
 import type { LearnerState } from "@/lib/learner/model";
@@ -39,12 +39,15 @@ export async function syncOnce(local: LearnerState, store: SyncStore): Promise<L
   return merged;
 }
 
-let client: SupabaseClient | null = null;
-function supabase(): SupabaseClient | null {
+let client: Promise<SupabaseClient> | null = null;
+/** The Supabase library is ~40 KB gzipped, so it loads only when sync is set up and used. */
+function supabase(): Promise<SupabaseClient> | null {
   if (!syncConfigured) return null;
   // Implicit flow: the sign-in link can open in a different browser than the one that
   // asked for it (the mail app's browser instead of the installed PWA), which PKCE breaks.
-  client ??= createClient(SUPABASE_URL!, ANON!, { auth: { flowType: "implicit", persistSession: true } });
+  client ??= import("@supabase/supabase-js").then(({ createClient }) =>
+    createClient(SUPABASE_URL!, ANON!, { auth: { flowType: "implicit", persistSession: true } }),
+  );
   return client;
 }
 
@@ -94,7 +97,7 @@ let again = false;
 let lastSynced = "";
 
 async function run(): Promise<void> {
-  const sb = supabase();
+  const sb = await supabase();
   if (!sb) return;
   const { data } = await sb.auth.getSession();
   const user = data.session?.user;
@@ -138,12 +141,18 @@ export function syncNow(): Promise<void> {
 
 /** Called once from the app shell: sync on sign-in, on local changes, and when the app comes back. */
 export function startAutoSync(): () => void {
-  const sb = supabase();
-  if (!sb) return () => {};
+  const pending = supabase();
+  if (!pending) return () => {};
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const { data: auth } = sb.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_OUT" || !session) setStatus({ kind: "signed-out" });
-    else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") void syncNow();
+  let stopped = false;
+  let unsubscribe = () => {};
+  void pending.then((sb) => {
+    if (stopped) return;
+    const { data } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) setStatus({ kind: "signed-out" });
+      else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") void syncNow();
+    });
+    unsubscribe = () => data.subscription.unsubscribe();
   });
   const offChange = onLearnerChange(() => {
     // The merge we just saved fires this too; only real local edits need a push.
@@ -158,8 +167,9 @@ export function startAutoSync(): () => void {
   document.addEventListener("visibilitychange", onVisible);
   window.addEventListener("online", onOnline);
   return () => {
+    stopped = true;
     clearTimeout(timer);
-    auth.subscription.unsubscribe();
+    unsubscribe();
     offChange();
     document.removeEventListener("visibilitychange", onVisible);
     window.removeEventListener("online", onOnline);
@@ -168,7 +178,7 @@ export function startAutoSync(): () => void {
 
 /** Email a sign-in link (and a 6-digit code, if the email template includes it). */
 export async function sendSignInEmail(email: string): Promise<void> {
-  const sb = supabase();
+  const sb = await supabase();
   if (!sb) throw new Error("Sync isn't set up yet.");
   const { error } = await sb.auth.signInWithOtp({
     email,
@@ -179,13 +189,13 @@ export async function sendSignInEmail(email: string): Promise<void> {
 
 /** For the code typed from the email, when the link opens in another browser. */
 export async function verifySignInCode(email: string, code: string): Promise<void> {
-  const sb = supabase();
+  const sb = await supabase();
   if (!sb) throw new Error("Sync isn't set up yet.");
   const { error } = await sb.auth.verifyOtp({ email, token: code, type: "email" });
   if (error) throw new Error(error.message);
 }
 
 export async function signOut(): Promise<void> {
-  await supabase()?.auth.signOut();
+  await (await supabase())?.auth.signOut();
   setStatus({ kind: "signed-out" });
 }

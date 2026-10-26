@@ -119,7 +119,9 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await expect(page.getByText("משתמשים ב-present perfect")).toBeVisible();
   await expect(page.getByText("Saved to your phrase bank")).toBeVisible();
   await expect(page.getByLabel(/XP earned/)).toContainText("+");
-  await expect(page.getByText("“I'm stuck” used")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Session stats" }).or(page.getByLabel("Session stats"))).toContainText(
+    "“I'm stuck”",
+  );
 
   await page.getByRole("link", { name: "Continue" }).click();
   await expect(page).toHaveURL("/");
@@ -189,11 +191,22 @@ test("practice library lists every category and opens a scenario", async ({ page
 
 test("warm-up: recall the correct sentence by typing, then the conversation starts", async ({ page }) => {
   await mockApis(page, []);
+  // The first conversation goes straight in: nothing to review yet.
+  await page.goto("/session/work-standup");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: "Start conversation" }).click();
+  await page.getByLabel("Your reply").fill("Yesterday I finished the report");
+  await page.getByLabel("Your reply").press("Enter");
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+  await page.getByRole("button", { name: "End conversation" }).click();
+  await expect(page).toHaveURL(/\/report\//);
+
   await page.goto("/session/free-your-week");
   await page.getByRole("button", { name: /Quiet mode/ }).click();
-  await page.getByRole("button", { name: /Warm up \(2\) & start/ }).click();
+  // Up to three items, now that there is a conversation to review.
+  await page.getByRole("button", { name: /Warm up \(3\) & start/ }).click();
 
-  await expect(page.getByText("Last time you said:")).toBeVisible();
+  await expect(page.getByText("Earlier you said:")).toBeVisible();
   await expect(page.getByText("I live in Shoham for ten years.")).toBeVisible();
   // The answer is hidden until he tries.
   await expect(page.getByText("I've been living in Shoham for ten years.")).toHaveCount(0);
@@ -205,14 +218,18 @@ test("warm-up: recall the correct sentence by typing, then the conversation star
   await expect(page.getByText("I'm looking forward to meet you.")).toBeVisible();
   await page.getByRole("button", { name: "Show me the answer" }).click();
   await expect(page.getByText("I'm looking forward to meeting you.")).toBeVisible();
-  await page.getByRole("button", { name: "Start the conversation" }).click();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  // Skipping the last item goes straight into the conversation.
+  await expect(page.getByLabel("Item 3 of 3")).toBeVisible();
+  await page.getByRole("button", { name: "Skip" }).click();
 
   await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
 
   // Those two are scheduled for later; the next visit warms up on the next two mistakes.
   await page.goto("/session/interview-about-you");
   await page.getByRole("button", { name: /Quiet mode/ }).click();
-  await page.getByRole("button", { name: /Warm up \(2\)/ }).click();
+  await page.getByRole("button", { name: /Warm up \(\d\)/ }).click();
   await expect(page.getByText("An Azure exam that called AZ-900.")).toBeVisible();
 });
 

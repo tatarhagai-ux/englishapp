@@ -34,6 +34,7 @@ import { phrasesToPractice, targetKeysForNext, warmupItems, type WarmupItem } fr
 import { Intro } from "./Intro";
 import { Warmup } from "./Warmup";
 import { Transcript } from "./Transcript";
+import { MissionBar } from "./MissionBar";
 import { HelperPanel, type HelperState } from "./HelperPanel";
 import { Orb, type OrbState } from "./Orb";
 
@@ -549,6 +550,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         </button>
       </header>
 
+      {!scenario.hidden && <MissionBar task={scenario.task} phrases={scenario.phrases} />}
+
       <main className="flex-1 overflow-y-auto px-4 py-3">
         <Transcript
           turns={turns}
@@ -556,6 +559,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
           pendingTutor={pendingTutor}
           partial={partial}
           hideTutorText={hideText}
+          thinking={orb === "thinking"}
         />
       </main>
 

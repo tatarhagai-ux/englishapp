@@ -39,6 +39,9 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
   const mission = boss?.mission ?? next.task;
   const goalMet = minutesToday >= goal;
   const lastReport = [...state.sessions].reverse().find((s) => s.report);
+  // A brand-new learner gets one clear first step, the level check, instead of two competing ones.
+  const firstTime = hydrated && ready && stats.sessions === 0 && !hasPlacement(state);
+  const suggestCheck = hydrated && ready && !firstTime && !hasPlacement(state) && levelHistory(state).length < 3;
 
   return (
     <div className="space-y-5">
@@ -80,7 +83,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
       )}
 
       {/* After three level estimates from normal conversations, the level is known; skip the nudge. */}
-      {hydrated && ready && !hasPlacement(state) && levelHistory(state).length < 3 && (
+      {suggestCheck && (
         <Link
           href={`/session/${PLACEMENT_ID}`}
           className="tile flex items-center gap-3 border-accent/60 bg-accent-soft p-4 transition-colors hover:border-accent"
@@ -90,7 +93,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           </span>
           <span className="flex-1">
             <span className="block font-extrabold">Measure your speaking level</span>
-            <span className="block text-sm text-dim">A 4-minute chat with 5 questions. Start here.</span>
+            <span className="block text-sm text-dim">A 4-minute chat that makes your plan sharper.</span>
           </span>
           <ArrowRight className="size-5 text-dim" aria-hidden />
         </Link>
@@ -102,49 +105,62 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
         style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}
       >
         <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">
-          {goalMet ? "Daily goal reached" : "Today's mission"}
+          {firstTime ? "Start here" : goalMet ? "Daily goal reached" : "Today's mission"}
         </p>
         <h2 id="mission-title" className="mt-1 text-2xl font-black leading-tight">
-          {next.title}
+          {firstTime ? "Find your speaking level" : next.title}
         </h2>
-        <p className="mt-1.5 font-bold opacity-95">{mission}</p>
-        <div
-          className="mt-4 h-3 overflow-hidden rounded-full bg-white/25"
-          role="progressbar"
-          aria-label="Minutes spoken today"
-          aria-valuemin={0}
-          aria-valuemax={goal}
-          aria-valuenow={minutesToday}
-        >
-          <div className="h-full rounded-full bg-xp" style={{ width: `${Math.min(1, minutesToday / goal) * 100}%` }} />
-        </div>
-        <p className="mt-1.5 text-xs font-extrabold">
-          {minutesToday} of {goal} minutes
+        <p className="mt-1.5 font-bold opacity-95">
+          {firstTime
+            ? "A relaxed 4-minute chat, 5 questions. No corrections during it. Your plan starts from here."
+            : mission}
         </p>
+        {!firstTime && (
+          <>
+            <div
+              className="mt-4 h-3 overflow-hidden rounded-full bg-white/25"
+              role="progressbar"
+              aria-label="Minutes spoken today"
+              aria-valuemin={0}
+              aria-valuemax={goal}
+              aria-valuenow={minutesToday}
+            >
+              <div
+                className="h-full rounded-full bg-xp"
+                style={{ width: `${Math.min(1, minutesToday / goal) * 100}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs font-extrabold">
+              {minutesToday} of {goal} minutes
+            </p>
+          </>
+        )}
       </section>
 
       <div className="space-y-3">
         <Link
-          href={ready ? `/session/${next.id}` : "/setup"}
+          href={!ready ? "/setup" : firstTime ? `/session/${PLACEMENT_ID}` : `/session/${next.id}`}
           className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 text-lg uppercase"
         >
-          {goalMet ? "Keep going" : "Start talking"} <ArrowRight className="size-5" aria-hidden />
+          {firstTime ? "Start" : goalMet ? "Keep going" : "Start talking"} <ArrowRight className="size-5" aria-hidden />
         </Link>
         <div className="flex justify-center">
           <TutorBadge />
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <StatTile icon={Flame} value={stats.currentStreak} label="day streak" tone="text-streak" />
-        <StatTile icon={Trophy} value={stats.mistakesMastered} label="mistakes fixed" tone="text-go" />
-        <StatTile
-          icon={Clock}
-          value={Math.round(stats.totalSpeakingSeconds / 60)}
-          label="min spoken"
-          tone="text-accent"
-        />
-      </div>
+      {!firstTime && (
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile icon={Flame} value={stats.currentStreak} label="day streak" tone="text-streak" />
+          <StatTile icon={Trophy} value={stats.mistakesMastered} label="mistakes fixed" tone="text-go" />
+          <StatTile
+            icon={Clock}
+            value={Math.round(stats.totalSpeakingSeconds / 60)}
+            label="min spoken"
+            tone="text-accent"
+          />
+        </div>
+      )}
 
       {hydrated && lastReport?.report && (
         <Link href={`/report/${lastReport.id}`} className="tile flex items-center gap-3 p-4 hover:border-accent/60">

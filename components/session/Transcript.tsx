@@ -15,6 +15,8 @@ interface Props {
   partial: string;
   /** Hide the other side's text so the turn is listening practice. Tap a bubble to reveal. */
   hideTutorText: boolean;
+  /** Waiting for the first words of a reply: show a typing bubble so the pause feels alive. */
+  thinking?: boolean;
 }
 
 /** "Quick fix:" lines (precise mode) get the correction highlighted. */
@@ -29,13 +31,13 @@ function renderTutor(text: string) {
   );
 }
 
-export function Transcript({ turns, speakerName, pendingTutor, partial, hideTutorText }: Props) {
+export function Transcript({ turns, speakerName, pendingTutor, partial, hideTutorText, thinking }: Props) {
   const end = useRef<HTMLDivElement>(null);
   const [revealed, setRevealed] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [turns.length, pendingTutor, partial]);
+  }, [turns.length, pendingTutor, partial, thinking]);
 
   return (
     <div className="space-y-3" aria-live="polite">
@@ -76,6 +78,24 @@ export function Transcript({ turns, speakerName, pendingTutor, partial, hideTuto
           <Avatar name={speakerName} size={30} />
           <p className="max-w-[85%] rounded-2xl rounded-bl-md border-2 border-line bg-elev px-3.5 py-2.5 leading-relaxed">
             {hideTutorText ? "…" : pendingTutor}
+          </p>
+        </div>
+      )}
+      {thinking && !pendingTutor && (
+        <div className="flex items-end gap-2">
+          <Avatar name={speakerName} size={30} />
+          <p
+            className="flex items-center gap-1 rounded-2xl rounded-bl-md border-2 border-line bg-elev px-4 py-3.5"
+            aria-label={`${speakerName} is thinking`}
+          >
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="size-2 animate-bounce rounded-full bg-dim"
+                style={{ animationDelay: `${i * 150}ms` }}
+                aria-hidden
+              />
+            ))}
           </p>
         </div>
       )}

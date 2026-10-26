@@ -177,14 +177,18 @@ describe("learner model", () => {
 });
 
 describe("warm-up", () => {
+  it("has nothing before the first real conversation", () => {
+    expect(warmupItems(initialState(NOW), NOW)).toEqual([]);
+  });
+
   it("starts with the top two sayable placement mistakes", () => {
-    const items = warmupItems(initialState(NOW), NOW);
+    const items = warmupItems(withSession(), NOW);
     expect(items.map((i) => i.id)).toEqual(["present_perfect_duration", "looking_forward_to_ing"]);
     expect(items[0]).toMatchObject({ kind: "mistake", target: "I've been living in Shoham for ten years." });
   });
 
   it("skips explanations that are not one sentence", () => {
-    const s = initialState(NOW);
+    const s = withSession();
     for (const k of Object.keys(s.errors))
       if (k !== "office_idioms" && k !== "answer_all_parts") s.errors[k].status = "mastered";
     expect(warmupItems(s, NOW)).toEqual([]);

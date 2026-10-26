@@ -151,35 +151,15 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
             </span>
           </div>
 
-          {report.level && report.level.confidence !== "low" && (
-            <section className="tile flex items-center gap-4 p-4" aria-label="Speaking level in this conversation">
-              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-accent text-xl font-black text-white">
-                {report.level.cefr}
-              </span>
-              <div>
-                <p className="font-extrabold">Speaking level in this conversation</p>
-                {report.level.note_en && <p className="text-sm text-dim">{report.level.note_en}</p>}
-              </div>
-            </section>
-          )}
-
-          {report.interview && <InterviewCard interview={report.interview} voiceId={prefs.tutorVoiceId} />}
-
-          <div className="grid grid-cols-2 gap-3">
-            <Stat
-              icon={Clock}
-              label={session.mode === "voice" ? "Minutes speaking" : "Practice minutes"}
-              value={(voiceSeconds / 60).toFixed(1)}
-            />
-            <Stat icon={Gauge} label="Words per minute" value={wpm ?? "—"} />
-            <Stat icon={MessageCircle} label="Your turns" value={learnerTurns.length} />
-            <Stat icon={LifeBuoy} label="“I'm stuck” used" value={session.stuckCount} />
-          </div>
-
           <section aria-labelledby="fixes-title" className="space-y-3">
             <h2 id="fixes-title" className="font-black">
               {report.corrections.length ? "Your top fixes" : "No important mistakes this time"}
             </h2>
+            {report.corrections.length > 0 && (
+              <p className="-mt-1.5 text-sm text-dim">
+                Say each one out loud once. Producing it yourself is what makes it stick.
+              </p>
+            )}
             {report.corrections.map((c) => (
               <CorrectionCard
                 key={c.original}
@@ -192,6 +172,20 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
               />
             ))}
           </section>
+
+          {report.interview && <InterviewCard interview={report.interview} voiceId={prefs.tutorVoiceId} />}
+
+          {report.level && report.level.confidence !== "low" && (
+            <section className="tile flex items-center gap-4 p-4" aria-label="Speaking level in this conversation">
+              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-accent text-xl font-black text-white">
+                {report.level.cefr}
+              </span>
+              <div>
+                <p className="font-extrabold">Speaking level in this conversation</p>
+                {report.level.note_en && <p className="text-sm text-dim">{report.level.note_en}</p>}
+              </div>
+            </section>
+          )}
 
           {report.phrases.length > 0 && (
             <section aria-labelledby="phrases-title" className="space-y-2.5">
@@ -216,6 +210,17 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
           )}
         </>
       )}
+
+      <dl className="tile grid grid-cols-4 divide-x-2 divide-line py-3 text-center" aria-label="Session stats">
+        <Stat
+          icon={Clock}
+          label={session.mode === "voice" ? "min speaking" : "min"}
+          value={(voiceSeconds / 60).toFixed(1)}
+        />
+        <Stat icon={Gauge} label="wpm" value={wpm ?? "—"} />
+        <Stat icon={MessageCircle} label="your turns" value={learnerTurns.length} />
+        <Stat icon={LifeBuoy} label="“I'm stuck”" value={session.stuckCount} />
+      </dl>
 
       <details className="tile p-4">
         <summary className="cursor-pointer font-extrabold">Full transcript</summary>
@@ -252,10 +257,11 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function Stat({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string | number }) {
   return (
-    <div className="tile p-3">
-      <Icon className="size-4 text-accent" aria-hidden />
-      <p className="mt-1 text-xl font-black">{value}</p>
-      <p className="text-xs font-bold text-dim">{label}</p>
+    <div className="px-1">
+      <dt className="flex items-center justify-center gap-1 text-xs font-bold text-dim">
+        <Icon className="size-3.5 text-accent" aria-hidden /> {label}
+      </dt>
+      <dd className="text-lg font-black">{value}</dd>
     </div>
   );
 }

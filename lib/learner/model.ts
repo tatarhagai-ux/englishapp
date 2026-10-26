@@ -328,9 +328,11 @@ export type WarmupItem =
 /**
  * The warm-up: up to `max` items, mistakes first (active recall: see the wrong sentence,
  * say the right one), then phrases whose review is due. Mastered mistakes and mistakes
- * reviewed recently (card not yet due) are skipped.
+ * reviewed recently (card not yet due) are skipped. Before the first real conversation
+ * there is nothing to review yet, so the first session goes straight in.
  */
 export function warmupItems(state: LearnerState, now = new Date(), max = 3): WarmupItem[] {
+  if (!state.sessions.some(isRealSession)) return [];
   const mistakes: WarmupItem[] = rankedErrors(state)
     .filter((e) => !e.card || new Date(e.card.due) <= now)
     // Skip entries that are explanations rather than one sayable sentence.
