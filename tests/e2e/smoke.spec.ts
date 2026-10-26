@@ -24,6 +24,36 @@ test.describe("app shell", () => {
     await expect(page.getByText("First words")).toBeVisible();
   });
 
+  test("screen theme: dark by default, light or auto from settings, kept after a reload", async ({ page }) => {
+    await page.goto("/settings");
+    const html = page.locator("html");
+    await expect(html).toHaveAttribute("data-theme", "dark");
+    const theme = page.getByRole("group", { name: "Screen theme" });
+    await theme.getByRole("button", { name: "Light" }).click();
+    await expect(html).toHaveAttribute("data-theme", "light");
+    await page.reload();
+    await expect(html).toHaveAttribute("data-theme", "light");
+    await theme.getByRole("button", { name: "Auto" }).click();
+    await expect(html).not.toHaveAttribute("data-theme", /.+/);
+    await theme.getByRole("button", { name: "Dark" }).click();
+    await expect(html).toHaveAttribute("data-theme", "dark");
+  });
+
+  test("update: a newer live version shows a banner; settings can check by hand", async ({ page }) => {
+    await page.goto("/settings");
+    await page.getByRole("button", { name: "Check for updates" }).click();
+    await expect(page.getByText("Up to date")).toBeVisible();
+    await expect(page.getByText("A new version of Speakwise is ready.")).toHaveCount(0);
+
+    await page.route("**/api/version", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: '{"version":"newer000000"}' }),
+    );
+    await page.goto("/practice");
+    await expect(page.getByText("A new version of Speakwise is ready.")).toBeVisible();
+    await page.getByRole("button", { name: "Update" }).click();
+    await expect(page).toHaveURL(/\/practice$/);
+  });
+
   test("settings save and survive a reload", async ({ page }) => {
     await page.goto("/settings");
     await expect(
@@ -203,7 +233,7 @@ test("pronunciation course: open a unit, hear a minimal pair, read the Hebrew ti
     await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' });
   });
   await page.goto("/practice");
-  await page.getByRole("link", { name: /Pronunciation for Hebrew speakers/ }).click();
+  await page.getByRole("link", { name: /^Pronunciation 10 units/ }).click();
   await expect(page.getByText("0 / 10")).toBeVisible();
   await page.getByRole("link", { name: /W is not V/ }).click();
   await expect(page.getByRole("heading", { name: "W is not V" })).toBeVisible();

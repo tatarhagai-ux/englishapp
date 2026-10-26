@@ -29,8 +29,33 @@
   color-scheme: dark;
 }
 
+/* Light: chosen in Settings, or "Auto" on a phone set to light. */
+:root[data-theme="light"] {
+  --bg: #f6f7fb;
+  --bg-elev: #ffffff;
+  --bg-elev-2: #eef0f7;
+  --line: #dfe2ee;
+  --text: #12152a;
+  --text-dim: #4a5070;
+  --text-faint: #8a90ab;
+  --accent: #5b3df5;
+  --accent-2: #0fb894;
+  --accent-soft: rgba(91, 61, 245, 0.1);
+  --good: #12a46c;
+  --warn: #c78a00;
+  --bad: #e0334f;
+  --ring: rgba(91, 61, 245, 0.45);
+  --accent-deep: #3a22b8;
+  --go: #2fbf71;
+  --go-deep: #1f8a50;
+  --go-ink: #04230f;
+  --xp: #e0a800;
+  --streak: #e87a00;
+  color-scheme: light;
+}
+
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
+  :root:not([data-theme]) {
     --bg: #f6f7fb;
     --bg-elev: #ffffff;
     --bg-elev-2: #eef0f7;

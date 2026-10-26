@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BookOpen, ChevronRight, Download, ShieldCheck, Trash2 } from "lucide-react";
+import { BookOpen, ChevronRight, Download, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { learner } from "@/lib/client/learner";
 import { usePrefs, type Prefs } from "@/lib/client/prefs";
 import { voiceById } from "@/content/voices";
@@ -12,12 +12,19 @@ import { SyncSettings } from "./SyncSettings";
 import { ReminderSettings } from "./ReminderSettings";
 import { MemorySettings } from "./MemorySettings";
 import { syncConfigured } from "@/lib/client/sync";
+import { applyUpdate, BUILD_ID, useUpdate, type UpdateCheck } from "@/lib/client/update";
 
 const CORRECTION_HELP: Record<Prefs["correctionMode"], string> = {
   off: "No corrections while you talk. Fixes appear only in the report. Good for building confidence.",
   gentle:
     "Your tutor repeats your sentence the right way inside the reply, without stopping you. What top apps do by default.",
   precise: "Your tutor points out each important mistake right away and asks you to say it again.",
+};
+
+const THEME_HELP: Record<Prefs["theme"], string> = {
+  dark: "Easy on the eyes in the evening and in a dim office.",
+  light: "Easier to read in bright daylight.",
+  system: "Follows your phone's light or dark setting.",
 };
 
 export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
@@ -36,6 +43,8 @@ export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
         </span>
         <ChevronRight className="size-5 text-faint" aria-hidden />
       </Link>
+
+      <AppSection theme={prefs.theme} onTheme={(theme) => setPrefs({ theme })} />
 
       <Section title="Tutor">
         <Link
@@ -235,6 +244,50 @@ function DataControls() {
           {done}
         </p>
       )}
+    </Section>
+  );
+}
+
+function AppSection({ theme, onTheme }: { theme: Prefs["theme"]; onTheme: (t: Prefs["theme"]) => void }) {
+  const { check } = useUpdate();
+  const [result, setResult] = useState<UpdateCheck | "checking" | null>(null);
+  async function onCheck() {
+    setResult("checking");
+    const r = await check();
+    setResult(r);
+    if (r === "new") await applyUpdate();
+  }
+  return (
+    <Section title="App">
+      <Field label="Screen" hint={THEME_HELP[theme]}>
+        <Segmented
+          label="Screen theme"
+          value={theme}
+          onChange={onTheme}
+          options={[
+            { value: "dark", label: "Dark" },
+            { value: "light", label: "Light" },
+            { value: "system", label: "Auto" },
+          ]}
+        />
+      </Field>
+      <div className="flex items-center gap-3">
+        <p className="flex-1 text-sm text-dim">
+          Version <span className="font-mono">{BUILD_ID.slice(0, 7)}</span>
+          {result === "latest" && <span className="ml-2 font-bold text-good">Up to date</span>}
+          {result === "error" && <span className="ml-2 font-bold text-bad">Couldn&apos;t check. Try again.</span>}
+          {result === "new" && <span className="ml-2 font-bold text-accent">Updating…</span>}
+        </p>
+        <button
+          type="button"
+          onClick={() => void onCheck()}
+          disabled={result === "checking"}
+          className="btn-3d btn-ghost flex items-center gap-1.5 px-3 py-2 text-sm disabled:opacity-60"
+        >
+          <RefreshCw className="size-4" aria-hidden />
+          {result === "checking" ? "Checking…" : "Check for updates"}
+        </button>
+      </div>
     </Section>
   );
 }
