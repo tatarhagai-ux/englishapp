@@ -8,6 +8,7 @@ import { analysisSchema, buildAnalyzerMessages, extractJson, parseAnalysis } fro
 import { scenarioById } from "@/content/scenarios";
 import evalSet from "@/eval/sentences.json";
 import { pickItems, type EvalItem as Item } from "@/lib/diagnostics";
+import { serverSyncConfigured, supabaseStore } from "@/lib/sync/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,6 +117,17 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const token = url.searchParams.get("token") ?? "";
   if (!expected || !safeEqual(token, expected)) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  // ?check=sync: can the server reach the stored learner document? Counts only, no content.
+  if (url.searchParams.get("check") === "sync") {
+    if (!serverSyncConfigured()) return NextResponse.json({ sync: "not_configured" });
+    try {
+      const doc = await supabaseStore.pull();
+      return NextResponse.json({ sync: "ok", stored: Boolean(doc), sessions: doc?.sessions?.length ?? 0 });
+    } catch (err) {
+      return NextResponse.json({ sync: "error", message: (err as Error).message });
+    }
+  }
 
   try {
     const cfg = llmConfig();

@@ -11,7 +11,7 @@ import {
   type SessionRecord,
 } from "@/lib/learner/model";
 import { mergeStates } from "@/lib/learner/merge";
-import { syncOnce, type SyncStore } from "@/lib/client/sync";
+import { syncOnce, type SyncStore } from "@/lib/sync/merge-store";
 import { analysisSchema } from "@/lib/prompts/analyzer";
 
 const T0 = new Date("2026-10-25T08:00:00Z");
