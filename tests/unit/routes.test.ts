@@ -73,7 +73,11 @@ describe("POST /api/chat", () => {
         .map((l) => l.text)
         .join(""),
     ).toBe("Oh nice, so you've been studying for two weeks!");
-    expect(lines.at(-1)).toMatchObject({ t: "done", model: "deepseek/deepseek-v4-flash", usage: { promptTokens: 900 } });
+    expect(lines.at(-1)).toMatchObject({
+      t: "done",
+      model: "deepseek/deepseek-v4-flash",
+      usage: { promptTokens: 900 },
+    });
     const sent = fake.calls[0];
     expect(sent.messages[0].role).toBe("system");
     expect(sent.messages[0].content).toContain("I've been living in Shoham");
