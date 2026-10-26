@@ -26,6 +26,7 @@ import {
 import type { Turn } from "@/lib/conversation/types";
 import type { Analysis } from "@/lib/prompts/analyzer";
 import { monthKey } from "@/lib/cost/budget";
+import { backupSummary, parseBackup, restoreBackup, type BackupError } from "@/lib/learner/backup";
 import { sttCostUsd, ttsCostUsd } from "@/lib/cost/pricing";
 import { dayKey } from "@/lib/game/streak";
 import { browserSpeechActive } from "./browser-speech";
@@ -272,6 +273,14 @@ export const learner = {
 
   exportJson(): string {
     return JSON.stringify(get(), null, 2);
+  },
+
+  /** Merge an exported backup into this device's copy. */
+  restore(text: string): { summary: string } | { error: BackupError } {
+    const parsed = parseBackup(text);
+    if ("error" in parsed) return parsed;
+    set(restoreBackup(get(), parsed.state));
+    return { summary: backupSummary(parsed.state) };
   },
 
   /** Swap in a merged state from sync. */

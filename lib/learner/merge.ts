@@ -14,7 +14,10 @@ import type { Card } from "ts-fsrs";
 import type { ErrorRecord, LearnerState, ListeningState, PhraseRecord, SessionRecord } from "./model";
 
 export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
-  const resetAt = later(a.resetAt, b.resetAt);
+  const restoredAt = later(a.restoredAt, b.restoredAt);
+  const lastReset = later(a.resetAt, b.resetAt);
+  // Restoring a backup after "Delete all" brings the old history back on every device.
+  const resetAt = lastReset && (!restoredAt || lastReset > restoredAt) ? lastReset : undefined;
   const after = (iso: string | undefined) => !resetAt || (iso ?? "") >= resetAt;
 
   const removedPhrases = mergeRecords(a.removed?.phrases, b.removed?.phrases, (x, y) => (x >= y ? x : y));
@@ -72,6 +75,7 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     .slice(-12);
   if (memory.length) out.memory = memory;
   if (resetAt) out.resetAt = resetAt;
+  if (restoredAt) out.restoredAt = restoredAt;
   if (Object.keys(removedPhrases).length || removedSessions.length) {
     out.removed = {};
     if (Object.keys(removedPhrases).length) out.removed.phrases = removedPhrases;

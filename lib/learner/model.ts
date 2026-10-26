@@ -95,6 +95,8 @@ export interface LearnerState {
   feelings?: Record<string, WeekFeeling>;
   /** Set by "Delete all". Sync drops anything older from other devices. */
   resetAt?: string;
+  /** Set when a backup is restored: a "Delete all" from before it no longer applies. */
+  restoredAt?: string;
   /** Deletions, kept so sync doesn't bring them back: phrase (lowercased) → when, and session ids. */
   removed?: { phrases?: Record<string, string>; sessions?: string[] };
 }
