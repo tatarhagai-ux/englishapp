@@ -37,6 +37,7 @@ export async function POST(req: Request) {
       practicePhrases: body.practicePhrases,
       memory: body.memory,
       wrapUp: body.wrapUp,
+      level: body.level,
     });
     iterator = llm()
       .stream({

@@ -3,6 +3,8 @@
 import { PLAN } from "@/content/plan";
 import { ownedStretchWords } from "@/lib/learner/plan";
 import { speakingChecks, weeklySummary } from "@/lib/learner/weekly";
+import { adaptation } from "@/lib/learner/adapt";
+import { LEVEL_TEXT } from "./CoachCard";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Award, Briefcase, ChevronRight, Lock } from "lucide-react";
@@ -315,6 +317,7 @@ function WeekSection() {
   const today = dayKey(new Date());
   const { thisWeek, lastWeek } = weeklySummary(state, today);
   const checks = speakingChecks(state);
+  const adapt = adaptation(state, today);
   const owned = ownedStretchWords(state);
   const totalWords = PLAN.reduce((n, w) => n + w.words.length, 0);
   const rows: { label: string; now: number; before: number; goal?: number }[] = [
@@ -352,6 +355,20 @@ function WeekSection() {
         </ul>
         <p className="text-xs font-bold text-faint">
           Weeks run Sunday to Saturday. Two rest days in a row keep your streak.
+        </p>
+      </section>
+
+      <section className="tile space-y-2 p-4" aria-labelledby="adapt-title">
+        <h2 id="adapt-title" className="font-black">
+          How your tutor adapts
+        </h2>
+        <p className="text-sm">
+          <span className="font-extrabold">{LEVEL_TEXT[adapt.level]}</span>
+          <span className="text-dim">, because {adapt.reasons.join(" and ")}.</span>
+        </p>
+        <p className="text-xs font-bold text-faint">
+          It looks at your last 3 conversations: how often you got stuck, asked to hear it again, and how long your
+          answers were, plus how the week felt to you. It is always patient, and gives one word when you search for one.
         </p>
       </section>
 

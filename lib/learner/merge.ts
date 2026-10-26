@@ -60,6 +60,8 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     })),
   );
   if (pronunciation) out.pronunciation = pronunciation;
+  const feelings = mergeOptional(a.feelings, b.feelings, (x, y) => mergeRecords(x, y, (u) => u));
+  if (feelings) out.feelings = feelings;
   const memory = mergeBy(
     [...(a.memory ?? []), ...(b.memory ?? [])],
     (m) => m.text.toLowerCase(),
