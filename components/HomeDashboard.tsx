@@ -8,7 +8,7 @@ import { hasPlacement, levelHistory, minutesOnDay, rankedErrors, statsFrom, warm
 import { PLACEMENT_ID } from "@/content/scenarios";
 import { dayKey } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/xp";
-import { ChooseVoicePrompt, Greeting, TutorBadge } from "./HomeClient";
+import { ChooseVoicePrompt, Greeting, TutorBadge, VoiceTipCard } from "./HomeClient";
 import { UnfinishedCard } from "./UnfinishedCard";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { PlanToday } from "./PlanToday";
@@ -212,6 +212,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
       )}
 
       <ChooseVoicePrompt />
+      {!firstTime && <VoiceTipCard />}
     </div>
   );
 }

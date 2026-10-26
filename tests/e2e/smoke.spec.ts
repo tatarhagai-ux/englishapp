@@ -372,3 +372,13 @@ test("pronunciation: record yourself, then play it next to the tutor", async ({ 
   await expect(first.getByRole("button", { name: "Tutor" })).toBeVisible();
   await expect(first.getByRole("button", { name: "Record again" })).toBeVisible();
 });
+
+test("android: a one-time Home card opens the steps for natural voices", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "The tip is for Android phones (the mobile project uses a Pixel).");
+  await page.goto("/");
+  await page.getByRole("link", { name: /Make the voices sound natural/ }).click();
+  await expect(page).toHaveURL(/\/settings\/voice#voice-tip/);
+  await expect(page.getByText("Speech Recognition and Synthesis from Google")).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: /Make the voices sound natural/ })).toHaveCount(0);
+});

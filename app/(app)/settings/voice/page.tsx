@@ -259,10 +259,14 @@ function DeviceVoices() {
 function AndroidVoiceTip() {
   const [android, setAndroid] = useState(false);
   const [open, setOpen] = useState(false);
-  useEffect(() => setAndroid(/Android/i.test(navigator.userAgent)), []);
+  useEffect(() => {
+    setAndroid(/Android/i.test(navigator.userAgent));
+    // Arriving from the Home card opens the steps right away.
+    if (window.location.hash === "#voice-tip") setOpen(true);
+  }, []);
   if (!android) return null;
   return (
-    <section className="card p-4">
+    <section id="voice-tip" className="card scroll-mt-4 p-4">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

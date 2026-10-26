@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Headphones } from "lucide-react";
+import { ArrowRight, Headphones, Smartphone, X } from "lucide-react";
 import { usePrefs } from "@/lib/client/prefs";
 import { voiceById } from "@/content/voices";
 import { Avatar } from "./Avatar";
@@ -51,5 +51,41 @@ export function ChooseVoicePrompt() {
       </span>
       <ArrowRight className="size-5 text-dim" aria-hidden />
     </Link>
+  );
+}
+
+/**
+ * Android only, once: the device voice sounds much better with Google's engine, and the
+ * steps live in the voice settings where he wouldn't look for them.
+ */
+export function VoiceTipCard() {
+  const [prefs, setPrefs] = usePrefs();
+  const [android, setAndroid] = useState(false);
+  useEffect(() => setAndroid(/Android/i.test(navigator.userAgent)), []);
+  if (!android || prefs.voiceTipSeen) return null;
+  return (
+    <div className="tile flex items-center gap-3 p-4">
+      <Link
+        href="/settings/voice#voice-tip"
+        onClick={() => setPrefs({ voiceTipSeen: true })}
+        className="flex flex-1 items-center gap-3"
+      >
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+          <Smartphone className="size-5" aria-hidden />
+        </span>
+        <span className="flex-1">
+          <span className="block font-extrabold">Make the voices sound natural</span>
+          <span className="block text-sm text-dim">A 2-minute change in your phone&apos;s settings.</span>
+        </span>
+      </Link>
+      <button
+        type="button"
+        onClick={() => setPrefs({ voiceTipSeen: true })}
+        aria-label="Dismiss the voice tip"
+        className="rounded-full p-1.5 text-faint hover:text-text"
+      >
+        <X className="size-4" aria-hidden />
+      </button>
+    </div>
   );
 }
