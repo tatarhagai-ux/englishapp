@@ -516,6 +516,363 @@ export const STORIES: readonly Story[] = [
       { text: "fair point", meaningEn: "you're right about that", meaningHe: "נקודה הוגנת" },
     ],
   },
+  {
+    id: "s-hotel",
+    title: "A noisy room",
+    level: "B1+",
+    topic: "travel",
+    setting: "A guest calls the hotel front desk",
+    lines: [
+      { voice: "ryan", name: "Front desk", text: "Front desk, Oliver speaking. How can I help?" },
+      {
+        voice: "andrew",
+        name: "Guest",
+        text: "Hi, I'm in room three-twelve. There's construction right outside my window, and it's been going since seven.",
+      },
+      {
+        voice: "ryan",
+        name: "Front desk",
+        text: "I'm really sorry about that. The work should finish by noon, but I understand that doesn't help much.",
+      },
+      {
+        voice: "andrew",
+        name: "Guest",
+        text: "Not really. I've got calls all morning. Is there any chance of moving to a quieter room?",
+      },
+      {
+        voice: "ryan",
+        name: "Front desk",
+        text: "Let me check. I've got a room on the other side of the building, on the fifth floor. It's a bit smaller, but it's very quiet.",
+      },
+      { voice: "andrew", name: "Guest", text: "Smaller is fine. Quiet is what matters." },
+      {
+        voice: "ryan",
+        name: "Front desk",
+        text: "Great. I'll send someone up with a new key, and breakfast is on us today.",
+      },
+    ],
+    questions: [
+      {
+        q: "What's the guest's problem?",
+        options: ["The room is dirty", "Construction noise outside", "The Wi-Fi doesn't work"],
+        answer: 1,
+        why: "“There's construction right outside my window.”",
+      },
+      {
+        q: "What's the downside of the new room?",
+        options: ["It's more expensive", "It's a bit smaller", "It has no window"],
+        answer: 1,
+        why: "“It's a bit smaller, but it's very quiet.”",
+      },
+      {
+        q: "What does the hotel offer to make up for it?",
+        options: ["A free night", "Free breakfast today", "A late checkout"],
+        answer: 1,
+        why: "“Breakfast is on us today.”",
+      },
+    ],
+    phrases: [
+      {
+        text: "Is there any chance of",
+        meaningEn: "a polite way to ask if something is possible",
+        meaningHe: "יש סיכוי ש",
+      },
+      { text: "what matters", meaningEn: "the important thing", meaningHe: "מה שחשוב" },
+      { text: "send someone up", meaningEn: "send a person to your room", meaningHe: "לשלוח מישהו למעלה" },
+    ],
+  },
+  {
+    id: "s-tech-support",
+    title: "The laptop won't connect",
+    level: "B1+",
+    topic: "tech",
+    setting: "An employee calls IT support",
+    lines: [
+      { voice: "prabhat", name: "IT", text: "IT support, this is Arjun. What seems to be the problem?" },
+      {
+        voice: "andrew",
+        name: "Hagai",
+        text: "My laptop won't connect to the office Wi-Fi. It worked fine yesterday.",
+      },
+      { voice: "prabhat", name: "IT", text: "OK. Have you tried turning the Wi-Fi off and on again?" },
+      { voice: "andrew", name: "Hagai", text: "Yeah, twice. I also restarted the laptop. No luck." },
+      {
+        voice: "prabhat",
+        name: "IT",
+        text: "Right. There was a password change last night, so your laptop is probably still using the old one. Go to the network settings, forget the network, and log in again with your new password.",
+      },
+      { voice: "andrew", name: "Hagai", text: "Oh, that makes sense. I didn't even know the password had changed." },
+      {
+        voice: "prabhat",
+        name: "IT",
+        text: "The email went out at midnight, so you're not the only one. Give it a try and call back if it's still not working.",
+      },
+    ],
+    questions: [
+      {
+        q: "What has Hagai already tried?",
+        options: ["Nothing yet", "Turning Wi-Fi off and on, and restarting", "Calling his manager"],
+        answer: 1,
+        why: "“Yeah, twice. I also restarted the laptop.”",
+      },
+      {
+        q: "What's the likely cause?",
+        options: ["A broken laptop", "The Wi-Fi password changed", "A virus"],
+        answer: 1,
+        why: "“There was a password change last night.”",
+      },
+      {
+        q: "Why does IT say “you're not the only one”?",
+        options: [
+          "The email went out at midnight, so many people missed it",
+          "Everyone's laptop is broken",
+          "Hagai called twice",
+        ],
+        answer: 0,
+        why: "“The email went out at midnight, so you're not the only one.”",
+      },
+    ],
+    phrases: [
+      { text: "What seems to be the problem?", meaningEn: "a polite way to ask what's wrong", meaningHe: "מה הבעיה?" },
+      { text: "No luck.", meaningEn: "it didn't work", meaningHe: "בלי הצלחה" },
+      { text: "Give it a try", meaningEn: "try it", meaningHe: "תנסה" },
+    ],
+  },
+  {
+    id: "s-feedback",
+    title: "Feedback from the boss",
+    level: "B2",
+    topic: "work",
+    setting: "A manager gives feedback after a presentation",
+    lines: [
+      {
+        voice: "jenny",
+        name: "Rachel",
+        text: "Thanks for the presentation this morning. Do you have five minutes to go over it?",
+      },
+      { voice: "andrew", name: "Hagai", text: "Sure. How do you think it went?" },
+      {
+        voice: "jenny",
+        name: "Rachel",
+        text: "Overall, really well. The data was solid, and you handled the questions calmly. That's not easy in front of the directors.",
+      },
+      { voice: "andrew", name: "Hagai", text: "Thanks. Was there anything you'd change?" },
+      {
+        voice: "jenny",
+        name: "Rachel",
+        text: "Just one thing. You spent a long time on the background, so the recommendation came right at the end, when people were already checking their phones. Next time, lead with the main point.",
+      },
+      { voice: "andrew", name: "Hagai", text: "That's fair. Start with the answer, then explain." },
+      {
+        voice: "jenny",
+        name: "Rachel",
+        text: "Exactly. Do that and you'll be ready for the board meeting next month.",
+      },
+    ],
+    questions: [
+      {
+        q: "What went well?",
+        options: ["The jokes", "The data and how he handled questions", "The timing"],
+        answer: 1,
+        why: "“The data was solid, and you handled the questions calmly.”",
+      },
+      {
+        q: "What should he change?",
+        options: ["Use more slides", "Put the main point first", "Speak more slowly"],
+        answer: 1,
+        why: "“Next time, lead with the main point.”",
+      },
+      {
+        q: "What does Rachel's last line suggest?",
+        options: ["He might present at the board meeting", "He lost the project", "The board meeting is cancelled"],
+        answer: 0,
+        why: "“You'll be ready for the board meeting next month.”",
+      },
+    ],
+    phrases: [
+      { text: "go over", meaningEn: "review together", meaningHe: "לעבור על" },
+      { text: "lead with", meaningEn: "start with", meaningHe: "לפתוח ב" },
+      { text: "That's fair.", meaningEn: "I accept that, it's reasonable", meaningHe: "זה הוגן" },
+    ],
+  },
+  {
+    id: "s-flatmate",
+    title: "The flatmate talk",
+    level: "B1+",
+    topic: "daily",
+    setting: "Two flatmates in the kitchen",
+    lines: [
+      { voice: "william", name: "Liam", text: "Hey, got a sec? I wanted to talk about the kitchen." },
+      { voice: "andrew", name: "You", text: "Sure. Is it the dishes? I know I left a few last night." },
+      {
+        voice: "william",
+        name: "Liam",
+        text: "Yeah, it's not a big deal, but it's been happening a lot lately, and I end up doing them before work.",
+      },
+      { voice: "andrew", name: "You", text: "Fair enough. Sorry, I've been getting home really late this week." },
+      {
+        voice: "william",
+        name: "Liam",
+        text: "No worries. How about a simple rule: whoever cooks, the other one washes up?",
+      },
+      {
+        voice: "andrew",
+        name: "You",
+        text: "That works for me. And if I can't do them at night, I'll do them first thing in the morning.",
+      },
+    ],
+    questions: [
+      {
+        q: "What's the issue?",
+        options: ["Rent", "Dishes left in the kitchen", "Noise at night"],
+        answer: 1,
+        why: "“Is it the dishes? I know I left a few last night.”",
+      },
+      {
+        q: "Why has this been happening?",
+        options: ["He's been coming home late", "He's been sick", "He doesn't like cooking"],
+        answer: 0,
+        why: "“I've been getting home really late this week.”",
+      },
+      {
+        q: "What rule do they agree on?",
+        options: ["They take turns each week", "Whoever cooks, the other washes up", "They buy a dishwasher"],
+        answer: 1,
+        why: "“Whoever cooks, the other one washes up.”",
+      },
+    ],
+    phrases: [
+      { text: "got a sec?", meaningEn: "do you have a moment?", meaningHe: "יש לך רגע?" },
+      { text: "Fair enough.", meaningEn: "that's reasonable, I accept that", meaningHe: "מקובל, הוגן" },
+      { text: "That works for me.", meaningEn: "I agree with that plan", meaningHe: "זה מתאים לי" },
+    ],
+  },
+  {
+    id: "s-networking",
+    title: "Meeting someone at an event",
+    level: "B2",
+    topic: "work",
+    setting: "Two people at a tech meetup",
+    lines: [
+      {
+        voice: "emma",
+        name: "Nora",
+        text: "Hi, I don't think we've met. I'm Nora, I work on the product team at Cloudly.",
+      },
+      {
+        voice: "andrew",
+        name: "Hagai",
+        text: "Nice to meet you, I'm Hagai. I'm in the army right now, but I'm really into AI automation.",
+      },
+      { voice: "emma", name: "Nora", text: "Oh, interesting. What kind of things do you automate?" },
+      {
+        voice: "andrew",
+        name: "Hagai",
+        text: "Mostly reports and repetitive office tasks. I built a small tool that turns a spreadsheet into a weekly summary.",
+      },
+      {
+        voice: "emma",
+        name: "Nora",
+        text: "That's exactly the kind of thing our customers ask about. Are you thinking of doing it professionally after the army?",
+      },
+      { voice: "andrew", name: "Hagai", text: "That's the plan. I'm trying to learn as much as I can before then." },
+      {
+        voice: "emma",
+        name: "Nora",
+        text: "Let's stay in touch. Here's my card, send me a message and I'll tell you about our internship.",
+      },
+    ],
+    questions: [
+      {
+        q: "What does Hagai automate?",
+        options: ["Social media posts", "Reports and repetitive office tasks", "Home devices"],
+        answer: 1,
+        why: "“Mostly reports and repetitive office tasks.”",
+      },
+      {
+        q: "Why is Nora interested?",
+        options: ["Her customers ask about that kind of thing", "She needs a new laptop", "She knows his commander"],
+        answer: 0,
+        why: "“That's exactly the kind of thing our customers ask about.”",
+      },
+      {
+        q: "What might come from this conversation?",
+        options: ["An internship opportunity", "A job in the army", "Nothing at all"],
+        answer: 0,
+        why: "“Send me a message and I'll tell you about our internship.”",
+      },
+    ],
+    phrases: [
+      {
+        text: "I don't think we've met.",
+        meaningEn: "a friendly way to start talking to someone new",
+        meaningHe: "נראה לי שלא הכרנו",
+      },
+      { text: "I'm really into", meaningEn: "I really like", meaningHe: "אני ממש בקטע של" },
+      { text: "stay in touch", meaningEn: "keep contacting each other", meaningHe: "לשמור על קשר" },
+    ],
+  },
+  {
+    id: "s-car-rental",
+    title: "Picking up a rental car",
+    level: "B1+",
+    topic: "travel",
+    setting: "At a car rental desk abroad",
+    lines: [
+      { voice: "guy", name: "Agent", text: "Good afternoon. Do you have a reservation with us?" },
+      { voice: "andrew", name: "You", text: "Yes, under Tatar. A small car for three days." },
+      {
+        voice: "guy",
+        name: "Agent",
+        text: "Got it. Would you like to add full insurance? It's fifteen dollars a day, and it covers any damage with no deposit.",
+      },
+      { voice: "andrew", name: "You", text: "What happens if I don't take it?" },
+      {
+        voice: "guy",
+        name: "Agent",
+        text: "Then we hold five hundred dollars on your credit card, and you'd pay for any damage up to that amount.",
+      },
+      {
+        voice: "andrew",
+        name: "You",
+        text: "OK, I'll take the full insurance then. And the tank, should I bring it back full?",
+      },
+      {
+        voice: "guy",
+        name: "Agent",
+        text: "Yes, full to full. If it's not full, we charge for the fuel plus a service fee.",
+      },
+    ],
+    questions: [
+      {
+        q: "How long is the rental?",
+        options: ["One day", "Three days", "A week"],
+        answer: 1,
+        why: "“A small car for three days.”",
+      },
+      {
+        q: "What happens without full insurance?",
+        options: ["He can't rent the car", "They hold $500 on his card", "He pays double"],
+        answer: 1,
+        why: "“We hold five hundred dollars on your credit card.”",
+      },
+      {
+        q: "What does “full to full” mean?",
+        options: [
+          "Bring the car back with a full tank",
+          "The car is always full of passengers",
+          "Pay in full at the start",
+        ],
+        answer: 0,
+        why: "He gets it with a full tank and must return it full, or pay for fuel plus a fee.",
+      },
+    ],
+    phrases: [
+      { text: "under", meaningEn: "booked with the name", meaningHe: "על השם" },
+      { text: "What happens if", meaningEn: "asking about the result of a choice", meaningHe: "מה קורה אם" },
+      { text: "I'll take", meaningEn: "I'll choose / buy", meaningHe: "אני אקח" },
+    ],
+  },
 ];
 
 export function storyById(id: string): Story | undefined {
