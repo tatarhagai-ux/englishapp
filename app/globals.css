@@ -101,65 +101,71 @@ body {
   outline-offset: 2px;
 }
 
-.card {
-  background: var(--bg-elev);
-  border: 2px solid var(--line);
-  border-radius: 1.25rem;
-}
-
-.accent-gradient {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-}
-
-.text-gradient {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 /*
- * Chunky "3D" buttons: a solid bottom edge that collapses on press. The tactile feel is
- * what makes Duolingo-style apps satisfying to tap every day.
+ * Component classes live in the components layer so utilities can still override them
+ * (a selected tile's accent border, a ghost button's red text).
  */
-.btn-3d {
-  position: relative;
-  border-radius: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  transition:
-    transform 80ms ease,
-    box-shadow 80ms ease,
-    filter 120ms ease;
-}
-.btn-3d:active:not(:disabled) {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 transparent !important;
-}
-.btn-3d:hover:not(:disabled) {
-  filter: brightness(1.06);
-}
-.btn-go {
-  background: var(--go);
-  color: var(--go-ink);
-  box-shadow: 0 4px 0 var(--go-deep);
-}
-.btn-accent {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 4px 0 var(--accent-deep);
-}
-.btn-ghost {
-  background: var(--bg-elev);
-  color: var(--text);
-  border: 2px solid var(--line);
-  box-shadow: 0 3px 0 var(--line);
-}
+@layer components {
+  .card {
+    background: var(--bg-elev);
+    border: 2px solid var(--line);
+    border-radius: 1.25rem;
+  }
 
-.tile {
-  background: var(--bg-elev);
-  border: 2px solid var(--line);
-  border-radius: 1.25rem;
+  .accent-gradient {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /*
+   * Chunky "3D" buttons: a solid bottom edge that collapses on press. The tactile feel is
+   * what makes Duolingo-style apps satisfying to tap every day.
+   */
+  .btn-3d {
+    position: relative;
+    border-radius: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    transition:
+      transform 80ms ease,
+      box-shadow 80ms ease,
+      filter 120ms ease;
+  }
+  .btn-3d:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 transparent !important;
+  }
+  .btn-3d:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+  .btn-go {
+    background: var(--go);
+    color: var(--go-ink);
+    box-shadow: 0 4px 0 var(--go-deep);
+  }
+  .btn-accent {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 0 var(--accent-deep);
+  }
+  .btn-ghost {
+    background: var(--bg-elev);
+    color: var(--text);
+    border: 2px solid var(--line);
+    box-shadow: 0 3px 0 var(--line);
+  }
+
+  .tile {
+    background: var(--bg-elev);
+    border: 2px solid var(--line);
+    border-radius: 1.25rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

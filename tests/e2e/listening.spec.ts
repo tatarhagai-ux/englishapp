@@ -29,6 +29,11 @@ test("dictation round: type what you hear, see the diff, finish with a score", a
   await page.goto("/practice");
   await page.getByRole("link", { name: /Listening gym/ }).click();
   await expect(page.getByText("Your listening speed")).toBeVisible();
+  // Screens reached from Practice keep the Practice tab lit.
+  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Practice" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await page.getByRole("button", { name: "British", exact: true }).click();
   await page.getByRole("button", { name: /Start 8 sentences/ }).click();
   await expect(page.getByText(/· British ·/)).toBeVisible();
@@ -42,5 +47,6 @@ test("dictation round: type what you hear, see the diff, finish with a score", a
     await page.getByRole("button", { name: i === 7 ? "Finish" : "Next" }).click();
   }
   await expect(page.getByText("7 of 8 correct · +35 XP")).toBeVisible();
-  await expect(page.getByText(/Speed up! Next round plays at 0\.95×/)).toBeVisible();
+  // Speed adapts during the round: a miss (0.85×), then 3 right (0.90×), then 3 more (0.95×).
+  await expect(page.getByText("Faster! You went from 0.90× to 0.95×.")).toBeVisible();
 });

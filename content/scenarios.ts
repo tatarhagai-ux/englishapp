@@ -681,6 +681,11 @@ Do not correct anything. React in a few words, then ask the next question. After
   },
 ];
 
+/** The roleplay character's name ("Tom" from "Tom, a senior engineer…"), or null for the tutor. */
+export function characterName(scenario: Scenario): string | null {
+  return scenario.role ? scenario.role.split(",")[0].trim() : null;
+}
+
 export function scenarioById(id: string): Scenario | undefined {
   return SCENARIOS.find((s) => s.id === id);
 }

@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import clsx from "clsx";
-import { scenarioById } from "@/content/scenarios";
+import { characterName, scenarioById } from "@/content/scenarios";
 import { voiceById, DEFAULT_TUTOR_VOICE_ID } from "@/content/voices";
 import type { Turn, TurnInput } from "@/lib/conversation/types";
 import { usePrefs } from "@/lib/client/prefs";
@@ -63,6 +63,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   const isTutor = scenario.voiceId === null;
   const voice = voiceById(scenario.voiceId ?? prefs.tutorVoiceId) ?? voiceById(DEFAULT_TUTOR_VOICE_ID)!;
+  // Roleplay characters go by their own name ("Tom"), not the voice's.
+  const speakerName = characterName(scenario) ?? voice.displayName;
   const tutorName = voiceById(prefs.tutorVoiceId)?.displayName ?? "Ava";
   // Free talk follows the length setting; roleplays and the level check have their own.
   const limitSeconds = (isTutor && !scenario.hidden ? prefs.sessionMinutes : scenario.minutes) * 60;
@@ -524,7 +526,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         <Orb state={orb} size={36} showLabel={false} />
         <div className="flex-1">
           <div className="flex items-baseline justify-between">
-            <p className="font-extrabold">{voice.displayName}</p>
+            <p className="font-extrabold">{speakerName}</p>
             <p className="font-mono text-xs text-dim" aria-label="Elapsed time">
               {minutes}:{seconds}
             </p>
@@ -550,7 +552,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       <main className="flex-1 overflow-y-auto px-4 py-3">
         <Transcript
           turns={turns}
-          speakerName={voice.displayName}
+          speakerName={speakerName}
           pendingTutor={pendingTutor}
           partial={partial}
           hideTutorText={hideText}
@@ -692,9 +694,9 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
                 ? "Listening. Pause for a moment when you're done."
                 : "Listening. Tap send when you're done."
             : orb === "thinking"
-              ? `${voice.displayName} is thinking…`
+              ? `${speakerName} is thinking…`
               : orb === "speaking"
-                ? `${voice.displayName} is talking…`
+                ? `${speakerName} is talking…`
                 : mode === "voice"
                   ? "Tap the mic to talk."
                   : "Quiet mode: type, and listen to the reply."}

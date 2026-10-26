@@ -6,7 +6,7 @@ import clsx from "clsx";
 import type { WarmupItem } from "@/lib/learner/model";
 import { assessPronunciation, SpeechSetupError } from "@/lib/client/speech";
 import { learner } from "@/lib/client/learner";
-import { saidCorrectly } from "@/lib/text/compare";
+import { saidCorrectly, usedPhrase } from "@/lib/text/compare";
 
 interface Props {
   items: WarmupItem[];
@@ -30,13 +30,20 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone }: Props) {
   const [typed, setTyped] = useState("");
   const [showHe, setShowHe] = useState(hebrewHelp);
   const [reviewed, setReviewed] = useState(0);
+  /** Only the first answer schedules the review; retries are practice. */
+  const [recorded, setRecorded] = useState(false);
   const item = items[index];
 
   function record(ok: boolean) {
+    if (recorded) return;
+    setRecorded(true);
     if (item.kind === "phrase") learner.reviewPhrase(item.id, ok);
     else learner.reviewMistake(item.id, ok);
     setReviewed((n) => n + 1);
   }
+
+  const isRight = (answer: string) =>
+    item.kind === "phrase" ? usedPhrase(answer, item.target) : saidCorrectly(answer, item.target);
 
   function next() {
     if (index + 1 >= items.length) {
@@ -46,6 +53,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone }: Props) {
     }
     setIndex(index + 1);
     setRevealed(false);
+    setRecorded(false);
     setAttempt({ status: "idle" });
     setTyped("");
     setShowHe(hebrewHelp);
@@ -56,7 +64,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone }: Props) {
     try {
       const r = await assessPronunciation(item.target);
       learner.addSpeechUsage(sessionId, { sttSeconds: r.seconds });
-      const ok = saidCorrectly(r.text, item.target);
+      const ok = isRight(r.text);
       record(ok);
       setRevealed(true);
       setAttempt({ status: "checked", said: r.text, ok });
@@ -75,7 +83,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone }: Props) {
   function checkTyped(e: React.FormEvent) {
     e.preventDefault();
     if (!typed.trim()) return;
-    const ok = saidCorrectly(typed, item.target);
+    const ok = isRight(typed);
     record(ok);
     setRevealed(true);
     setAttempt({ status: "checked", said: typed, ok });
@@ -163,14 +171,28 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone }: Props) {
 
       <div className="mt-auto space-y-3">
         {attempt.status === "checked" ? (
-          <button
-            type="button"
-            onClick={next}
-            className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 uppercase"
-          >
-            {index + 1 >= items.length ? "Start the conversation" : "Next"}{" "}
-            <ArrowRight className="size-5" aria-hidden />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={next}
+              className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 uppercase"
+            >
+              {index + 1 >= items.length ? "Start the conversation" : "Next"}{" "}
+              <ArrowRight className="size-5" aria-hidden />
+            </button>
+            {!attempt.ok && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTyped("");
+                  setAttempt({ status: "idle" });
+                }}
+                className="btn-3d btn-ghost flex w-full items-center justify-center gap-2 py-3"
+              >
+                <RotateCcw className="size-4" aria-hidden /> Try again
+              </button>
+            )}
+          </>
         ) : mode === "voice" && attempt.status !== "error" ? (
           <>
             <button

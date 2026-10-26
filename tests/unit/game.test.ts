@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { levelFromXp, xpForSession, xpToNext } from "@/lib/game/xp";
-import { bestStreak, computeStreak, dayKey } from "@/lib/game/streak";
+import { bestStreak, computeStreak, dayKey, friendlyDay } from "@/lib/game/streak";
 import { ACHIEVEMENTS, EMPTY_STATS, earned } from "@/lib/game/achievements";
 
 describe("xp", () => {
@@ -90,5 +90,13 @@ describe("achievements", () => {
 
   it("have unique keys", () => {
     expect(new Set(ACHIEVEMENTS.map((a) => a.key)).size).toBe(ACHIEVEMENTS.length);
+  });
+});
+
+describe("friendlyDay", () => {
+  it("names today and yesterday, then short dates", () => {
+    expect(friendlyDay("2026-10-26", "2026-10-26")).toBe("Today");
+    expect(friendlyDay("2026-10-25", "2026-10-26")).toBe("Yesterday");
+    expect(friendlyDay("2026-10-24", "2026-10-26")).toBe("Sat 24 Oct");
   });
 });

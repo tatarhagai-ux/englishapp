@@ -7,7 +7,7 @@ import { PLACEMENT } from "@/content/learner-seed";
 import { scenarioById } from "@/content/scenarios";
 import { ACHIEVEMENTS } from "@/lib/game/achievements";
 import { levelFromXp } from "@/lib/game/xp";
-import { dayKey } from "@/lib/game/streak";
+import { dayKey, friendlyDay } from "@/lib/game/streak";
 import { useLearner } from "@/lib/client/learner";
 import {
   averageWpm,
@@ -31,7 +31,8 @@ const STATUS_ORDER: Record<ErrorStatus, number> = { new: 0, practicing: 1, maste
 
 export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
   const state = useLearner();
-  const stats = statsFrom(state, dayKey(new Date()));
+  const today = dayKey(new Date());
+  const stats = statsFrom(state, today);
   const lvl = levelFromXp(stats.xp);
   const errors = Object.values(state.errors).sort(
     (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || b.occurrences - a.occurrences,
@@ -142,9 +143,9 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
               <li key={s.id}>
                 <Link href={`/report/${s.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-elev-2">
                   <span className="flex-1">
-                    <span className="block font-extrabold">{scenarioById(s.scenarioId)?.title ?? s.scenarioId}</span>
+                    <span className="block font-extrabold">{scenarioById(s.scenarioId)?.title ?? "Conversation"}</span>
                     <span className="block text-xs font-bold text-dim">
-                      {s.day} · {Math.max(1, Math.round(s.speakingSeconds / 60))} min ·{" "}
+                      {friendlyDay(s.day, today)} · {Math.max(1, Math.round(s.speakingSeconds / 60))} min ·{" "}
                       {s.report ? (s.report.task.completed ? "mission complete" : "mission open") : "no report yet"}
                     </span>
                   </span>

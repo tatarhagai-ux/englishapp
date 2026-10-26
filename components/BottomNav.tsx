@@ -5,12 +5,18 @@ import { usePathname } from "next/navigation";
 import { BarChart3, Home, Mic, Settings } from "lucide-react";
 import clsx from "clsx";
 
+/** Each tab also owns the screens you reach from it, so the bar shows where you are. */
 const ITEMS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/practice", label: "Practice", icon: Mic },
-  { href: "/progress", label: "Progress", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "Home", icon: Home, also: [] },
+  { href: "/practice", label: "Practice", icon: Mic, also: ["/listen", "/pronounce"] },
+  { href: "/progress", label: "Progress", icon: BarChart3, also: ["/phrases"] },
+  { href: "/settings", label: "Settings", icon: Settings, also: ["/guide"] },
 ] as const;
+
+function isActive(pathname: string, href: string, also: readonly string[]) {
+  if (href === "/") return pathname === "/";
+  return [href, ...also].some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -21,8 +27,8 @@ export function BottomNav() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto flex max-w-xl justify-around px-2">
-        {ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        {ITEMS.map(({ href, label, icon: Icon, also }) => {
+          const active = isActive(pathname, href, also);
           return (
             <li key={href}>
               <Link

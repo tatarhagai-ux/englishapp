@@ -70,7 +70,8 @@ export function ListeningGym() {
   useEffect(() => {
     if (!round || !item || autoplayed.current === index) return;
     autoplayed.current = index;
-    play(round.rate);
+    // The live rate: it adapts within the round (3 right in a row speeds up, a miss slows down).
+    play(learner.get().listening?.rate ?? round.rate);
     // Autoplay once per item.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round, index]);
@@ -120,7 +121,7 @@ export function ListeningGym() {
         mode,
         correct: score,
         total: round.items.length,
-        rate: round.rate,
+        rate: learner.get().listening?.rate ?? round.rate,
       });
       setDone(true);
       return;
@@ -156,10 +157,10 @@ export function ListeningGym() {
             </p>
             <p className="mt-1 font-bold">
               {listening.rate > round.rate
-                ? `Speed up! Next round plays at ${listening.rate.toFixed(2)}×.`
+                ? `Faster! You went from ${round.rate.toFixed(2)}× to ${listening.rate.toFixed(2)}×.`
                 : listening.rate < round.rate
-                  ? `Next round slows to ${listening.rate.toFixed(2)}×, so you can lock it in.`
-                  : `Next round stays at ${listening.rate.toFixed(2)}×.`}
+                  ? `Slowed to ${listening.rate.toFixed(2)}× to lock it in. It speeds up again after 3 in a row.`
+                  : `You held ${listening.rate.toFixed(2)}×.`}
             </p>
           </section>
         )}
@@ -248,7 +249,7 @@ export function ListeningGym() {
             Quit
           </button>
           <p className="text-sm font-extrabold text-dim">
-            {voice?.displayName} · {voice?.accent} · {round.rate.toFixed(2)}×
+            {voice?.displayName} · {voice?.accent} · {listening.rate.toFixed(2)}×
           </p>
         </div>
         <div className="flex gap-1.5" aria-label={`Sentence ${index + 1} of ${round.items.length}`}>
@@ -261,7 +262,7 @@ export function ListeningGym() {
       <section className="tile flex flex-col items-center gap-4 p-6">
         <button
           type="button"
-          onClick={() => play(round.rate)}
+          onClick={() => play(listening.rate)}
           aria-label="Play the sentence"
           className="btn-3d btn-accent grid size-20 place-items-center rounded-full"
         >
@@ -273,7 +274,7 @@ export function ListeningGym() {
         </button>
         <button
           type="button"
-          onClick={() => play(Math.max(0.6, round.rate - 0.25))}
+          onClick={() => play(Math.max(0.6, listening.rate - 0.25))}
           className="inline-flex items-center gap-1.5 text-sm font-extrabold text-dim hover:text-text"
         >
           <Snail className="size-4" aria-hidden /> Play slower

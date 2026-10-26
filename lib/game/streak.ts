@@ -52,3 +52,14 @@ export function bestStreak(activeDays: Iterable<string>): number {
   }
   return best;
 }
+
+/** "Today", "Yesterday", or "Sat, 24 Oct" for a YYYY-MM-DD day key. */
+export function friendlyDay(day: string, today: string): string {
+  if (day === today) return "Today";
+  const d = new Date(`${day}T12:00:00Z`);
+  const t = new Date(`${today}T12:00:00Z`);
+  if (Math.round((t.getTime() - d.getTime()) / 864e5) === 1) return "Yesterday";
+  return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(
+    d,
+  );
+}

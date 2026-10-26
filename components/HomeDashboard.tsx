@@ -4,7 +4,14 @@ import Link from "next/link";
 import { ArrowRight, Clock, Flame, Gauge, MessageCircle, Sparkles, Target, Trophy, Wrench, Zap } from "lucide-react";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
-import { hasPlacement, minutesOnDay, rankedErrors, recommendScenario, statsFrom } from "@/lib/learner/model";
+import {
+  hasPlacement,
+  levelHistory,
+  minutesOnDay,
+  rankedErrors,
+  recommendScenario,
+  statsFrom,
+} from "@/lib/learner/model";
 import { PLACEMENT_ID } from "@/content/scenarios";
 import { dayKey } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/xp";
@@ -72,7 +79,8 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
         </Link>
       )}
 
-      {hydrated && ready && !hasPlacement(state) && (
+      {/* After three level estimates from normal conversations, the level is known; skip the nudge. */}
+      {hydrated && ready && !hasPlacement(state) && levelHistory(state).length < 3 && (
         <Link
           href={`/session/${PLACEMENT_ID}`}
           className="tile flex items-center gap-3 border-accent/60 bg-accent-soft p-4 transition-colors hover:border-accent"

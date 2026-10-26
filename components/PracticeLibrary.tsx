@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, AudioLines, Check, Clock, Headphones } from "lucide-react";
-import { CATEGORY_INFO, SCENARIOS, type Scenario, type ScenarioCategory } from "@/content/scenarios";
+import { CATEGORY_INFO, SCENARIOS, characterName, type Scenario, type ScenarioCategory } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
@@ -92,13 +92,14 @@ export function PracticeLibrary() {
 
 function ScenarioCard({ scenario, done, tutorName }: { scenario: Scenario; done: boolean; tutorName: string }) {
   const voice = scenario.voiceId ? voiceById(scenario.voiceId) : null;
-  const who = voice ? `${voice.displayName} · ${voice.accent}` : `With ${tutorName}`;
+  const name = characterName(scenario) ?? voice?.displayName;
+  const who = voice ? `${name} · ${voice.accent}` : `With ${tutorName}`;
   return (
     <Link
       href={`/session/${scenario.id}`}
       className="tile flex items-center gap-3 p-3.5 transition-colors hover:border-accent/60"
     >
-      <Avatar name={voice?.displayName ?? tutorName} size={44} />
+      <Avatar name={name ?? tutorName} size={44} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5 font-extrabold">
           {scenario.title}

@@ -183,7 +183,8 @@ test("practice library lists every category and opens a scenario", async ({ page
   await expect(page.getByText("Recommended for you")).toBeVisible();
   await page.getByRole("link", { name: /Problem at the airport/ }).click();
   await expect(page.getByRole("heading", { name: "Problem at the airport" })).toBeVisible();
-  await expect(page.getByText("Natasha · Australian accent")).toBeVisible();
+  await expect(page.getByText("Kate · Australian accent")).toBeVisible();
+  await expect(page.getByText(/talking with Kate, a busy/)).toBeVisible();
 });
 
 test("warm-up: recall the correct sentence by typing, then the conversation starts", async ({ page }) => {

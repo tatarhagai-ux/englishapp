@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronLeft, Keyboard, Mic, Target } from "lucide-react";
 import clsx from "clsx";
 import type { Scenario } from "@/content/scenarios";
-import { CATEGORY_INFO } from "@/content/scenarios";
+import { CATEGORY_INFO, characterName } from "@/content/scenarios";
 import type { Voice } from "@/content/voices";
 import { Avatar } from "../Avatar";
 
@@ -35,6 +35,7 @@ export function Intro({
   starting,
   warmupCount,
 }: Props) {
+  const speaker = characterName(scenario) ?? voice.displayName;
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col gap-5 px-4 py-6">
       <Link
@@ -45,22 +46,22 @@ export function Intro({
       </Link>
 
       <header className="flex items-center gap-4">
-        <Avatar name={voice.displayName} size={64} />
+        <Avatar name={speaker} size={64} />
         <div>
           <p className="text-xs font-extrabold uppercase tracking-wider text-faint">
             {CATEGORY_INFO[scenario.category].label} · {scenario.minutes} min
           </p>
           <h1 className="text-2xl font-black leading-tight">{scenario.title}</h1>
           <p className="text-sm font-bold text-dim">
-            {isTutor ? `With ${voice.displayName}, your tutor` : `${voice.displayName} · ${voice.accent} accent`}
+            {isTutor ? `With ${voice.displayName}, your tutor` : `${speaker} · ${voice.accent} accent`}
           </p>
         </div>
       </header>
 
       {!isTutor && scenario.role && (
         <p className="text-sm text-dim">
-          <span className="font-extrabold text-text">{scenario.setting}.</span> You&apos;re talking with{" "}
-          {scenario.role.charAt(0).toLowerCase() + scenario.role.slice(1)}.
+          <span className="font-extrabold text-text">{scenario.setting}.</span> You&apos;re talking with {scenario.role}
+          .
         </p>
       )}
 

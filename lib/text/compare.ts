@@ -27,6 +27,25 @@ const CONTRACTIONS: Record<string, string> = {
   "aren't": "are not",
   "what's": "what is",
   "let's": "let us",
+  // Spoken forms in the listening gym: typing the full form is just as right.
+  gonna: "going to",
+  wanna: "want to",
+  gotta: "got to",
+  kinda: "kind of",
+  "could've": "could have",
+  "would've": "would have",
+  "should've": "should have",
+  "how've": "how have",
+  "you'll": "you will",
+  "we'll": "we will",
+  "they'll": "they will",
+  "it'll": "it will",
+  "haven't": "have not",
+  "hasn't": "has not",
+  "wasn't": "was not",
+  "couldn't": "could not",
+  "wouldn't": "would not",
+  "shouldn't": "should not",
 };
 
 export function normalizeWords(text: string): string[] {
@@ -61,6 +80,53 @@ export function saidCorrectly(said: string, target: string, threshold = 0.8): bo
   return similarity(said, target) >= threshold;
 }
 
+/**
+ * Did he use the phrase, alone or inside a sentence of his own? "Lately I've been…" counts
+ * in "Lately I've been reading a lot". Ellipses and contractions are normalized away.
+ */
+export function usedPhrase(said: string, phrase: string): boolean {
+  const target = normalizeWords(phrase).join(" ");
+  if (!target) return false;
+  return ` ${normalizeWords(said).join(" ")} `.includes(` ${target} `) || saidCorrectly(said, phrase);
+}
+
 export function wordCount(text: string): number {
   return normalizeWords(text).length;
+}
+
+const FILLER = new Set([
+  "a",
+  "an",
+  "the",
+  "at",
+  "of",
+  "or",
+  "and",
+  "to",
+  "in",
+  "on",
+  "for",
+  "their",
+  "his",
+  "her",
+  "is",
+  "are",
+]);
+
+/**
+ * Does one of the analyzer's "met" items refer to this success criterion? The prompt asks
+ * it to copy the wording, but models paraphrase ("Described recent activities" for
+ * "Describes recent activities…"), so compare content words, allowing word endings to differ.
+ */
+export function criterionMet(met: string[], criterion: string): boolean {
+  const stem = (w: string) => w.replace(/(ing|ed|es|s)$/, "");
+  // Bracketed detail ("(I, not we)") explains the criterion; the words before it name it.
+  const target = normalizeWords(criterion.replace(/\([^)]*\)/g, " "))
+    .filter((w) => !FILLER.has(w))
+    .map(stem);
+  if (!target.length) return false;
+  return met.some((m) => {
+    const said = new Set(normalizeWords(m).map(stem));
+    return target.filter((w) => said.has(w)).length / target.length >= 0.6;
+  });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeWords, saidCorrectly, similarity, wordCount } from "@/lib/text/compare";
+import { criterionMet, usedPhrase, normalizeWords, saidCorrectly, similarity, wordCount } from "@/lib/text/compare";
 
 describe("say-it-again matching", () => {
   it("ignores case, punctuation and contractions", () => {
@@ -32,5 +32,30 @@ describe("say-it-again matching", () => {
 
   it("counts words", () => {
     expect(wordCount("It's called AZ-900.")).toBe(4);
+  });
+});
+
+describe("criterionMet", () => {
+  const c = "Describes recent activities (present perfect or past simple)";
+  it("matches exact and paraphrased wording", () => {
+    expect(criterionMet([c], c)).toBe(true);
+    expect(criterionMet(["Described recent activities using present perfect"], c)).toBe(true);
+    expect(criterionMet(["Explained their own actions"], "Explains their own actions (I, not we)")).toBe(true);
+  });
+  it("doesn't match a different criterion", () => {
+    expect(criterionMet(["Talks about at least one future plan"], c)).toBe(false);
+    expect(criterionMet([], c)).toBe(false);
+  });
+});
+
+describe("usedPhrase", () => {
+  it("accepts the phrase alone or inside his own sentence", () => {
+    expect(usedPhrase("touch base", "touch base")).toBe(true);
+    expect(usedPhrase("Let's touch base on Friday.", "touch base")).toBe(true);
+    expect(usedPhrase("Lately I've been reading a lot", "Lately I've been…")).toBe(true);
+  });
+  it("rejects a sentence without it", () => {
+    expect(usedPhrase("Let's talk on Friday", "touch base")).toBe(false);
+    expect(usedPhrase("database", "base")).toBe(false);
   });
 });

@@ -21,7 +21,7 @@ import { useHydrated, useLearner, learner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
 import { analyzeSession, ApiError, API_ERROR_TEXT } from "@/lib/client/api";
 import { usageCostUsd } from "@/lib/cost/pricing";
-import { wordCount } from "@/lib/text/compare";
+import { criterionMet, wordCount } from "@/lib/text/compare";
 import { CorrectionCard } from "./CorrectionCard";
 
 export function ReportScreen({ sessionId }: { sessionId: string }) {
@@ -79,11 +79,7 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
   const words = englishTurns.reduce((n, t) => n + wordCount(t.text), 0);
   const voiceSeconds = session.speakingSeconds;
   const wpm = session.mode === "voice" && voiceSeconds > 20 ? Math.round(words / (voiceSeconds / 60)) : null;
-  const met = new Set((report?.task.met ?? []).map((m) => m.toLowerCase().trim()));
-  const criterionMet = (c: string) =>
-    [...met].some(
-      (m) => m === c.toLowerCase() || m.includes(c.toLowerCase().slice(0, 24)) || c.toLowerCase().includes(m),
-    );
+  const isMet = (c: string) => criterionMet(report?.task.met ?? [], c);
 
   return (
     <Shell>
@@ -127,7 +123,7 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
             <ul className="mt-3 space-y-1 text-sm font-bold">
               {scenario.successCriteria.map((c) => (
                 <li key={c} className="flex gap-2">
-                  {criterionMet(c) ? (
+                  {isMet(c) ? (
                     <Check className="size-4 shrink-0" strokeWidth={3} aria-label="Met" />
                   ) : (
                     <Circle className="size-4 shrink-0 opacity-60" aria-label="Not yet" />
