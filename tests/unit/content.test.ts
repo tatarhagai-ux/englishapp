@@ -46,3 +46,16 @@ describe("one-minute talk topics", () => {
     }
   });
 });
+
+describe("short reads", () => {
+  it("mark only phrases that are really in the text, with two answerable questions", async () => {
+    const { READINGS } = await import("@/content/readings");
+    expect(new Set(READINGS.map((r) => r.id)).size).toBe(READINGS.length);
+    for (const r of READINGS) {
+      const text = r.paragraphs.join(" ");
+      for (const g of r.glossary) expect(text.includes(g.text), `${r.id}: ${g.text}`).toBe(true);
+      expect(r.questions).toHaveLength(2);
+      for (const q of r.questions) expect(q.options[q.answer]).toBeTruthy();
+    }
+  });
+});

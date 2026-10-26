@@ -12,7 +12,7 @@ const ITEMS = [
     href: "/practice",
     label: "Practice",
     icon: Mic,
-    also: ["/listen", "/pronounce", "/review", "/words", "/mistakes", "/talk"],
+    also: ["/listen", "/pronounce", "/review", "/words", "/mistakes", "/talk", "/read"],
   },
   { href: "/progress", label: "Progress", icon: BarChart3, also: ["/phrases"] },
   { href: "/settings", label: "Settings", icon: Settings, also: ["/guide"] },

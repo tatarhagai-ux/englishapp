@@ -25,6 +25,7 @@ import {
   type WeekFeeling,
   ratePhrase,
   recordStory,
+  recordReading,
   type CardRating,
 } from "@/lib/learner/model";
 import type { Turn } from "@/lib/conversation/types";
@@ -243,6 +244,10 @@ export const learner = {
 
   recordStory(id: string, correct: number) {
     set(recordStory(get(), id, correct));
+  },
+
+  recordReading(id: string, correct: number) {
+    set(recordReading(get(), id, correct));
   },
 
   ratePhrase(text: string, rating: CardRating) {

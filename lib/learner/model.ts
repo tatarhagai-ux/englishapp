@@ -111,6 +111,8 @@ export interface LearnerState {
   listening?: ListeningState;
   /** Listening stories: best number of questions right, by story id. */
   stories?: Record<string, { best: number; at: string }>;
+  /** Short reads, the same way. */
+  readings?: Record<string, { best: number; at: string }>;
   /** Best pronunciation score per course unit. */
   pronunciation?: Record<string, { best: number; attempts: number; lastAt: string }>;
   /** Facts he shared in conversations, so the tutor can pick up where they left off. */
@@ -723,6 +725,18 @@ export function recordStory(state: LearnerState, id: string, correct: number, no
   return {
     ...state,
     stories: { ...state.stories, [id]: { best: Math.max(prev, correct), at: now.toISOString() } },
+    listening: { ...l, xp: l.xp + 5 * Math.max(0, correct - prev) },
+  };
+}
+
+/** A finished short read: best score kept, XP only for improving on it (like stories). */
+export function recordReading(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
+  const prev = state.readings?.[id]?.best ?? 0;
+  const l = state.listening ?? LISTENING_START;
+  return {
+    ...state,
+    readings: { ...state.readings, [id]: { best: Math.max(prev, correct), at: now.toISOString() } },
+    // Skill XP lives with listening's (it's what statsFrom adds up).
     listening: { ...l, xp: l.xp + 5 * Math.max(0, correct - prev) },
   };
 }

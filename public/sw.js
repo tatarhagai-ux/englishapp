@@ -5,7 +5,7 @@ const SHELL = "sw-shell-v4";
 const STATIC = "sw-static-v1";
 const OFFLINE_URL = "/offline.html";
 // Pages kept for offline use: the last copy that loaded fine is served when the network fails.
-const OFFLINE_PAGES = ["/", "/review", "/words", "/phrases", "/progress", "/practice", "/guide", "/pronounce"];
+const OFFLINE_PAGES = ["/", "/review", "/words", "/read", "/phrases", "/progress", "/practice", "/guide", "/pronounce"];
 const STATIC_MAX = 150;
 
 self.addEventListener("install", (event) => {

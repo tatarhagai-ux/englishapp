@@ -10,6 +10,7 @@ import {
   Check,
   Clock,
   Headphones,
+  BookOpen,
   Timer,
   BookOpenText,
   Wrench,
@@ -166,6 +167,7 @@ export function PracticeLibrary() {
           detail={cardsDue > 0 ? `${cardsDue} for today` : "10 packs · say the word"}
           badge={cardsDue}
         />
+        <SkillTile href="/read" icon={BookOpen} title="Short reads" detail="Tap a phrase for help" />
         <SkillTile href="/phrases" icon={BookMarked} title="Phrase bank" detail="Everything you saved" />
       </SkillGroup>
 

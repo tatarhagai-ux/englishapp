@@ -74,6 +74,10 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     mergeRecords(x, y, (u, v) => ({ best: Math.max(u.best, v.best), at: later(u.at, v.at)! })),
   );
   if (stories) out.stories = stories;
+  const readings = mergeOptional(a.readings, b.readings, (x, y) =>
+    mergeRecords(x, y, (u, v) => ({ best: Math.max(u.best, v.best), at: later(u.at, v.at)! })),
+  );
+  if (readings) out.readings = readings;
   const feelings = mergeOptional(a.feelings, b.feelings, (x, y) => mergeRecords(x, y, (u) => u));
   if (feelings) out.feelings = feelings;
   const memory = mergeBy(
