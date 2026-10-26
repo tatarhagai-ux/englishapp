@@ -6,6 +6,7 @@ import { diffWords } from "@/lib/text/diff";
 import {
   browserSpeechActive,
   createRecognition,
+  mergeFinal,
   markAzureMissing,
   primeBrowserSpeech,
   speakInBrowser,
@@ -55,7 +56,9 @@ async function speechToken() {
 }
 
 async function speechConfig(language: string) {
-  const [sdk, t] = await Promise.all([loadSdk(), speechToken()]);
+  // The token first: without Azure it fails fast, and the large SDK is never downloaded.
+  const t = await speechToken();
+  const sdk = await loadSdk();
   const cfg = sdk.SpeechConfig.fromAuthorizationToken(t.token, t.region);
   cfg.speechRecognitionLanguage = language;
   return { sdk, cfg };
@@ -89,8 +92,12 @@ export interface ListenHandlers {
  * Continuous recognition with a patient end-of-speech pause (learners hesitate mid-sentence).
  * Call stop() while the tutor speaks so the recognizer never hears the tutor's voice.
  */
-/** Silent rounds before the browser recognizer stops reopening the microphone. */
-const MAX_EMPTY_ROUNDS = 3;
+/**
+ * Quiet time before the browser recognizer stops reopening the microphone. Chrome ends a
+ * session after a few silent seconds (on Android after every pause), so this is counted in
+ * time, not rounds: thinking for a while mid-answer must not end the turn.
+ */
+export const IDLE_AFTER_MS = 20_000;
 
 export class Listener {
   private recognizer: SpeechSdk.SpeechRecognizer | null = null;
@@ -156,11 +163,10 @@ export class Listener {
     let segmentStart = 0;
     // Android Chrome can repeat earlier words in each new final ("I", "I have", "I have been").
     let lastFinal = "";
-    // Rounds that ended with nothing heard; Chrome ends a session after a few silent seconds.
-    let emptyRounds = 0;
+    let lastHeard = Date.now();
     rec.onresult = (e) => {
       if (this.cancelled) return;
-      emptyRounds = 0;
+      lastHeard = Date.now();
       segmentStart ||= Date.now();
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -186,7 +192,7 @@ export class Listener {
     };
     rec.onend = () => {
       if (this.cancelled) return;
-      if (++emptyRounds > MAX_EMPTY_ROUNDS) {
+      if (Date.now() - lastHeard > IDLE_AFTER_MS) {
         h.onIdle?.();
         return;
       }
@@ -247,53 +253,29 @@ function recognizeOnceInBrowser(
   const rec = createRecognition();
   if (!rec) return Promise.reject(new SpeechSetupError("unsupported"));
   rec.lang = language;
-  rec.continuous = false;
+  // Continuous, so a pause to think doesn't end the attempt. Android Chrome still ends the
+  // session after each pause; it is reopened until the learner is really done.
+  rec.continuous = true;
   rec.interimResults = true;
   const started = Date.now();
   return new Promise((resolve, reject) => {
-    const finals: string[] = [];
+    /** Words from earlier browser sessions of this same attempt. */
+    let earlier = "";
+    let current = "";
     let interim = "";
-    let failed = false;
-    // A tap on "done" ends it; so does a long attempt nobody stops.
-    const stop = () => {
-      try {
-        rec.stop();
-      } catch {
-        // Already ended.
-      }
-    };
-    opts.signal?.addEventListener("abort", stop, { once: true });
-    const guard = setTimeout(stop, MAX_ATTEMPT_MS);
-    // Tell the screen once the microphone is really capturing, so the first words aren't lost.
-    let announced = false;
-    const listening = () => {
-      if (announced) return;
-      announced = true;
-      opts.onListening?.();
-    };
-    rec.onaudiostart = listening;
-    rec.onstart = listening;
-    rec.onresult = (e) => {
-      interim = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (r.isFinal) finals[i] = r[0].transcript.trim();
-        else interim += `${r[0].transcript} `;
-      }
-      opts.onPartial?.(`${finals.filter(Boolean).join(" ")} ${interim}`.trim());
-    };
-    rec.onerror = (e) => {
-      if (e.error === "no-speech" || e.error === "aborted") return;
-      failed = true;
-      reject(
-        new SpeechSetupError(/not-allowed|service-not-allowed|audio-capture/.test(e.error) ? "mic_denied" : "network"),
-      );
-    };
-    rec.onend = () => {
+    let running = false;
+    let finishing = false;
+    let settled = false;
+    let quietRestarts = 0;
+    let silence: ReturnType<typeof setTimeout> | undefined;
+    const heard = () => `${mergeFinal(earlier, current)} ${interim}`.trim();
+
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(silence);
       clearTimeout(guard);
-      if (failed) return;
-      // Words still on screen when "done" was tapped count too.
-      const text = `${finals.filter(Boolean).join(" ")} ${interim}`.trim();
+      const text = heard();
       if (!text) return reject(new SpeechSetupError("no_speech"));
       const { tokens, accuracy } = diffWords(text, reference);
       resolve({
@@ -314,12 +296,85 @@ function recognizeOnceInBrowser(
         scored: false,
       });
     };
+    // A tap on "done", a long silence after speaking, or the time limit ends it.
+    const finish = () => {
+      finishing = true;
+      clearTimeout(silence);
+      if (!running) return settle();
+      try {
+        rec.stop();
+      } catch {
+        settle();
+      }
+    };
+    opts.signal?.addEventListener("abort", finish, { once: true });
+    const guard = setTimeout(finish, MAX_ATTEMPT_MS);
+
+    // Tell the screen once the microphone is really capturing, so the first words aren't lost.
+    let announced = false;
+    const listening = () => {
+      if (announced) return;
+      announced = true;
+      opts.onListening?.();
+    };
+    rec.onaudiostart = listening;
+    rec.onstart = listening;
+    rec.onresult = (e) => {
+      if (settled) return;
+      let finals = "";
+      interim = "";
+      for (let i = 0; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finals = mergeFinal(finals, r[0].transcript);
+        else interim += `${r[0].transcript} `;
+      }
+      current = finals;
+      interim = interim.trim();
+      opts.onPartial?.(heard());
+      // Done once he stops: sooner when the whole sentence is there, later while it isn't.
+      const complete = diffWords(heard(), reference).accuracy >= 0.8;
+      clearTimeout(silence);
+      silence = setTimeout(finish, complete ? DONE_AFTER_MS : PAUSE_AFTER_MS);
+    };
+    rec.onerror = (e) => {
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      settled = true;
+      clearTimeout(silence);
+      clearTimeout(guard);
+      reject(
+        new SpeechSetupError(/not-allowed|service-not-allowed|audio-capture/.test(e.error) ? "mic_denied" : "network"),
+      );
+    };
+    rec.onend = () => {
+      running = false;
+      if (settled) return;
+      // Words still on screen when it ended count too.
+      earlier = mergeFinal(earlier, `${current} ${interim}`);
+      current = "";
+      interim = "";
+      // The browser stopped on its own mid-attempt (Android does after every pause): reopen.
+      // With nothing said at all, give it one more round, then stop.
+      const reopen = !finishing && (Boolean(earlier) || quietRestarts++ < 1);
+      if (!reopen) return settle();
+      try {
+        rec.start();
+        running = true;
+      } catch {
+        settle();
+      }
+    };
     rec.start();
+    running = true;
   });
 }
 
+/** After the whole sentence is heard, this much quiet means he's done. */
+const DONE_AFTER_MS = 1500;
+/** With words still missing, wait longer: he may be thinking of the next one. */
+const PAUSE_AFTER_MS = 4000;
+
 /** A single attempt never runs longer than this; most sentences take a few seconds. */
-const MAX_ATTEMPT_MS = 20_000;
+const MAX_ATTEMPT_MS = 30_000;
 
 export interface AttemptOptions {
   /** The microphone is really open now (not just requested), so the learner can start talking. */

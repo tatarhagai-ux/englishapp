@@ -6,7 +6,7 @@ import { Check, ChevronLeft, Loader2, Play, Square, Wrench } from "lucide-react"
 import clsx from "clsx";
 import { VOICES, sampleLine, type Gender, type Voice } from "@/content/voices";
 import { usePrefs } from "@/lib/client/prefs";
-import { browserSpeechActive } from "@/lib/client/browser-speech";
+import { browserSpeechActive, deviceVoiceNames } from "@/lib/client/browser-speech";
 import { useClipPlayer, type TtsError } from "@/lib/client/tts";
 import { Avatar } from "@/components/Avatar";
 
@@ -210,6 +210,41 @@ export default function VoicePickerPage() {
           })}
         </ul>
       </section>
+
+      <DeviceVoices />
     </div>
+  );
+}
+
+/**
+ * Without Azure the voices come from the phone itself. This shows which one each character
+ * gets, so it's clear when two share a voice (pitch and pace then tell them apart).
+ */
+function DeviceVoices() {
+  const [names, setNames] = useState<Record<string, string | null> | null>(null);
+  return (
+    <section aria-labelledby="device-title" className="space-y-2">
+      <button
+        type="button"
+        id="device-title"
+        aria-expanded={names !== null}
+        onClick={() => (names ? setNames(null) : void deviceVoiceNames(VOICES.map((v) => v.id)).then(setNames))}
+        className="text-sm font-extrabold text-accent"
+      >
+        {names ? "Hide" : "Show"} which voice this device uses
+      </button>
+      {names && (
+        <ul className="space-y-1 rounded-2xl bg-elev-2 p-3 text-xs">
+          {VOICES.map((v) => (
+            <li key={v.id} className="flex justify-between gap-3">
+              <span className="font-bold">
+                {v.displayName} ({v.gender}, {v.accent})
+              </span>
+              <span className="truncate text-dim">{names[v.id] ?? "no English voice found"}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
