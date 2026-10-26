@@ -342,3 +342,31 @@ test("interview reports show answer structure, and progress shows readiness", as
   // One answer isn't enough to call a pattern yet.
   await expect(ready).toContainText("Each interview report checks four things");
 });
+
+test("quick review: two minutes on due items without a conversation", async ({ page }) => {
+  await mockApis(page, []);
+  await page.goto("/review");
+  await expect(page.getByText("Nothing is due right now.")).toBeVisible();
+
+  // One real conversation makes the placement mistakes reviewable.
+  await page.goto("/session/work-standup");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: "Start conversation" }).click();
+  await page.getByLabel("Your reply").fill("Yesterday I finished the report");
+  await page.getByLabel("Your reply").press("Enter");
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+  await page.getByRole("button", { name: "End conversation" }).click();
+  await expect(page).toHaveURL(/\/report\//);
+
+  await page.goto("/practice");
+  await page.getByRole("link", { name: /Quick review/ }).click();
+  await page.getByRole("button", { name: /Type it/ }).click();
+  await page.getByRole("button", { name: /Review \d items/ }).click();
+  await expect(page.getByText("Earlier you said:")).toBeVisible();
+  await page.getByLabel("Your answer").fill("I have been living in Shoham for ten years");
+  await page.getByRole("button", { name: "Check" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Correct" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next" })).toBeInViewport();
+  await page.getByRole("button", { name: "Skip" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Done." })).toBeVisible();
+});

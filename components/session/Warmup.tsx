@@ -11,9 +11,12 @@ import { saidCorrectly, usedPhrase } from "@/lib/text/compare";
 interface Props {
   items: WarmupItem[];
   mode: "voice" | "quiet";
-  sessionId: string;
+  /** The conversation it warms up for; null for a standalone quick review. */
+  sessionId: string | null;
   hebrewHelp: boolean;
   onDone: () => void;
+  /** Inside a page with the bottom bar: leave room for it so the buttons stay visible. */
+  embedded?: boolean;
 }
 
 type Attempt = { status: "idle" | "listening" | "checked" | "error"; said?: string; ok?: boolean; error?: string };
@@ -23,7 +26,7 @@ type Attempt = { status: "idle" | "listening" | "checked" | "error"; said?: stri
  * said wrong last time and produce the right version yourself before seeing it. Phrases
  * are said out loud from their meaning. Every answer schedules the next review (FSRS).
  */
-export function Warmup({ items, mode, sessionId, hebrewHelp, onDone }: Props) {
+export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = false }: Props) {
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [attempt, setAttempt] = useState<Attempt>({ status: "idle" });
@@ -47,7 +50,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone }: Props) {
 
   function next() {
     if (index + 1 >= items.length) {
-      learner.addReviews(sessionId, reviewed);
+      if (sessionId) learner.addReviews(sessionId, reviewed);
       onDone();
       return;
     }
@@ -98,7 +101,12 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone }: Props) {
   const hebrew = item.kind === "phrase" ? item.hebrew : item.whyHe;
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col gap-5 px-4 py-6">
+    <div
+      className={clsx(
+        "mx-auto flex max-w-xl flex-col gap-5",
+        embedded ? "min-h-[calc(100dvh-8.5rem)]" : "min-h-dvh px-4 py-6",
+      )}
+    >
       <header className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-faint">

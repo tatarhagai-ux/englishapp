@@ -11,11 +11,13 @@ import {
   rankedErrors,
   recommendScenario,
   statsFrom,
+  warmupItems,
 } from "@/lib/learner/model";
 import { PLACEMENT_ID } from "@/content/scenarios";
 import { dayKey } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/xp";
 import { ChooseVoicePrompt, Greeting, TutorBadge } from "./HomeClient";
+import { QUICK_REVIEW_MAX } from "./QuickReview";
 
 const SESSION_STEPS = [
   { icon: Sparkles, title: "Warm-up", detail: "Say phrases from past sessions out loud" },
@@ -41,6 +43,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
   const lastReport = [...state.sessions].reverse().find((s) => s.report);
   // A brand-new learner gets one clear first step, the level check, instead of two competing ones.
   const firstTime = hydrated && ready && stats.sessions === 0 && !hasPlacement(state);
+  const dueReviews = hydrated ? warmupItems(state, new Date(), QUICK_REVIEW_MAX).length : 0;
   const suggestCheck = hydrated && ready && !firstTime && !hasPlacement(state) && levelHistory(state).length < 3;
 
   return (
@@ -147,6 +150,11 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
         <div className="flex justify-center">
           <TutorBadge />
         </div>
+        {dueReviews > 0 && !goalMet && (
+          <Link href="/review" className="block text-center text-sm font-extrabold text-accent">
+            Short on time? 2-minute review ({dueReviews} due)
+          </Link>
+        )}
       </div>
 
       {!firstTime && (

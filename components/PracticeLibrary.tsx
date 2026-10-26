@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, AudioLines, Check, Clock, Headphones } from "lucide-react";
+import { ArrowRight, AudioLines, Check, Clock, Headphones, RotateCcw } from "lucide-react";
 import { CATEGORY_INFO, SCENARIOS, characterName, type Scenario, type ScenarioCategory } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
-import { recommendScenario } from "@/lib/learner/model";
+import { recommendScenario, warmupItems } from "@/lib/learner/model";
+import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { Avatar } from "./Avatar";
 
 const ORDER: ScenarioCategory[] = ["interview", "free", "work", "abroad", "world"];
@@ -18,6 +19,7 @@ export function PracticeLibrary() {
   const recommended = recommendScenario(state);
   const done = new Set(state.sessions.filter((s) => s.report?.task.completed).map((s) => s.scenarioId));
   const tutorName = voiceById(prefs.tutorVoiceId)?.displayName ?? "Your tutor";
+  const due = hydrated ? warmupItems(state, new Date(), QUICK_REVIEW_MAX).length : 0;
 
   return (
     <div className="space-y-6">
@@ -64,6 +66,19 @@ export function PracticeLibrary() {
           <span className="block font-extrabold">Pronunciation for Hebrew speakers</span>
           <span className="block text-sm text-dim">
             TH, W/V, ship/sheep, stress and a friendlier melody. 10 short units.
+          </span>
+        </span>
+        <ArrowRight className="size-5 text-faint" aria-hidden />
+      </Link>
+
+      <Link href="/review" className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent">
+          <RotateCcw className="size-6" aria-hidden />
+        </span>
+        <span className="flex-1">
+          <span className="block font-extrabold">Quick review</span>
+          <span className="block text-sm text-dim">
+            {due > 0 ? `${due} due · ` : ""}Two minutes on your mistakes and phrases, no conversation.
           </span>
         </span>
         <ArrowRight className="size-5 text-faint" aria-hidden />
