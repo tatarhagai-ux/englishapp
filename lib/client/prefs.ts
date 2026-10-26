@@ -18,6 +18,11 @@ export interface Prefs {
   /** Show Hebrew translations next to explanations by default. Off keeps it challenging. */
   hebrewHelp: boolean;
   sessionMinutes: number;
+  /**
+   * "tap": tap to start, talk as long as you like, tap to stop, check the text, then send.
+   * "handsfree": the turn goes out by itself after a short silence.
+   */
+  micMode: "tap" | "handsfree";
 }
 
 const KEY = "sw_prefs_v1";
@@ -29,6 +34,7 @@ const DEFAULTS: Prefs = {
   correctionMode: "gentle",
   hebrewHelp: false,
   sessionMinutes: 10,
+  micMode: "tap",
 };
 
 const listeners = new Set<() => void>();

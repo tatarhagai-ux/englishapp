@@ -290,6 +290,92 @@ test("without Azure the tutor speaks with the browser's voice and the conversati
   await expect.poll(() => chatBodies.length).toBe(2);
 });
 
+test("tap to talk: speak with pauses, check and fix the text, then send; hands-free waits for silence", async ({
+  page,
+}) => {
+  // A fake microphone and browser recognizer the test drives (Azure isn't configured here).
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      value: { getUserMedia: async () => ({ getTracks: () => [] }) },
+    });
+    type Handler = ((e: unknown) => void) | null;
+    class FakeRecognition {
+      lang = "";
+      continuous = false;
+      interimResults = false;
+      onresult: Handler = null;
+      onerror: Handler = null;
+      onend: (() => void) | null = null;
+      start() {
+        (window as unknown as { __rec: FakeRecognition }).__rec = this;
+      }
+      stop() {}
+      abort() {}
+    }
+    Object.assign(window, { SpeechRecognition: FakeRecognition });
+  });
+  const chatBodies: { history: { role: string; text: string; input?: string }[] }[] = [];
+  await mockApis(page, chatBodies);
+  // Waits for the recognizer to start (it first asks Azure, which answers "not configured").
+  const say = (text: string) =>
+    page
+      .waitForFunction(() => "__rec" in window)
+      .then(() =>
+        page.evaluate((t) => {
+          const rec = (window as unknown as { __rec: { onresult: (e: unknown) => void } }).__rec;
+          rec.onresult({ resultIndex: 0, results: [Object.assign([{ transcript: t }], { isFinal: true })] });
+        }, text),
+      );
+  const freshListen = () => page.evaluate(() => delete (window as unknown as { __rec?: unknown }).__rec);
+
+  await page.goto("/session/free-your-week");
+  await startSkippingWarmup(page);
+  await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tap to talk" })).toBeVisible();
+
+  // Pauses between phrases don't send anything.
+  await freshListen();
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await say("I study for AZ-900");
+  await say("two weeks");
+  await page.waitForTimeout(3000);
+  expect(chatBodies).toHaveLength(0);
+
+  // Stop, check, add more, fix a word, send.
+  await page.getByRole("button", { name: "Done talking" }).click();
+  const heard = page.getByLabel(/^Heard/);
+  await expect(heard).toHaveValue("I study for AZ-900 two weeks");
+  await freshListen();
+  await page.getByRole("button", { name: "Keep talking" }).click();
+  await say("and it's hard");
+  await page.getByRole("button", { name: "Done talking" }).click();
+  await expect(heard).toHaveValue("I study for AZ-900 two weeks and it's hard");
+  await heard.fill("I've been studying for AZ-900 for two weeks and it's hard");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.poll(() => chatBodies.length).toBe(1);
+  expect(chatBodies[0].history.at(-1)).toMatchObject({
+    role: "learner",
+    text: "I've been studying for AZ-900 for two weeks and it's hard",
+    input: "voice",
+  });
+
+  // Hands-free: listening starts by itself and the turn goes out after a real silence.
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+  await page.getByRole("button", { name: "Tap to talk" }).click();
+  await expect(page.getByRole("button", { name: "Hands-free" })).toBeVisible();
+  await freshListen();
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await say("Remembering");
+  await say("all the service names");
+  await expect.poll(() => chatBodies.length, { timeout: 8000 }).toBe(2);
+  expect(chatBodies[1].history.at(-1)).toMatchObject({ text: "Remembering all the service names", input: "voice" });
+
+  // The choice is remembered for the next conversation.
+  await page.reload();
+  await startSkippingWarmup(page);
+  await expect(page.getByRole("button", { name: "Hands-free" })).toBeVisible();
+});
+
 test("interview reports show answer structure, and progress shows readiness", async ({ page }) => {
   await page.addInitScript(() => {
     const report = {

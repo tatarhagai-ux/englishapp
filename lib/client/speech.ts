@@ -145,6 +145,8 @@ export class Listener {
     rec.continuous = true;
     rec.interimResults = true;
     let segmentStart = 0;
+    // Android Chrome can repeat earlier words in each new final ("I", "I have", "I have been").
+    let lastFinal = "";
     rec.onresult = (e) => {
       if (this.cancelled) return;
       segmentStart ||= Date.now();
@@ -156,7 +158,10 @@ export class Listener {
         else if (text) {
           const seconds = Math.max(1, (Date.now() - segmentStart) / 1000);
           segmentStart = 0;
-          h.onFinal(text, seconds);
+          const repeats = lastFinal && text.toLowerCase().startsWith(lastFinal.toLowerCase());
+          const fresh = repeats ? text.slice(lastFinal.length).trim() : text;
+          lastFinal = text;
+          if (fresh) h.onFinal(fresh, seconds);
         }
       }
       if (interim.trim()) h.onPartial(interim.trim());
