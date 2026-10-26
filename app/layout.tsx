@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/nunito";
 import { GeistMono } from "geist/font/mono";
 import { ServiceWorker } from "@/components/ServiceWorker";
+import { SyncBoot } from "@/components/SyncBoot";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${GeistMono.variable} antialiased`}>
         {children}
         <ServiceWorker />
+        <SyncBoot />
       </body>
     </html>
   );

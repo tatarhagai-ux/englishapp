@@ -79,6 +79,10 @@ export interface LearnerState {
   listening?: ListeningState;
   /** Best pronunciation score per course unit. */
   pronunciation?: Record<string, { best: number; attempts: number; lastAt: string }>;
+  /** Set by "Delete all". Sync drops anything older from other devices. */
+  resetAt?: string;
+  /** Deletions, kept so sync doesn't bring them back: phrase (lowercased) → when, and session ids. */
+  removed?: { phrases?: Record<string, string>; sessions?: string[] };
 }
 
 export interface ListeningState {
@@ -407,8 +411,24 @@ export function addPhrases(
   return { state: { ...state, phrases: [...state.phrases, ...fresh] }, added: fresh.length };
 }
 
-export function removePhrase(state: LearnerState, text: string): LearnerState {
-  return { ...state, phrases: state.phrases.filter((p) => p.text !== text) };
+export function removePhrase(state: LearnerState, text: string, now = new Date()): LearnerState {
+  return {
+    ...state,
+    phrases: state.phrases.filter((p) => p.text !== text),
+    removed: {
+      ...state.removed,
+      phrases: { ...state.removed?.phrases, [text.toLowerCase()]: now.toISOString() },
+    },
+  };
+}
+
+export function removeSession(state: LearnerState, id: string): LearnerState {
+  const sessions = state.removed?.sessions ?? [];
+  return {
+    ...state,
+    sessions: state.sessions.filter((s) => s.id !== id),
+    removed: { ...state.removed, sessions: sessions.includes(id) ? sessions : [...sessions, id] },
+  };
 }
 
 /**

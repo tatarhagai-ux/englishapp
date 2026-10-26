@@ -32,8 +32,8 @@ const STEPS = [
   {
     key: "supabase" as const,
     title: "Supabase",
-    vars: ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
-    why: "Remembers your conversations, mistakes and progress across phone and computer.",
+    vars: ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"],
+    why: "Optional. Syncs conversations, mistakes and progress between your phone and computer. Without it, everything stays on one device.",
     link: { href: "https://supabase.com/dashboard/projects", label: "Open Supabase" },
   },
 ];

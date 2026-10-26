@@ -8,6 +8,7 @@ import {
   recordListening,
   markPhrasesUsed,
   removePhrase,
+  removeSession,
   applyAnalysis,
   reviewMistake,
   initialState,
@@ -25,7 +26,8 @@ import { dayKey } from "@/lib/game/streak";
 
 /**
  * Browser copy of the learner model. One JSON blob in localStorage; small enough (a year
- * of daily sessions is well under a megabyte) and replaced by Supabase sync later.
+ * of daily sessions is well under a megabyte). It stays the source of truth on each device;
+ * lib/client/sync.ts merges it with the copy in Supabase when sync is on.
  */
 const KEY = "sw_learner_v1";
 const listeners = new Set<() => void>();
@@ -74,6 +76,12 @@ function subscribe(cb: () => void) {
     listeners.delete(cb);
     window.removeEventListener("storage", onStorage);
   };
+}
+
+/** For sync: hear about every local change. */
+export function onLearnerChange(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
 }
 
 export function useLearner(): LearnerState {
@@ -133,8 +141,7 @@ export const learner = {
 
   /** Remove a session that never got a learner turn (opened and abandoned). */
   discardSession(id: string) {
-    const state = get();
-    set({ ...state, sessions: state.sessions.filter((s) => s.id !== id) });
+    set(removeSession(get(), id));
   },
 
   saveReport(id: string, analysis: Analysis, dailyGoalMinutes: number) {
@@ -226,7 +233,13 @@ export const learner = {
     return JSON.stringify(get(), null, 2);
   },
 
+  /** Swap in a merged state from sync. */
+  replace(next: LearnerState) {
+    set(next);
+  },
+
   reset() {
-    set(initialState());
+    const now = new Date();
+    set({ ...initialState(now), resetAt: now.toISOString() });
   },
 };

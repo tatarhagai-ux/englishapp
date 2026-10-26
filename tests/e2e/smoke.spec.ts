@@ -38,6 +38,14 @@ test.describe("app shell", () => {
     await expect(page.getByText("Monthly spending cap:")).toContainText("$15");
   });
 
+  test("sync explains it needs setup when Supabase isn't connected", async ({ page }) => {
+    await page.goto("/settings");
+    const sync = page.getByRole("region", { name: "Sync across devices" });
+    await expect(sync).toContainText("saved on this device only");
+    await sync.getByRole("link", { name: "setup page" }).click();
+    await expect(page).toHaveURL(/\/setup$/);
+  });
+
   test("bottom navigation reaches every tab", async ({ page }) => {
     await page.goto("/");
     const nav = page.getByRole("navigation", { name: "Main" });

@@ -8,6 +8,8 @@ import { usePrefs, type Prefs } from "@/lib/client/prefs";
 import { voiceById } from "@/content/voices";
 import { Segmented } from "./Segmented";
 import { Avatar } from "./Avatar";
+import { SyncSettings } from "./SyncSettings";
+import { syncConfigured } from "@/lib/client/sync";
 
 const CORRECTION_HELP: Record<Prefs["correctionMode"], string> = {
   off: "No corrections while you talk. Fixes appear only in the report. Good for building confidence.",
@@ -140,12 +142,16 @@ export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
         </p>
       </Section>
 
+      <Section title="Sync across devices">
+        <SyncSettings />
+      </Section>
+
       <DataControls />
     </div>
   );
 }
 
-/** Everything lives on this device for now, so export is the backup and delete is final. */
+/** Export is the backup; delete is final, and with sync on it also clears the other devices. */
 function DataControls() {
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -164,14 +170,19 @@ function DataControls() {
   function deleteAll() {
     learner.reset();
     setConfirming(false);
-    setDone("All conversations, reports and progress were deleted from this device.");
+    setDone(
+      syncConfigured
+        ? "All conversations, reports and progress were deleted. Signed-in devices clear on their next sync."
+        : "All conversations, reports and progress were deleted from this device.",
+    );
   }
 
   return (
     <Section title="Your data">
       <p className="text-sm text-dim">
-        Conversations, reports and progress are stored only on this device. Recordings are never stored: speech is
-        turned into text and the audio is discarded.
+        Conversations, reports and progress are stored on this device
+        {syncConfigured ? ", and in your Supabase project when sync is on" : " only"}. Recordings are never stored:
+        speech is turned into text and the audio is discarded.
       </p>
       <div className="grid grid-cols-2 gap-3">
         <button
@@ -220,7 +231,7 @@ function DataControls() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="tile space-y-4 p-4">
+    <section aria-label={title} className="tile space-y-4 p-4">
       <h2 className="text-xs font-extrabold uppercase tracking-wider text-faint">{title}</h2>
       {children}
     </section>
