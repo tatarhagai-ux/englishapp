@@ -421,9 +421,17 @@ test("tap to talk: pauses don't send, stop shows the words to fix before sending
   await freshListen();
   await page.getByRole("button", { name: "Start talking" }).click();
   await say("Hello there");
+  // Short quiet rounds keep the microphone open (a thinking pause)...
   for (let i = 0; i < 4; i++) {
     await page.evaluate(() => (window as unknown as { __rec: { onend: () => void } }).__rec.onend());
   }
+  await expect(page.getByRole("textbox", { name: /Heard/ })).toHaveCount(0);
+  // ...but after 20 quiet seconds it stops.
+  await page.evaluate(() => {
+    const later = Date.now() + 25_000;
+    Date.now = () => later;
+    (window as unknown as { __rec: { onend: () => void } }).__rec.onend();
+  });
   await expect(page.getByRole("textbox", { name: /Heard/ })).toHaveValue("Hello there");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect.poll(() => chatBodies.length).toBe(2);

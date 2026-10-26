@@ -89,16 +89,50 @@ export function pickVoice(voices: SpeechSynthesisVoice[], voiceId: string): Spee
 }
 
 /**
- * Pitch nudge for when the browser lacks a matching voice: a male character on a female
- * voice (or the reverse) still sounds different from the tutor, and two characters on the
- * same voice don't sound identical.
+ * Each character's own color on top of the device voice. Phones often have one voice per
+ * accent and don't say whether it's male or female, so several characters share a voice;
+ * pitch and pace keep them apart.
+ */
+const CHARACTER_TONE: Record<string, { pitch: number; rate: number }> = {
+  ava: { pitch: 0, rate: 1 },
+  emma: { pitch: 0.12, rate: 1.04 },
+  jenny: { pitch: -0.06, rate: 0.97 },
+  sonia: { pitch: 0.05, rate: 0.98 },
+  natasha: { pitch: 0.16, rate: 1.06 },
+  neerja: { pitch: -0.1, rate: 1 },
+  andrew: { pitch: 0, rate: 0.98 },
+  brian: { pitch: 0.08, rate: 1.03 },
+  guy: { pitch: -0.08, rate: 1.06 },
+  ryan: { pitch: 0.04, rate: 0.97 },
+  william: { pitch: -0.14, rate: 0.95 },
+  prabhat: { pitch: 0.1, rate: 1 },
+};
+
+/**
+ * Pitch for a character. A male character on a voice that isn't known to be male (on
+ * Android the voices have no names to tell) gets a clearly deeper pitch; a female
+ * character on a male voice a higher one.
  */
 export function pitchFor(voice: SpeechSynthesisVoice | undefined, voiceId: string): number {
   const wanted = voiceById(voiceId);
   const actual = voice ? guessGender(voice.name) : null;
-  const mismatch = wanted && actual && wanted.gender !== actual ? (wanted.gender === "male" ? -0.25 : 0.2) : 0;
-  const jitter = ((hash(voiceId) % 7) - 3) * 0.03;
-  return Math.min(2, Math.max(0.5, 1 + mismatch + jitter));
+  let shift = 0;
+  if (wanted?.gender === "male" && actual !== "male") shift = -0.35;
+  else if (wanted?.gender === "female" && actual === "male") shift = 0.3;
+  const tone = CHARACTER_TONE[voiceId]?.pitch ?? ((hash(voiceId) % 7) - 3) * 0.03;
+  return Math.min(2, Math.max(0.5, 1 + shift + tone));
+}
+
+/** The character's speaking pace relative to the chosen speed. */
+export function rateFor(voiceId: string): number {
+  return CHARACTER_TONE[voiceId]?.rate ?? 1;
+}
+
+/** Which of this device's voices each character speaks with (for the voice settings). */
+export async function deviceVoiceNames(voiceIds: string[]): Promise<Record<string, string | null>> {
+  if (!canSpeak()) return Object.fromEntries(voiceIds.map((id) => [id, null]));
+  const voices = await loadVoices();
+  return Object.fromEntries(voiceIds.map((id) => [id, pickVoice(voices, id)?.name ?? null]));
 }
 
 /** Speak one sentence; resolves when it ends (or fails). Cancel with stopSpeaking(). */
@@ -113,7 +147,7 @@ export async function speakInBrowser(text: string, voiceId: string, rate: number
       // Some browsers reject a voice from an earlier list; the default voice still works.
     }
     u.lang = voice?.lang ?? "en-US";
-    u.rate = rate;
+    u.rate = Math.min(2, rate * rateFor(voiceId));
     u.pitch = pitchFor(voice, voiceId);
     // Chrome sometimes never fires onend; don't let that freeze the conversation.
     const guard = setTimeout(resolve, 4000 + (text.length * 90) / Math.max(0.5, rate));
@@ -140,6 +174,20 @@ export function primeBrowserSpeech() {
 }
 
 // Recognition ----------------------------------------------------------------------------
+
+/**
+ * Join a new final onto what was heard. Android Chrome often repeats the earlier words in
+ * the next final ("I have", then "I have been here"), so a final that starts with
+ * everything so far replaces it instead of doubling it.
+ */
+export function mergeFinal(prev: string, next: string): string {
+  const p = prev.trim();
+  const n = next.trim();
+  if (!p) return n;
+  if (!n) return p;
+  if (n.toLowerCase().startsWith(p.toLowerCase())) return n;
+  return `${p} ${n}`;
+}
 
 interface RecognitionAlternative {
   transcript: string;
