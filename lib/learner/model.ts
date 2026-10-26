@@ -322,7 +322,7 @@ export function reviewMistake(state: LearnerState, key: string, good: boolean, n
 }
 
 export type WarmupItem =
-  | { kind: "phrase"; id: string; target: string; meaning: string; hebrew: string }
+  | { kind: "phrase"; id: string; target: string; meaning: string; hebrew: string; interview?: boolean }
   | { kind: "mistake"; id: string; target: string; wrong: string; why: string; whyHe: string };
 
 /**
@@ -337,7 +337,8 @@ export function warmupItems(state: LearnerState, now = new Date(), max = 3): War
     .filter((e) => !e.card || new Date(e.card.due) <= now)
     // Skip entries that are explanations rather than one sayable sentence.
     .filter((e) => e.better && !/[=…]/.test(e.better))
-    .slice(0, 2)
+    // Two before a conversation (it's a warm-up); about half of a longer quick review.
+    .slice(0, max <= 3 ? 2 : Math.ceil(max / 2))
     .map((e) => ({ kind: "mistake", id: e.key, target: e.better, wrong: e.example, why: e.why, whyHe: e.whyHe }));
   const phrases: WarmupItem[] = duePhrases(state, now, max).map((p) => ({
     kind: "phrase",
@@ -345,6 +346,7 @@ export function warmupItems(state: LearnerState, now = new Date(), max = 3): War
     target: p.text.replace(/[….]+$/, ""),
     meaning: p.meaningEn,
     hebrew: p.meaningHe,
+    ...(p.tag === "Interview" ? { interview: true } : {}),
   }));
   return [...mistakes, ...phrases].slice(0, max);
 }

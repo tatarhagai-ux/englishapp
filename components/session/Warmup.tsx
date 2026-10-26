@@ -132,8 +132,18 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
           </>
         ) : (
           <>
-            <p className="font-extrabold">Say this phrase in a sentence of your own, or just the phrase:</p>
-            {item.meaning && <p className="text-dim">Means: {item.meaning}</p>}
+            {item.interview ? (
+              <>
+                <p className="font-extrabold">Interview question:</p>
+                <p className="text-dim">“{item.meaning}”</p>
+                <p className="font-extrabold">Open your answer with your saved line:</p>
+              </>
+            ) : (
+              <>
+                <p className="font-extrabold">Say this phrase in a sentence of your own, or just the phrase:</p>
+                {item.meaning && <p className="text-dim">Means: {item.meaning}</p>}
+              </>
+            )}
           </>
         )}
 

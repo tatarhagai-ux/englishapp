@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addPhrases,
   applyAnalysis,
   averageWpm,
   currentSpeakingLevel,
@@ -261,5 +262,22 @@ describe("speaking level", () => {
 
   it("never recommends the hidden level check", () => {
     for (let i = 0; i < 5; i++) expect(recommendScenario(initialState(NOW)).hidden).toBeFalsy();
+  });
+});
+
+describe("quick review size", () => {
+  it("takes more mistakes in a longer review, and marks saved interview lines", () => {
+    let s = withSession();
+    s = addPhrases(
+      s,
+      [{ text: "Last year I fixed our reporting pipeline.", meaningEn: "Tell me about a challenge.", meaningHe: "" }],
+      "Interview",
+      NOW,
+    ).state;
+    const short = warmupItems(s, NOW);
+    const long = warmupItems(s, NOW, 8);
+    expect(short.filter((i) => i.kind === "mistake")).toHaveLength(2);
+    expect(long.filter((i) => i.kind === "mistake").length).toBeGreaterThan(2);
+    expect(long.find((i) => i.kind === "phrase")).toMatchObject({ interview: true });
   });
 });
