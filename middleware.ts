@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { GATE_COOKIE, gateConfig, isProductionDeploy, isValidGateToken } from "@/lib/auth/gate";
 
-const PUBLIC_PATHS = ["/unlock", "/api/unlock", "/setup", "/api/health"];
+// /api/diagnostics checks its own DIAG_TOKEN (and is off without one).
+const PUBLIC_PATHS = ["/unlock", "/api/unlock", "/setup", "/api/health", "/api/diagnostics"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
