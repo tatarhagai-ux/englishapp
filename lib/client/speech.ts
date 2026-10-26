@@ -77,12 +77,20 @@ export interface ListenHandlers {
   /** A finished utterance. In hands-free mode this ends the learner's turn. */
   onFinal: (text: string, seconds: number) => void;
   onError: (err: SpeechSetupError) => void;
+  /**
+   * Browser recognition only: it gave up after several silent rounds. Every reopening of
+   * the microphone beeps on Android and flashes the status-bar icon, so it stops instead.
+   */
+  onIdle?: () => void;
 }
 
 /**
  * Continuous recognition with a patient end-of-speech pause (learners hesitate mid-sentence).
  * Call stop() while the tutor speaks so the recognizer never hears the tutor's voice.
  */
+/** Silent rounds before the browser recognizer stops reopening the microphone. */
+const MAX_EMPTY_ROUNDS = 3;
+
 export class Listener {
   private recognizer: SpeechSdk.SpeechRecognizer | null = null;
   private browser: BrowserRecognition | null = null;
@@ -147,8 +155,11 @@ export class Listener {
     let segmentStart = 0;
     // Android Chrome can repeat earlier words in each new final ("I", "I have", "I have been").
     let lastFinal = "";
+    // Rounds that ended with nothing heard; Chrome ends a session after a few silent seconds.
+    let emptyRounds = 0;
     rec.onresult = (e) => {
       if (this.cancelled) return;
+      emptyRounds = 0;
       segmentStart ||= Date.now();
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -174,6 +185,10 @@ export class Listener {
     };
     rec.onend = () => {
       if (this.cancelled) return;
+      if (++emptyRounds > MAX_EMPTY_ROUNDS) {
+        h.onIdle?.();
+        return;
+      }
       try {
         rec.start();
       } catch {
