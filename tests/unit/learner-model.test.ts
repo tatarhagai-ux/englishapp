@@ -400,3 +400,42 @@ describe("differentScenario", () => {
     expect(other.hidden).toBeFalsy();
   });
 });
+
+describe("word cards", () => {
+  it("adds a pack without flooding reviews, then introduces 10 new words a day", async () => {
+    const { cardQueue, ratePhrase, phrasesToPractice } = await import("@/lib/learner/model");
+    const { DECKS } = await import("@/content/decks");
+    let s = withSession();
+    const office = DECKS.find((d) => d.id === "office")!;
+    s = addPhrases(
+      s,
+      office.words.map((w) => ({ ...w, deck: "office" })),
+      office.title,
+      NOW,
+    ).state;
+    // Not studied yet: not in the warm-up, not pushed by the tutor.
+    expect(warmupItems(s, NOW).filter((i) => i.kind === "phrase")).toHaveLength(0);
+    expect(phrasesToPractice(s, NOW)).toEqual([]);
+    const q = cardQueue(s, NOW, { today: "2026-10-25" });
+    expect(q.fresh).toHaveLength(10);
+    for (const p of q.fresh) s = ratePhrase(s, p.text, 3, NOW);
+    expect(cardQueue(s, NOW, { today: "2026-10-25" }).fresh).toHaveLength(0);
+    expect(cardQueue(s, NOW, { today: "2026-10-26" }).fresh).toHaveLength(2);
+    // Studied words now take part in reviews and conversations.
+    expect(phrasesToPractice(s, NOW).length).toBeGreaterThan(0);
+  });
+
+  it("Again comes back tomorrow, Easy waits much longer", async () => {
+    const { ratePhrase } = await import("@/lib/learner/model");
+    let s = addPhrases(
+      withSession(),
+      [{ text: "heads-up", meaningEn: "a warning", meaningHe: "", deck: "office" }],
+      "Office",
+      NOW,
+    ).state;
+    const again = ratePhrase(s, "heads-up", 1, NOW).phrases[0].card.due;
+    s = ratePhrase(s, "heads-up", 4, NOW);
+    const easy = s.phrases[0].card.due;
+    expect(new Date(easy).getTime()).toBeGreaterThan(new Date(again).getTime() + 3 * 86_400_000);
+  });
+});

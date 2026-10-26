@@ -9,7 +9,7 @@ import { SCENARIOS, scenarioById, type Scenario } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import type { Turn } from "@/lib/conversation/types";
 import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
-import { bestStreak, computeStreak } from "@/lib/game/streak";
+import { bestStreak, computeStreak, dayKey } from "@/lib/game/streak";
 import { EMPTY_STATS, type LearnerStats } from "@/lib/game/achievements";
 import { xpForSession } from "@/lib/game/xp";
 
@@ -63,6 +63,10 @@ export interface PhraseRecord {
   example?: string;
   /** Times he used it in a conversation. */
   usedCount?: number;
+  /** Added from a word pack (content/decks.ts): it waits for the word cards before reviews. */
+  deck?: string;
+  /** When he first studied it on a word card (for the daily new-card limit). */
+  studiedAt?: string;
 }
 
 export interface SessionRecord {
@@ -419,9 +423,14 @@ function reviveCard(card: Card): Card {
   };
 }
 
+/** A pack word he hasn't met on a card yet: not something to recall in a review. */
+export function isUnstudied(p: PhraseRecord): boolean {
+  return Boolean(p.deck) && p.card.reps === 0;
+}
+
 export function duePhrases(state: LearnerState, now = new Date(), max = 3): PhraseRecord[] {
   return state.phrases
-    .filter((p) => new Date(p.card.due) <= now)
+    .filter((p) => new Date(p.card.due) <= now && !isUnstudied(p))
     .sort((a, b) => new Date(a.card.due).getTime() - new Date(b.card.due).getTime())
     .slice(0, max);
 }
@@ -436,6 +445,55 @@ export function reviewPhrase(state: LearnerState, text: string, good: boolean, n
         : p,
     ),
   };
+}
+
+/** Word-card answer, Anki style: 1 again, 2 hard, 3 good, 4 easy. */
+export type CardRating = 1 | 2 | 3 | 4;
+const RATING: Record<CardRating, Rating.Again | Rating.Hard | Rating.Good | Rating.Easy> = {
+  1: Rating.Again,
+  2: Rating.Hard,
+  3: Rating.Good,
+  4: Rating.Easy,
+};
+
+export function ratePhrase(state: LearnerState, text: string, rating: CardRating, now = new Date()): LearnerState {
+  return {
+    ...state,
+    phrases: state.phrases.map((p) =>
+      p.text === text
+        ? {
+            ...p,
+            card: scheduler.next(reviveCard(p.card), now, RATING[rating]).card,
+            studiedAt: p.studiedAt ?? now.toISOString(),
+          }
+        : p,
+    ),
+  };
+}
+
+/** New pack words per day on the word cards; reviews are never capped. */
+export const NEW_CARDS_PER_DAY = 10;
+
+/**
+ * Today's word cards: everything due (soonest first), then new pack words up to the daily
+ * limit, in the order the packs list them. `deck` narrows it to one pack.
+ */
+export function cardQueue(
+  state: LearnerState,
+  now = new Date(),
+  opts: { deck?: string; today?: string } = {},
+): { due: PhraseRecord[]; fresh: PhraseRecord[] } {
+  const inDeck = (p: PhraseRecord) => !opts.deck || p.deck === opts.deck;
+  const due = state.phrases
+    .filter((p) => inDeck(p) && !isUnstudied(p) && new Date(p.card.due) <= now)
+    .sort((a, b) => new Date(a.card.due).getTime() - new Date(b.card.due).getTime());
+  const today = opts.today ?? dayKey(now);
+  const startedToday = state.phrases.filter(
+    (p) => p.deck && p.studiedAt && dayKey(new Date(p.studiedAt)) === today,
+  ).length;
+  const room = Math.max(0, NEW_CARDS_PER_DAY - startedToday);
+  const fresh = state.phrases.filter((p) => inDeck(p) && isUnstudied(p)).slice(0, room);
+  return { due, fresh };
 }
 
 export function reviewMistake(state: LearnerState, key: string, good: boolean, now = new Date()): LearnerState {
@@ -562,7 +620,7 @@ export function averageWpm(state: LearnerState, wordsOf: (text: string) => numbe
 
 export function addPhrases(
   state: LearnerState,
-  items: { text: string; meaningEn: string; meaningHe: string; example?: string }[],
+  items: { text: string; meaningEn: string; meaningHe: string; example?: string; deck?: string }[],
   tag: string | undefined,
   now = new Date(),
 ): { state: LearnerState; added: number } {
@@ -604,7 +662,8 @@ export function removeSession(state: LearnerState, id: string): LearnerState {
 export function phrasesToPractice(state: LearnerState, now = new Date(), max = 3): string[] {
   const due = duePhrases(state, now, max).map((p) => p.text);
   const rest = state.phrases
-    .filter((p) => !due.includes(p.text))
+    // Pack words he hasn't met on a card yet would crowd out the ones he's learning.
+    .filter((p) => !due.includes(p.text) && !isUnstudied(p))
     .sort((a, b) => (a.usedCount ?? 0) - (b.usedCount ?? 0) || b.addedAt.localeCompare(a.addedAt))
     .map((p) => p.text);
   return [...due, ...rest].slice(0, max);

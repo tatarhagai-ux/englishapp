@@ -8,7 +8,7 @@ import clsx from "clsx";
 /** Each tab also owns the screens you reach from it, so the bar shows where you are. */
 const ITEMS = [
   { href: "/", label: "Home", icon: Home, also: [] },
-  { href: "/practice", label: "Practice", icon: Mic, also: ["/listen", "/pronounce", "/review"] },
+  { href: "/practice", label: "Practice", icon: Mic, also: ["/listen", "/pronounce", "/review", "/words"] },
   { href: "/progress", label: "Progress", icon: BarChart3, also: ["/phrases"] },
   { href: "/settings", label: "Settings", icon: Settings, also: ["/guide"] },
 ] as const;

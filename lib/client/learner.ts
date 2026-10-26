@@ -1,6 +1,7 @@
 "use client";
 
 import { planDayByKey, planWeek } from "@/content/plan";
+import { deckById } from "@/content/decks";
 import { addWeekWords } from "@/lib/learner/plan";
 import { useSyncExternalStore } from "react";
 import {
@@ -22,6 +23,8 @@ import {
   type HelpKind,
   type SessionRecord,
   type WeekFeeling,
+  ratePhrase,
+  type CardRating,
 } from "@/lib/learner/model";
 import type { Turn } from "@/lib/conversation/types";
 import type { Analysis } from "@/lib/prompts/analyzer";
@@ -235,6 +238,23 @@ export const learner = {
 
   reviewPhrase(text: string, good: boolean) {
     set(reviewPhrase(get(), text, good));
+  },
+
+  ratePhrase(text: string, rating: CardRating) {
+    set(ratePhrase(get(), text, rating));
+  },
+
+  /** Add a word pack to the phrase bank; returns how many words were new. */
+  addDeck(deckId: string): number {
+    const deck = deckById(deckId);
+    if (!deck) return 0;
+    const r = addPhrases(
+      get(),
+      deck.words.map((w) => ({ ...w, deck: deck.id })),
+      deck.title,
+    );
+    set(r.state);
+    return r.added;
   },
 
   reviewMistake(key: string, good: boolean) {

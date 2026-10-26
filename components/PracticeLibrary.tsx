@@ -10,6 +10,7 @@ import {
   Check,
   Clock,
   Headphones,
+  Layers,
   MessageCircle,
   Plane,
   RotateCcw,
@@ -162,6 +163,7 @@ export function PracticeLibrary() {
             title="Quick review"
             detail={due > 0 ? `${due} due now` : "Mistakes and phrases"}
           />
+          <SkillTile href="/words" icon={Layers} title="Word cards" detail="10 packs · say the word" />
           <SkillTile href="/phrases" icon={BookMarked} title="Phrase bank" detail="Everything you saved" />
         </div>
       </section>

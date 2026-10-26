@@ -119,6 +119,8 @@ function mergePhrase(x: PhraseRecord, y: PhraseRecord): PhraseRecord {
     example: base.example ?? other.example,
     tag: base.tag ?? other.tag,
     usedCount: Math.max(x.usedCount ?? 0, y.usedCount ?? 0) || undefined,
+    deck: base.deck ?? other.deck,
+    studiedAt: earlier(base.studiedAt, other.studiedAt),
   };
 }
 
@@ -185,6 +187,12 @@ function mergeOptional<T>(x: T | undefined, y: T | undefined, both: (x: T, y: T)
   if (x === undefined) return y;
   if (y === undefined) return x;
   return both(x, y);
+}
+
+function earlier(x: string | undefined, y: string | undefined): string | undefined {
+  if (!x) return y;
+  if (!y) return x;
+  return x <= y ? x : y;
 }
 
 function later(x: string | undefined, y: string | undefined): string | undefined {

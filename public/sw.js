@@ -1,11 +1,11 @@
 // Speakwise service worker. It makes the app installable and lets the parts that need no
 // server (quick review, the phrase bank, progress, the guide) open without a connection:
 // the learner's data already lives on the device. It never caches API responses or audio.
-const SHELL = "sw-shell-v3";
+const SHELL = "sw-shell-v4";
 const STATIC = "sw-static-v1";
 const OFFLINE_URL = "/offline.html";
 // Pages kept for offline use: the last copy that loaded fine is served when the network fails.
-const OFFLINE_PAGES = ["/", "/review", "/phrases", "/progress", "/practice", "/guide", "/pronounce"];
+const OFFLINE_PAGES = ["/", "/review", "/words", "/phrases", "/progress", "/practice", "/guide", "/pronounce"];
 const STATIC_MAX = 150;
 
 self.addEventListener("install", (event) => {
