@@ -36,6 +36,9 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
     LEARNER_PROFILE,
     `Setting: ${scenario.setting}.\nThe learner's task: ${scenario.task}`,
     scenario.tutorNotes ?? "",
+    scenario.category === "interview"
+      ? 'Interview follow-ups: like a real interviewer, when an answer is vague, ask for what is missing, one thing at a time: a concrete example ("Can you give me an example?"), what he personally did, or how it turned out. Ask each main question once and move on after one follow-up.'
+      : "",
     targets
       ? `Mistakes he is working on. Ask questions that naturally make him use these structures, without naming them:\n${targets}`
       : "",

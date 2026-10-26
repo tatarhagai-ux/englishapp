@@ -257,3 +257,69 @@ test("without Azure the tutor speaks with the browser's voice and the conversati
   await box.press("Enter");
   await expect.poll(() => chatBodies.length).toBe(2);
 });
+
+test("interview reports show answer structure, and progress shows readiness", async ({ page }) => {
+  await page.addInitScript(() => {
+    const report = {
+      corrections: [],
+      other_errors: [],
+      correct_uses: [],
+      phrases: [],
+      task: { completed: true, met: ["States a clear result or lesson"], feedback_en: "Clear story." },
+      praise_en: "",
+      interview: {
+        answers: [
+          {
+            question: "Tell me about a challenge you handled.",
+            direct: true,
+            example: true,
+            actions: true,
+            result: false,
+            tip_en: "End with what changed, ideally a number.",
+            better_start: "Last year, our main server went down two days before a launch.",
+          },
+        ],
+        readiness: 3,
+        note_en: "Close your stories with the outcome.",
+      },
+    };
+    const day = new Date().toISOString().slice(0, 10);
+    const state = {
+      v: 1,
+      errors: {},
+      phrases: [],
+      spend: {},
+      sessions: [
+        {
+          id: "iv1",
+          scenarioId: "interview-star",
+          mode: "quiet",
+          startedAt: new Date().toISOString(),
+          endedAt: new Date().toISOString(),
+          day,
+          turns: [{ role: "learner", text: "We had a big problem with the server.", input: "text" }],
+          speakingSeconds: 120,
+          stuckCount: 0,
+          fixedAloud: [],
+          xp: 20,
+          costUsd: 0,
+          report,
+        },
+      ],
+    };
+    if (!localStorage.getItem("sw_learner_v1")) localStorage.setItem("sw_learner_v1", JSON.stringify(state));
+  });
+
+  await page.goto("/report/iv1");
+  const card = page.getByRole("region", { name: "Your interview answers" });
+  await expect(card).toContainText("3/5");
+  await expect(card.getByText("Missing: ")).toHaveCount(1);
+  await expect(card).toContainText("Result or lesson");
+  await expect(card).toContainText("Strong start: Last year, our main server went down");
+  await expect(page.getByText("States a clear result or lesson")).toBeVisible();
+
+  await page.goto("/progress");
+  const ready = page.getByRole("region", { name: "Interview readiness" });
+  await expect(ready).toContainText("1 of 5 interview questions practiced");
+  await expect(ready).toContainText("3/5");
+});

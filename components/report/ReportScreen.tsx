@@ -23,6 +23,7 @@ import { analyzeSession, ApiError, API_ERROR_TEXT } from "@/lib/client/api";
 import { usageCostUsd } from "@/lib/cost/pricing";
 import { criterionMet, wordCount } from "@/lib/text/compare";
 import { CorrectionCard } from "./CorrectionCard";
+import { InterviewCard } from "./InterviewCard";
 
 export function ReportScreen({ sessionId }: { sessionId: string }) {
   const hydrated = useHydrated();
@@ -161,6 +162,8 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
               </div>
             </section>
           )}
+
+          {report.interview && <InterviewCard interview={report.interview} voiceId={prefs.tutorVoiceId} />}
 
           <div className="grid grid-cols-2 gap-3">
             <Stat

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Award, ChevronRight, Lock } from "lucide-react";
+import { ArrowRight, Award, Briefcase, ChevronRight, Lock } from "lucide-react";
 import clsx from "clsx";
 import { PLACEMENT } from "@/content/learner-seed";
 import { scenarioById } from "@/content/scenarios";
@@ -12,6 +12,7 @@ import { useLearner } from "@/lib/client/learner";
 import {
   averageWpm,
   currentSpeakingLevel,
+  interviewReadiness,
   isRealSession,
   levelHistory,
   statsFrom,
@@ -107,6 +108,8 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
             : `From the placement quiz on ${PLACEMENT.date} (${PLACEMENT.quizScore} plus a writing sample). Each conversation updates it.`}
         </p>
       </section>
+
+      <InterviewReadinessCard state={state} />
 
       <div className="grid grid-cols-2 gap-3">
         {[
@@ -228,5 +231,50 @@ function MistakeRow({ e }: { e: ErrorRecord }) {
         Seen {e.occurrences}× · used correctly {e.correctUses}×{e.mission ? ` · Mission: ${e.mission}` : ""}
       </p>
     </li>
+  );
+}
+
+/** Goal #1 is a job interview in English, so its readiness gets its own card. */
+function InterviewReadinessCard({ state }: { state: Parameters<typeof interviewReadiness>[0] }) {
+  const r = interviewReadiness(state);
+  return (
+    <section className="tile space-y-3 p-4" aria-labelledby="interview-ready-title">
+      <div className="flex items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+          <Briefcase className="size-5" aria-hidden />
+        </span>
+        <h2 id="interview-ready-title" className="flex-1 font-black">
+          Interview readiness
+        </h2>
+        {r.readiness !== null && (
+          <span className="text-2xl font-black text-accent" aria-label={`${r.readiness} of 5`}>
+            {r.readiness}/5
+          </span>
+        )}
+      </div>
+      <div
+        className="h-2.5 overflow-hidden rounded-full bg-elev-2"
+        role="progressbar"
+        aria-label="Interview questions practiced"
+        aria-valuemin={0}
+        aria-valuemax={r.total}
+        aria-valuenow={r.practiced}
+      >
+        <div className="h-full rounded-full bg-accent" style={{ width: `${(r.practiced / r.total) * 100}%` }} />
+      </div>
+      <p className="text-sm text-dim">
+        {r.practiced} of {r.total} interview questions practiced.{" "}
+        {r.weakest
+          ? `Most often missing: ${r.weakest.label.toLowerCase()} (in ${Math.round((1 - r.weakest.rate) * 100)}% of your last answers).`
+          : r.answers >= 2
+            ? "Your answers have all four parts most of the time. Keep it up."
+            : "Each interview report checks four things: a direct answer, a real example, what you did, and the result."}
+      </p>
+      {r.practiced < r.total && (
+        <Link href="/practice" className="inline-flex items-center gap-1 text-sm font-extrabold text-accent">
+          Practice an interview question <ArrowRight className="size-4" aria-hidden />
+        </Link>
+      )}
+    </section>
   );
 }

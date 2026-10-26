@@ -8,7 +8,7 @@ import { SEED_ERRORS } from "@/content/learner-seed";
 import { SCENARIOS, scenarioById, type Scenario } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import type { Turn } from "@/lib/conversation/types";
-import type { Analysis } from "@/lib/prompts/analyzer";
+import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
 import { bestStreak, computeStreak } from "@/lib/game/streak";
 import { EMPTY_STATS, type LearnerStats } from "@/lib/game/achievements";
 import { xpForSession } from "@/lib/game/xp";
@@ -533,5 +533,40 @@ export function recordPronunciation(
         lastAt: now.toISOString(),
       },
     },
+  };
+}
+
+export interface InterviewReadiness {
+  /** Interview scenarios with at least one report, out of all of them. */
+  practiced: number;
+  total: number;
+  /** Average readiness (1–5) over the last three interview reports that scored it. */
+  readiness: number | null;
+  /** The answer part he leaves out most often in his last ten answers, if any is below 70%. */
+  weakest: { key: (typeof ANSWER_PARTS)[number]["key"]; label: string; rate: number } | null;
+  answers: number;
+}
+
+export function interviewReadiness(state: LearnerState): InterviewReadiness {
+  const interviewIds = new Set(SCENARIOS.filter((s) => s.category === "interview" && !s.hidden).map((s) => s.id));
+  const reports = state.sessions.filter((s) => interviewIds.has(s.scenarioId) && s.report);
+  const scored = reports.filter((s) => s.report!.interview).map((s) => s.report!.interview!);
+  const recent = scored.slice(-3);
+  const answers = scored.flatMap((i) => i.answers).slice(-10);
+  let weakest: InterviewReadiness["weakest"] = null;
+  if (answers.length >= 2) {
+    for (const part of ANSWER_PARTS) {
+      const rate = answers.filter((a) => a[part.key]).length / answers.length;
+      if (rate < 0.7 && (!weakest || rate < weakest.rate)) weakest = { key: part.key, label: part.label, rate };
+    }
+  }
+  return {
+    practiced: new Set(reports.map((s) => s.scenarioId)).size,
+    total: interviewIds.size,
+    readiness: recent.length
+      ? Math.round((recent.reduce((n, i) => n + i.readiness, 0) / recent.length) * 10) / 10
+      : null,
+    weakest,
+    answers: answers.length,
   };
 }

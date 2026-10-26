@@ -62,7 +62,37 @@ export const analysisSchema = z.object({
     })
     .optional()
     .catch(undefined),
+  /** Interview scenarios only: how each answer was built, and overall readiness. */
+  interview: z
+    .object({
+      answers: z
+        .array(
+          z.object({
+            question: z.string().default(""),
+            direct: z.boolean().catch(false),
+            example: z.boolean().catch(false),
+            actions: z.boolean().catch(false),
+            result: z.boolean().catch(false),
+            tip_en: z.string().default(""),
+            better_start: z.string().default(""),
+          }),
+        )
+        .max(4)
+        .default([]),
+      readiness: z.coerce.number().int().min(1).max(5).catch(3),
+      note_en: z.string().default(""),
+    })
+    .optional()
+    .catch(undefined),
 });
+
+/** The four parts of a strong interview answer, in the order an interviewer listens for them. */
+export const ANSWER_PARTS = [
+  { key: "direct", label: "Answered directly" },
+  { key: "example", label: "Real example" },
+  { key: "actions", label: "Your actions (I)" },
+  { key: "result", label: "Result or lesson" },
+] as const;
 
 export type Analysis = z.infer<typeof analysisSchema>;
 
@@ -97,10 +127,19 @@ Rules:
 - phrases: up to 5 useful expressions from the tutor's lines or your corrections worth saving, with a short English meaning and a Hebrew translation.
 - task: decide if he completed the task, list which success criteria he met (copy their wording), and give one sentence of feedback.
 - praise_en: one specific thing he did well, quoting him if possible.
-- level: his SPEAKING level as shown here (A1, A2, B1, B1+, B2, B2+, C1, C2), judged on range, accuracy, fluency and how well he handles harder questions. confidence is "low" if he said little. note_en: one sentence on what would move him up.
+${
+  scenario.category === "interview"
+    ? `- interview: for each main interview question he answered (at most 4), judge his answer like a hiring manager: direct = he answered the actual question in his first sentence or two; example = he gave a concrete, real situation; actions = he said what HE did ("I", not only "we"); result = he ended with an outcome, a number, or a lesson. tip_en: the one change that would most improve that answer. better_start: a strong opening sentence in his own content, natural and spoken. readiness: 1 to 5, how ready these answers would sound in a real English interview (language and structure; 5 = ready). note_en: one sentence on what to practice next.
+`
+    : ""
+}- level: his SPEAKING level as shown here (A1, A2, B1, B1+, B2, B2+, C1, C2), judged on range, accuracy, fluency and how well he handles harder questions. confidence is "low" if he said little. note_en: one sentence on what would move him up.
 
 JSON shape:
-{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","level":{"cefr":"B1+","confidence":"medium","note_en":""}}`;
+{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","level":{"cefr":"B1+","confidence":"medium","note_en":""}${
+    scenario.category === "interview"
+      ? `,"interview":{"answers":[{"question":"","direct":true,"example":false,"actions":true,"result":false,"tip_en":"","better_start":""}],"readiness":3,"note_en":""}`
+      : ""
+  }}`;
 
   const user = `Scenario: ${scenario.title}
 Task: ${scenario.task}
