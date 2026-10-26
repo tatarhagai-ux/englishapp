@@ -52,10 +52,39 @@ describe("pickVoice", () => {
     expect(pickVoice(voices, "ava")?.name).toMatch(/Ava/);
   });
 
-  it("otherwise picks the best voice in the same accent", async () => {
+  it("otherwise picks the same gender and accent", async () => {
     const { pickVoice } = await import("@/lib/client/browser-speech");
-    const voices = [voice("Fred", "en-US"), voice("Google US English", "en-US", false), voice("Daniel", "en-GB")];
-    expect(pickVoice(voices, "andrew")?.name).toBe("Google US English");
+    const voices = [
+      voice("Microsoft Zira - English (United States)", "en-US"),
+      voice("Microsoft David - English (United States)", "en-US"),
+      voice("Microsoft Hazel - English (United Kingdom)", "en-GB"),
+      voice("Microsoft George - English (United Kingdom)", "en-GB"),
+    ];
+    expect(pickVoice(voices, "andrew")?.name).toMatch(/David/);
+    expect(pickVoice(voices, "ava")?.name).toMatch(/Zira/);
+    expect(pickVoice(voices, "ryan")?.name).toMatch(/George/);
+    expect(pickVoice(voices, "sonia")?.name).toMatch(/Hazel/);
+  });
+
+  it("gives different characters of the same kind different voices when there are several", async () => {
+    const { pickVoice } = await import("@/lib/client/browser-speech");
+    const voices = ["Mark", "David", "Guy", "Eric"].map((n) =>
+      voice(`Microsoft ${n} Online (Natural)`, "en-US", false),
+    );
+    const picked = new Set(["guy", "brian", "andrew", "william", "ryan"].map((id) => pickVoice(voices, id)?.name));
+    expect(picked.size).toBeGreaterThan(1);
+    // Stable: the same character always gets the same voice.
+    expect(pickVoice(voices, "brian")?.name).toBe(pickVoice(voices, "brian")?.name);
+  });
+
+  it("guesses gender from well-known names and pitches a mismatch apart", async () => {
+    const { guessGender, pitchFor, pickVoice } = await import("@/lib/client/browser-speech");
+    expect(guessGender("Microsoft Guy Online (Natural)")).toBe("male");
+    expect(guessGender("Samantha")).toBe("female");
+    expect(guessGender("Google US English")).toBeNull();
+    const onlyFemale = [voice("Microsoft Zira - English (United States)", "en-US")];
+    const v = pickVoice(onlyFemale, "andrew");
+    expect(pitchFor(v, "andrew")).toBeLessThan(pitchFor(v, "ava"));
   });
 
   it("falls back to any English voice", async () => {
