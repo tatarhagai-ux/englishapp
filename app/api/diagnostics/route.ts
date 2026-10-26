@@ -4,7 +4,7 @@ import { safeEqual } from "@/lib/auth/gate";
 import { llm, type Usage } from "@/lib/providers/llm";
 import { errorResponse } from "@/lib/http/errors";
 import { buildTutorSystemPrompt, toChatMessages } from "@/lib/prompts/tutor";
-import { buildAnalyzerMessages, parseAnalysis } from "@/lib/prompts/analyzer";
+import { analysisSchema, buildAnalyzerMessages, extractJson, parseAnalysis } from "@/lib/prompts/analyzer";
 import { scenarioById } from "@/content/scenarios";
 import evalSet from "@/eval/sentences.json";
 import { pickItems, type EvalItem as Item } from "@/lib/diagnostics";
@@ -21,7 +21,18 @@ export const maxDuration = 60;
  * reports. Off unless DIAG_TOKEN is set; a run costs a few cents at most.
  */
 const MAX_MODELS = 3;
-const MAX_SENTENCES = 12;
+const MAX_SENTENCES = 30;
+
+/** Why a reply didn't parse, short enough to read in the JSON result. */
+function parseFailure(text: string): string {
+  const raw = extractJson(text);
+  if (raw === null || typeof raw !== "object") return `not JSON: ${text.slice(0, 120)}`;
+  const issues = analysisSchema.safeParse(raw).error?.issues ?? [];
+  return issues
+    .slice(0, 3)
+    .map((i) => `${i.path.join(".")}: ${i.message}`)
+    .join("; ");
+}
 
 function addCost(total: number, u?: Usage) {
   return total + (u?.costUsd ?? 0);
@@ -78,11 +89,13 @@ async function checkModel(model: string, items: Item[]) {
       cost = addCost(cost, res.usage);
       const a = parseAnalysis(res.text);
       const reported = a ? [...a.corrections.map((c) => c.error_key), ...a.other_errors.map((o) => o.error_key)] : [];
-      return { expected: it.errors, reported, parsed: Boolean(a) };
+      return { expected: it.errors, reported, parsed: Boolean(a), failure: a ? null : parseFailure(res.text) };
     }),
   );
-  const withErrors = outcomes.filter((o) => o.expected.length > 0);
-  const clean = outcomes.filter((o) => o.expected.length === 0);
+  // Parse failures are counted on their own, not as missed mistakes.
+  const parsed = outcomes.filter((o) => o.parsed);
+  const withErrors = parsed.filter((o) => o.expected.length > 0);
+  const clean = parsed.filter((o) => o.expected.length === 0);
   const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : null);
   return {
     model,
@@ -92,6 +105,7 @@ async function checkModel(model: string, items: Item[]) {
       caughtPct: pct(withErrors.filter((o) => o.reported.length > 0).length, withErrors.length),
       needlessFixPct: pct(clean.filter((o) => o.reported.length > 0).length, clean.length),
       parseFailures: outcomes.filter((o) => !o.parsed).length,
+      failureSamples: [...new Set(outcomes.flatMap((o) => (o.failure ? [o.failure] : [])))].slice(0, 3),
     },
     costUsd: Math.round(cost * 100000) / 100000,
   };

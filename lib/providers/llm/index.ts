@@ -27,7 +27,9 @@ export function llm(): LlmProvider {
       endpoint: "https://openrouter.ai/api/v1/chat/completions",
       apiKey: cfg.apiKey,
       headers: { "X-Title": "Speakwise", ...(appUrl ? { "HTTP-Referer": `https://${appUrl}` } : {}) },
-      extraBody: { usage: { include: true } },
+      // Hybrid models (DeepSeek V4, Qwen3, Gemini Flash) can think before answering; a spoken
+      // tutor needs words fast, and thinking can eat the whole token budget, leaving no reply.
+      extraBody: { usage: { include: true }, reasoning: { enabled: false } },
     });
   }
   return cached;
