@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Loader2, Play, Square, Wrench } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, Loader2, Play, Smartphone, Square, Wrench } from "lucide-react";
 import clsx from "clsx";
 import { VOICES, sampleLine, type Gender, type Voice } from "@/content/voices";
 import { usePrefs } from "@/lib/client/prefs";
@@ -74,6 +74,8 @@ export default function VoicePickerPage() {
           )}
         </div>
       )}
+
+      <AndroidVoiceTip />
 
       {browserSpeechActive() && (
         <p role="status" className="text-sm text-dim">
@@ -244,6 +246,59 @@ function DeviceVoices() {
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Samsung phones speak with Samsung's own engine by default, which sounds flatter than
+ * Google's. Chrome can only use the voice the phone's engine offers, so the biggest free
+ * upgrade is in the phone's settings, not in the app.
+ */
+function AndroidVoiceTip() {
+  const [android, setAndroid] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => setAndroid(/Android/i.test(navigator.userAgent)), []);
+  if (!android) return null;
+  return (
+    <section className="card p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 text-left"
+      >
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+          <Smartphone className="size-5" aria-hidden />
+        </span>
+        <span className="flex-1">
+          <span className="block font-extrabold">Voices sound robotic?</span>
+          <span className="block text-sm text-dim">A 2-minute change on your phone makes them much more natural.</span>
+        </span>
+        <ChevronDown className={clsx("size-5 text-dim transition-transform", open && "rotate-180")} aria-hidden />
+      </button>
+      {open && (
+        <div className="mt-3 space-y-3 text-sm">
+          <ol className="list-decimal space-y-1.5 pl-5">
+            <li>
+              Open the phone&apos;s <b>Settings</b> and search for <b>Text-to-speech</b>.
+            </li>
+            <li>
+              Under <b>Preferred engine</b>, choose <b>Speech Recognition and Synthesis from Google</b> (or{" "}
+              <b>Speech Services by Google</b>). If it&apos;s missing, install it from the Play Store.
+            </li>
+            <li>
+              Tap the gear next to it, then <b>Install voice data</b> → <b>English (United States)</b>. Try the voices
+              and pick the one you like; download it so it works offline too.
+            </li>
+            <li>Close Chrome completely and open the app again.</li>
+          </ol>
+          <p dir="rtl" lang="he" className="rounded-lg bg-elev-2 px-2.5 py-1.5">
+            בעברית: הגדרות ← חיפוש &quot;המרת טקסט לדיבור&quot; ← מנוע מועדף: של Google ← גלגל השיניים ← התקנת נתוני קול
+            ← אנגלית (ארה&quot;ב) ← לבחור קול ולהוריד. אחר כך לסגור את Chrome ולפתוח מחדש.
+          </p>
+        </div>
       )}
     </section>
   );

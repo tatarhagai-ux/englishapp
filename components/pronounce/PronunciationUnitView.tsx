@@ -9,6 +9,7 @@ import { PRONUNCIATION } from "@/content/pronunciation";
 import { learner, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
 import { useClipPlayer } from "@/lib/client/tts";
+import { useWakeLock } from "@/lib/client/wake-lock";
 import { SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
 import { useMicAttempt } from "@/lib/client/use-mic-attempt";
 import { MicBusyLabel, MicHeard } from "@/components/MicLive";
@@ -24,6 +25,7 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
   const mic = useMicAttempt();
   /** Which sentence the microphone is open for. */
   const [active, setActive] = useState<number | null>(null);
+  useWakeLock(true);
   const best = state.pronunciation?.[unit.id]?.best;
   const index = PRONUNCIATION.findIndex((u) => u.id === unit.id);
   const next = PRONUNCIATION[index + 1];

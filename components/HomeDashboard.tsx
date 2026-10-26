@@ -192,7 +192,8 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
         </section>
       )}
 
-      {boss && (
+      {/* The first screen stays on its one step; the seeded mistakes come from his written test. */}
+      {boss && !firstTime && (
         <section className="tile p-4" aria-labelledby="boss-title">
           <div className="flex items-center gap-2">
             <Zap className="size-5 fill-current text-xp" aria-hidden />
@@ -200,6 +201,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
               Boss mistake: {boss.title}
             </h2>
           </div>
+          {stats.sessions === 0 && <p className="mt-1 text-xs font-bold text-faint">From your English test</p>}
           <p className="mt-3 font-bold text-bad line-through decoration-bad/60">{boss.example}</p>
           <p className="font-extrabold text-good">{boss.better}</p>
           <p className="mt-2 text-sm text-dim">{boss.why}</p>

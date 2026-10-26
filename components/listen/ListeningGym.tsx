@@ -9,6 +9,7 @@ import { LISTENING, type ListeningItem } from "@/content/listening";
 import { VOICES, type Accent, type Voice } from "@/content/voices";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { useClipPlayer } from "@/lib/client/tts";
+import { useWakeLock } from "@/lib/client/wake-lock";
 import { primeAudio, SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
 import { useMicAttempt } from "@/lib/client/use-mic-attempt";
 import { MicBusyLabel, MicHeard } from "@/components/MicLive";
@@ -44,6 +45,7 @@ export function ListeningGym() {
   const [done, setDone] = useState(false);
   const player = useClipPlayer();
   const autoplayed = useRef(-1);
+  useWakeLock(Boolean(round) && !done);
 
   const voicePool = useMemo(() => VOICES.filter((v) => accent === "Mixed" || v.accent === accent), [accent]);
 

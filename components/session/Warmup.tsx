@@ -8,6 +8,7 @@ import { SpeechSetupError } from "@/lib/client/speech";
 import { useMicAttempt } from "@/lib/client/use-mic-attempt";
 import { MicBusyLabel, MicHeard } from "@/components/MicLive";
 import { learner } from "@/lib/client/learner";
+import { useWakeLock } from "@/lib/client/wake-lock";
 import { saidCorrectly, usedPhrase } from "@/lib/text/compare";
 
 interface Props {
@@ -30,6 +31,7 @@ type Attempt = { status: "idle" | "checked" | "error"; said?: string; ok?: boole
  */
 export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = false }: Props) {
   const [index, setIndex] = useState(0);
+  useWakeLock(true);
   const [revealed, setRevealed] = useState(false);
   const [attempt, setAttempt] = useState<Attempt>({ status: "idle" });
   const mic = useMicAttempt();

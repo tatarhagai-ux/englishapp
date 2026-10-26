@@ -42,6 +42,7 @@ import { planDayByKey, planWeek } from "@/content/plan";
 import { weekWordsToPractice } from "@/lib/learner/plan";
 import { adaptation, paceFor } from "@/lib/learner/adapt";
 import { dayKey } from "@/lib/game/streak";
+import { useWakeLock } from "@/lib/client/wake-lock";
 import { Intro } from "./Intro";
 import { Warmup } from "./Warmup";
 import { Transcript } from "./Transcript";
@@ -114,6 +115,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [draft, setDraft] = useState("");
+  useWakeLock(phase !== "intro");
 
   const turnsRef = useRef<Turn[]>([]);
   const sessionRef = useRef<string | null>(null);

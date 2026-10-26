@@ -292,7 +292,7 @@ describe("browser voices for characters", () => {
     const android = [voice("English United States", "en-US"), voice("English United Kingdom", "en-GB")];
     const male = pitchFor(pickVoice(android, "andrew"), "andrew");
     const female = pitchFor(pickVoice(android, "ava"), "ava");
-    expect(male).toBeLessThanOrEqual(0.7);
+    expect(male).toBeLessThanOrEqual(0.82);
     expect(female).toBeGreaterThanOrEqual(1);
   });
 
@@ -302,5 +302,18 @@ describe("browser voices for characters", () => {
     const one = [voice("English United States", "en-US")];
     const tones = VOICES.map((v) => `${pitchFor(pickVoice(one, v.id), v.id).toFixed(2)}/${rateFor(v.id)}`);
     expect(new Set(tones).size).toBe(VOICES.length);
+  });
+});
+
+describe("pitchFor", () => {
+  it("keeps every character within the range that still sounds natural", async () => {
+    const { pitchFor, PITCH_MIN, PITCH_MAX } = await import("@/lib/client/browser-speech");
+    const { VOICES } = await import("@/content/voices");
+    const unnamed = voice("English United States", "en-US");
+    for (const v of VOICES) {
+      const p = pitchFor(unnamed, v.id);
+      expect(p).toBeGreaterThanOrEqual(PITCH_MIN);
+      expect(p).toBeLessThanOrEqual(PITCH_MAX);
+    }
   });
 });
