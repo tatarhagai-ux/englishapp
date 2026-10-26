@@ -1,7 +1,8 @@
 /**
  * Streak counting on calendar days in the learner's timezone (dates as "YYYY-MM-DD").
  * A streak survives until the end of today, so practicing yesterday but not yet today
- * still shows the streak. One freeze can cover a single missed day per week.
+ * still shows the streak. One freeze can cover a single missed day per week, and with
+ * restDays a short gap (the plan is 5 days a week) doesn't break it either.
  */
 
 function toDayNumber(day: string): number {
@@ -25,6 +26,8 @@ export function computeStreak(
   activeDays: Iterable<string>,
   today: string,
   freezeDays: Iterable<string> = [],
+  /** Missed days in a row that don't break the streak (they aren't counted in it either). */
+  restDays = 0,
 ): StreakResult {
   const active = new Set([...activeDays].map(toDayNumber));
   const frozen = new Set([...freezeDays].map(toDayNumber));
@@ -33,10 +36,18 @@ export function computeStreak(
 
   let cursor = practicedToday ? t : t - 1;
   let current = 0;
+  let gap = 0;
+  const first = Math.min(...active);
   const frozenDays: string[] = [];
-  while (active.has(cursor) || frozen.has(cursor)) {
-    if (active.has(cursor)) current++;
-    else frozenDays.push(new Date(cursor * 86_400_000).toISOString().slice(0, 10));
+  while (cursor >= first) {
+    if (active.has(cursor)) {
+      current++;
+      gap = 0;
+    } else if (frozen.has(cursor)) {
+      frozenDays.push(new Date(cursor * 86_400_000).toISOString().slice(0, 10));
+    } else if (++gap > restDays) {
+      break;
+    }
     cursor--;
   }
   return { current, practicedToday, frozenDays };

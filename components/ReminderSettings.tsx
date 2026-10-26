@@ -12,11 +12,11 @@ import { dayKey } from "@/lib/game/streak";
  */
 export function ReminderSettings() {
   const [prefs] = usePrefs();
-  const [time, setTime] = useState("12:30");
+  const [time, setTime] = useState("17:30");
   const [done, setDone] = useState(false);
 
   const input = () => ({
-    time: /^\d{2}:\d{2}$/.test(time) ? time : "12:30",
+    time: /^\d{2}:\d{2}$/.test(time) ? time : "17:30",
     url: window.location.origin,
     minutes: prefs.dailyGoalMinutes,
     startDay: dayKey(new Date()),

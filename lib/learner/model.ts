@@ -98,6 +98,8 @@ export interface MemoryItem {
 
 /** How many remembered facts are kept; older ones fall off. */
 export const MEMORY_MAX = 12;
+/** Days off in a row that don't break the streak. */
+export const STREAK_REST_DAYS = 2;
 
 export interface ListeningState {
   /** Playback speed he currently handles; the gym adapts it (i+1). */
@@ -303,7 +305,8 @@ export function statsFrom(state: LearnerState, today: string): LearnerStats {
   return {
     totalSpeakingSeconds: real.reduce((sum, s) => sum + s.speakingSeconds, 0),
     sessions: real.length,
-    currentStreak: computeStreak(days, today).current,
+    // The plan is 5 days a week, so two rest days in a row keep the streak alive.
+    currentStreak: computeStreak(days, today, [], STREAK_REST_DAYS).current,
     bestStreak: bestStreak(days),
     mistakesMastered: Object.values(state.errors).filter((e) => e.status === "mastered").length,
     stuckFreeSessions: real.filter((s) => s.stuckCount === 0 && s.endedAt).length,

@@ -720,3 +720,36 @@ export function characterName(scenario: Scenario): string | null {
 export function scenarioById(id: string): Scenario | undefined {
   return SCENARIOS.find((s) => s.id === id) ?? planScenario(id);
 }
+
+export type ScenarioLevel = "B1" | "B1+" | "B2";
+
+/** Roughly how demanding each conversation is, so the library reads easier → harder. */
+const LEVELS: Record<string, ScenarioLevel> = {
+  "abroad-airport": "B1",
+  "abroad-hotel": "B1",
+  "abroad-directions": "B1",
+  "abroad-restaurant": "B1",
+  "abroad-neighbor": "B1",
+  "free-your-week": "B1",
+  "free-fitness": "B1",
+  "work-small-talk": "B1",
+  "abroad-doctor": "B1+",
+  "abroad-renting": "B1+",
+  "abroad-bank-phone": "B1+",
+  "free-plans": "B1+",
+  "free-ai-tools": "B1+",
+  "free-book": "B1+",
+  "work-standup": "B1+",
+  "work-delay": "B1+",
+  "work-support-call": "B1+",
+  "interview-about-you": "B1+",
+};
+
+/** Library conversations not listed above are B2; plan topics follow their week. */
+export function scenarioLevel(s: Scenario): ScenarioLevel | null {
+  if (s.id === PLACEMENT_ID) return null;
+  if (LEVELS[s.id]) return LEVELS[s.id];
+  const week = /^plan-w(\d+)d/.exec(s.id)?.[1];
+  if (week) return Number(week) <= 4 ? "B1+" : "B2";
+  return "B2";
+}
