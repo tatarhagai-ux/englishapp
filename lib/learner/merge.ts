@@ -70,6 +70,10 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     })),
   );
   if (pronunciation) out.pronunciation = pronunciation;
+  const stories = mergeOptional(a.stories, b.stories, (x, y) =>
+    mergeRecords(x, y, (u, v) => ({ best: Math.max(u.best, v.best), at: later(u.at, v.at)! })),
+  );
+  if (stories) out.stories = stories;
   const feelings = mergeOptional(a.feelings, b.feelings, (x, y) => mergeRecords(x, y, (u) => u));
   if (feelings) out.feelings = feelings;
   const memory = mergeBy(

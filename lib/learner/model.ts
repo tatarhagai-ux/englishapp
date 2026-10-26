@@ -109,6 +109,8 @@ export interface LearnerState {
   /** Azure usage per month, to know when the free tier runs out. */
   speechUsage?: Record<string, { ttsChars: number; sttSeconds: number }>;
   listening?: ListeningState;
+  /** Listening stories: best number of questions right, by story id. */
+  stories?: Record<string, { best: number; at: string }>;
   /** Best pronunciation score per course unit. */
   pronunciation?: Record<string, { best: number; attempts: number; lastAt: string }>;
   /** Facts he shared in conversations, so the tutor can pick up where they left off. */
@@ -706,6 +708,20 @@ export function markPhrasesUsed(state: LearnerState, learnerText: string): Learn
  * Adaptive speed: three right in a row at the current speed moves it up 0.05; a miss moves
  * it down 0.05. That keeps listening a little above comfortable, which is where it improves.
  */
+/**
+ * A finished listening story. XP only for answers better than his best on that story, so
+ * replaying one to learn it is fine but doesn't farm points.
+ */
+export function recordStory(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
+  const prev = state.stories?.[id]?.best ?? 0;
+  const l = state.listening ?? LISTENING_START;
+  return {
+    ...state,
+    stories: { ...state.stories, [id]: { best: Math.max(prev, correct), at: now.toISOString() } },
+    listening: { ...l, xp: l.xp + 5 * Math.max(0, correct - prev) },
+  };
+}
+
 export function recordListening(state: LearnerState, itemId: string, correct: boolean): LearnerState {
   const l = state.listening ?? LISTENING_START;
   let rate = l.rate;

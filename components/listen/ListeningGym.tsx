@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, Headphones, Keyboard, Loader2, Mic, Play, Snail, Trophy } from "lucide-react";
 import clsx from "clsx";
+import { STORIES } from "@/content/stories";
 import { LISTENING, type ListeningItem } from "@/content/listening";
 import { VOICES, type Accent, type Voice } from "@/content/voices";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
@@ -177,6 +178,42 @@ export function ListeningGym() {
             </p>
           </section>
         )}
+
+        <section aria-labelledby="stories-title" className="space-y-2.5">
+          <div>
+            <h2 id="stories-title" className="font-black">
+              Stories
+            </h2>
+            <p className="text-sm text-dim">
+              A short real conversation, then three questions. Words appear at the end.
+            </p>
+          </div>
+          <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
+            {STORIES.map((s) => {
+              const best = hydrated ? state.stories?.[s.id]?.best : undefined;
+              return (
+                <Link
+                  key={s.id}
+                  href={`/listen/story/${s.id}`}
+                  className="tile w-44 shrink-0 snap-start space-y-1 p-3.5 transition-colors hover:border-accent/60"
+                >
+                  <p className="text-xs font-extrabold text-faint">
+                    {s.level} · {s.lines.length} lines
+                  </p>
+                  <p className="font-extrabold leading-snug">{s.title}</p>
+                  <p
+                    className={clsx(
+                      "text-xs font-bold",
+                      best === undefined ? "text-dim" : best === 3 ? "text-good" : "text-warn",
+                    )}
+                  >
+                    {best === undefined ? "New" : `Best ${best}/3`}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
 
         <section className="tile grid grid-cols-2 gap-3 p-4">
           <div>

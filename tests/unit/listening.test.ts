@@ -67,3 +67,30 @@ describe("adaptive listening speed", () => {
     ).toEqual(["a", "b", "c"]);
   });
 });
+
+describe("listening stories", () => {
+  it("are complete: two speakers with real voices, three answerable questions, phrases", async () => {
+    const { STORIES } = await import("@/content/stories");
+    const { voiceById } = await import("@/content/voices");
+    expect(STORIES.length).toBeGreaterThanOrEqual(10);
+    expect(new Set(STORIES.map((s) => s.id)).size).toBe(STORIES.length);
+    for (const s of STORIES) {
+      expect(new Set(s.lines.map((l) => l.voice)).size, s.id).toBeGreaterThanOrEqual(2);
+      for (const l of s.lines) expect(voiceById(l.voice), `${s.id} ${l.voice}`).toBeDefined();
+      expect(s.questions).toHaveLength(3);
+      for (const q of s.questions) expect(q.options[q.answer], q.q).toBeTruthy();
+      expect(s.phrases.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it("gives XP only for beating his best on a story", async () => {
+    const { recordStory } = await import("@/lib/learner/model");
+    let s = recordStory(initialState(), "s-gym", 2);
+    expect(s.listening!.xp).toBe(10);
+    s = recordStory(s, "s-gym", 1);
+    expect(s.listening!.xp).toBe(10);
+    s = recordStory(s, "s-gym", 3);
+    expect(s.listening!.xp).toBe(15);
+    expect(s.stories!["s-gym"].best).toBe(3);
+  });
+});

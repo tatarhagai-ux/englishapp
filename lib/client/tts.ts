@@ -103,3 +103,44 @@ export function useClipPlayer() {
 
   return { play, stop, state, error };
 }
+
+/**
+ * Play lines one after another, each in its own voice (listening stories). Resolves when the
+ * last line ends or the signal aborts. Without Azure it uses the browser's voices.
+ */
+export async function speakSequence(
+  lines: { text: string; voiceId: string }[],
+  rate: number,
+  opts: { signal?: AbortSignal; onLine?: (index: number) => void } = {},
+): Promise<void> {
+  for (let i = 0; i < lines.length; i++) {
+    if (opts.signal?.aborted) return;
+    opts.onLine?.(i);
+    const { text, voiceId } = lines[i];
+    if (!browserSpeechActive()) {
+      try {
+        const url = URL.createObjectURL(await fetchSpeech(text, voiceId, rate, opts.signal));
+        await new Promise<void>((resolve) => {
+          const audio = new Audio(url);
+          const done = () => {
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          audio.onended = done;
+          audio.onerror = done;
+          opts.signal?.addEventListener("abort", () => {
+            audio.pause();
+            done();
+          });
+          audio.play().catch(done);
+        });
+        continue;
+      } catch (err) {
+        if (opts.signal?.aborted) return;
+        if (!(err instanceof TtsRequestError && err.kind === "not_configured")) throw err;
+      }
+    }
+    if (opts.signal?.aborted) return;
+    await speakInBrowser(text, voiceId, rate);
+  }
+}
