@@ -1,9 +1,10 @@
 "use client";
 
-import { Briefcase, Check, Volume2, X } from "lucide-react";
+import { Bookmark, BookmarkCheck, Briefcase, Check, Volume2, X } from "lucide-react";
 import clsx from "clsx";
 import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
 import { useClipPlayer } from "@/lib/client/tts";
+import { learner, useLearner } from "@/lib/client/learner";
 
 type Interview = NonNullable<Analysis["interview"]>;
 
@@ -13,6 +14,8 @@ type Interview = NonNullable<Analysis["interview"]>;
  */
 export function InterviewCard({ interview, voiceId }: { interview: Interview; voiceId: string }) {
   const player = useClipPlayer();
+  const state = useLearner();
+  const saved = new Set(state.phrases.map((p) => p.text.toLowerCase()));
   if (!interview.answers.length) return null;
   return (
     <section aria-labelledby="interview-title" className="tile space-y-4 p-4">
@@ -66,6 +69,29 @@ export function InterviewCard({ interview, voiceId }: { interview: Interview; vo
                 >
                   <Volume2 className="size-4" aria-hidden />
                 </button>
+                {saved.has(a.better_start.toLowerCase()) ? (
+                  <span
+                    className="grid size-8 shrink-0 place-items-center text-good"
+                    aria-label="Saved to your phrase bank"
+                  >
+                    <BookmarkCheck className="size-4" aria-hidden />
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    // Saved answers come back in warm-ups and quick reviews, so the opening becomes automatic.
+                    onClick={() =>
+                      learner.addPhrases(
+                        [{ text: a.better_start, meaningEn: a.question || "Interview answer", meaningHe: "" }],
+                        "Interview",
+                      )
+                    }
+                    aria-label="Save the strong start to practice"
+                    className="grid size-8 shrink-0 place-items-center rounded-lg text-dim hover:text-text"
+                  >
+                    <Bookmark className="size-4" aria-hidden />
+                  </button>
+                )}
               </div>
             )}
           </li>
