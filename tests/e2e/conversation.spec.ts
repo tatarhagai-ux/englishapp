@@ -346,7 +346,7 @@ test("without Azure the tutor speaks with the browser's voice and the conversati
   await expect.poll(() => chatBodies.length).toBe(2);
 });
 
-test("tap to talk: pauses don't send, the second tap sends everything; hands-free waits for silence", async ({
+test("tap to talk: pauses don't send, stop shows the words to fix before sending; hands-free waits for silence", async ({
   page,
 }) => {
   // A fake microphone and browser recognizer the test drives (Azure isn't configured here).
@@ -389,23 +389,34 @@ test("tap to talk: pauses don't send, the second tap sends everything; hands-fre
   await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
   await expect(page.getByRole("button", { name: "Tap to talk" })).toBeVisible();
 
-  // Tap mode: pauses between phrases don't send; the second tap sends all of it at once.
+  // Tap mode: pauses between phrases don't send; stop shows everything heard, to fix or add to.
   await freshListen();
   await page.getByRole("button", { name: "Start talking" }).click();
   await say("I study for AZ-900");
   await say("two weeks");
   await page.waitForTimeout(3000);
   expect(chatBodies).toHaveLength(0);
+  await page.getByRole("button", { name: "Done talking" }).click();
+  const heard = page.getByRole("textbox", { name: /Heard/ });
+  await expect(heard).toHaveValue("I study for AZ-900 two weeks");
+  expect(chatBodies).toHaveLength(0);
+  // Keep talking adds to what's there.
+  await freshListen();
+  await page.getByRole("button", { name: "Keep talking" }).click();
+  await say("already");
+  await page.getByRole("button", { name: "Done talking" }).click();
+  await expect(heard).toHaveValue("I study for AZ-900 two weeks already");
+  await heard.fill("I've been studying for AZ-900 for two weeks");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect.poll(() => chatBodies.length).toBe(1);
   expect(chatBodies[0].history.at(-1)).toMatchObject({
     role: "learner",
-    text: "I study for AZ-900 two weeks",
+    text: "I've been studying for AZ-900 for two weeks",
     input: "voice",
   });
 
   // A long silence: the browser keeps ending its session. After a few empty rounds the app stops
-  // reopening the microphone (each reopening beeps on Android) and keeps what was said for a tap.
+  // reopening the microphone (each reopening beeps on Android) and shows what was said to check.
   await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
   await freshListen();
   await page.getByRole("button", { name: "Start talking" }).click();
@@ -413,7 +424,7 @@ test("tap to talk: pauses don't send, the second tap sends everything; hands-fre
   for (let i = 0; i < 4; i++) {
     await page.evaluate(() => (window as unknown as { __rec: { onend: () => void } }).__rec.onend());
   }
-  await expect(page.getByText("The microphone paused. Tap to send what you said.")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /Heard/ })).toHaveValue("Hello there");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect.poll(() => chatBodies.length).toBe(2);
   expect(chatBodies[1].history.at(-1)).toMatchObject({ text: "Hello there" });
