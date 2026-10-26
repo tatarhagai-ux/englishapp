@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Award, Briefcase, ChevronRight, Lock } from "lucide-react";
 import clsx from "clsx";
@@ -177,37 +178,59 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
         </ul>
       </section>
 
-      <section aria-labelledby="badges-title" className="space-y-3">
-        <h2 id="badges-title" className="font-black">
-          Achievements
-        </h2>
-        <ul className="grid grid-cols-2 gap-3">
-          {ACHIEVEMENTS.map((a) => {
-            const p = a.progress(stats);
-            const done = p >= 1;
-            return (
-              <li key={a.key} className={clsx("tile flex flex-col gap-2 p-3", !done && "opacity-80")}>
-                <span
-                  className={clsx(
-                    "grid size-10 place-items-center rounded-2xl",
-                    done ? "bg-xp text-[#3a2a00]" : "bg-elev-2 text-faint",
-                  )}
-                >
-                  {done ? <Award className="size-5" aria-hidden /> : <Lock className="size-4" aria-hidden />}
-                </span>
-                <div>
-                  <p className="text-sm font-extrabold">{a.title}</p>
-                  <p className="text-xs text-dim">{a.detail}</p>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-elev-2" aria-hidden>
-                  <div className="h-full rounded-full bg-go" style={{ width: `${p * 100}%` }} />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      <Achievements stats={stats} />
     </div>
+  );
+}
+
+/** Earned ones plus the two closest, so the list motivates instead of scrolling forever. */
+function Achievements({ stats }: { stats: ReturnType<typeof statsFrom> }) {
+  const [all, setAll] = useState(false);
+  const scored = ACHIEVEMENTS.map((a) => ({ a, p: a.progress(stats) }));
+  const earned = scored.filter((x) => x.p >= 1);
+  const next = scored
+    .filter((x) => x.p < 1)
+    .sort((x, y) => y.p - x.p)
+    .slice(0, 2);
+  const shown = all ? scored : [...earned, ...next];
+  return (
+    <section aria-labelledby="badges-title" className="space-y-3">
+      <h2 id="badges-title" className="flex items-baseline justify-between font-black">
+        Achievements
+        <span className="text-sm font-bold text-dim">
+          {earned.length} of {ACHIEVEMENTS.length}
+        </span>
+      </h2>
+      <ul className="grid grid-cols-2 gap-3">
+        {shown.map(({ a, p }) => {
+          const done = p >= 1;
+          return (
+            <li key={a.key} className={clsx("tile flex flex-col gap-2 p-3", !done && "opacity-80")}>
+              <span
+                className={clsx(
+                  "grid size-10 place-items-center rounded-2xl",
+                  done ? "bg-xp text-[#3a2a00]" : "bg-elev-2 text-faint",
+                )}
+              >
+                {done ? <Award className="size-5" aria-hidden /> : <Lock className="size-4" aria-hidden />}
+              </span>
+              <div>
+                <p className="text-sm font-extrabold">{a.title}</p>
+                <p className="text-xs text-dim">{a.detail}</p>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-elev-2" aria-hidden>
+                <div className="h-full rounded-full bg-go" style={{ width: `${p * 100}%` }} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {!all && shown.length < ACHIEVEMENTS.length && (
+        <button type="button" onClick={() => setAll(true)} className="text-sm font-extrabold text-accent">
+          Show all {ACHIEVEMENTS.length}
+        </button>
+      )}
+    </section>
   );
 }
 
