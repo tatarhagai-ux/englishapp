@@ -1,5 +1,6 @@
 "use client";
 
+import { HowItWorks } from "@/components/HowItWorks";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Languages, Loader2, Plus, Square, Trash2, Volume2 } from "lucide-react";
@@ -87,6 +88,14 @@ export function PhraseBank() {
             Phrases from your reports and lists you import. Your tutor works them into conversations, and they come back
             in warm-ups.
           </p>
+          <HowItWorks
+            steps={[
+              "Phrases land here from your reports, from each plan week's words, and from lists you import.",
+              "Your tutor gives you chances to use them in conversations.",
+              "Each time you use one in a conversation, it counts. Two good uses and it's yours.",
+            ]}
+            why="Words you only read stay passive. Using them out loud makes them active."
+          />
         </div>
       </header>
 

@@ -148,6 +148,42 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   expect((chatBodies[2] as unknown as { memory: string[] }).memory).toEqual(["He has an AZ-900 exam next month."]);
 });
 
+test("the plan: day 1 from its link, the week's words reach the tutor, the report leads to day 2", async ({ page }) => {
+  const chatBodies: { practicePhrases: string[]; targetKeys: string[] }[] = [];
+  await mockApis(page, chatBodies);
+  await page.goto("/session/free-your-week?plan=w1d1");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
+  const box = page.getByLabel("Your reply");
+  await box.fill("I've been juggling work and studying, my routine is crazy");
+  await box.press("Enter");
+  await expect.poll(() => chatBodies.length).toBe(1);
+  // The tutor gets this week's words to work in, and the week's focus mistake.
+  expect(chatBodies[0].practicePhrases.some((p) => ["routine", "demanding", "flexible", "to juggle"].includes(p))).toBe(
+    true,
+  );
+  expect(chatBodies[0].targetKeys).toContain("present_perfect_duration");
+
+  await page.getByRole("button", { name: "End conversation" }).click();
+  await expect(page).toHaveURL(/\/report\//);
+  await expect(page.getByRole("heading", { name: "Words of the week" })).toBeVisible();
+  await expect(page.getByText("routine", { exact: true })).toBeVisible();
+  const upNext = page.getByRole("link", { name: /Up next · Week 1, day 2/ });
+  await expect(upNext).toHaveAttribute("href", "/session/plan-w1d2?plan=w1d2");
+
+  // Home now shows day 1 done and offers to keep going.
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Today's done. Keep going?" })).toBeVisible();
+  await expect(page.getByRole("listitem", { name: "Day 1, done" })).toBeVisible();
+  await expect(page.getByText("Next: Day 2 of 5 · 10 min · A normal day in your life")).toBeVisible();
+  await expect(page.getByText("1 of 60 plan days done", { exact: false })).toBeVisible();
+
+  // The plan's own topic day opens as a tutor conversation.
+  await page.goto("/session/plan-w1d2?plan=w1d2");
+  await expect(page.getByRole("heading", { name: "A normal day in your life" })).toBeVisible();
+});
+
 test("ending before saying anything discards the session", async ({ page }) => {
   await mockApis(page, []);
   await page.goto("/session/free-your-week");
@@ -194,7 +230,9 @@ test("a chat failure shows a retry that works", async ({ page }) => {
 
 test("practice library lists every category and opens a scenario", async ({ page }) => {
   await page.goto("/practice");
-  await expect(page.getByText("Today's plan")).toBeVisible();
+  await expect(page.getByText(/Free practice/)).toBeVisible();
+  await page.getByRole("button", { name: "How it works" }).click();
+  await expect(page.getByText(/Numbered ones go from easier to harder/)).toBeVisible();
   const goals = page.getByRole("tablist", { name: "Goals" });
   for (const g of ["Job interview", "At work", "Life abroad", "Everyday talk"]) {
     await expect(goals.getByRole("tab", { name: new RegExp(g) })).toBeVisible();

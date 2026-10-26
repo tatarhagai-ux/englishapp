@@ -1,5 +1,6 @@
 "use client";
 
+import { HowItWorks } from "@/components/HowItWorks";
 import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronLeft, Keyboard, Mic } from "lucide-react";
@@ -57,6 +58,14 @@ export function QuickReview() {
         <div>
           <h1 className="text-2xl font-black tracking-tight">Quick review</h1>
           <p className="text-sm text-dim">Two minutes, no conversation. Your mistakes and phrases that are due.</p>
+          <HowItWorks
+            steps={[
+              "You see something you got wrong before, or a phrase you saved.",
+              "Say or type the right version, then check it.",
+              "Got it? It comes back later. Missed it? It comes back sooner.",
+            ]}
+            why="Coming back at the right time is what makes a fix stick in speech."
+          />
         </div>
       </header>
 

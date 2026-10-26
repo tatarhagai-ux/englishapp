@@ -1,5 +1,6 @@
 "use client";
 
+import { HowItWorks } from "@/components/HowItWorks";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft } from "lucide-react";
 import clsx from "clsx";
@@ -32,6 +33,14 @@ export function PronunciationCourse() {
             The sounds and patterns that most often make Israelis hard to understand. The goal is clarity, not an
             American accent.
           </p>
+          <HowItWorks
+            steps={[
+              "Open a unit. Each one is a single sound or pattern Hebrew speakers find hard.",
+              "Listen to the pairs (like west / vest) until you hear the difference.",
+              "Say the sentences. Words heard right turn green; the others show what to work on.",
+            ]}
+            why="Being understood the first time matters more than any accent."
+          />
         </div>
       </header>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { HowItWorks } from "@/components/HowItWorks";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, Headphones, Keyboard, Loader2, Mic, Play, Snail, Trophy } from "lucide-react";
@@ -149,6 +150,14 @@ export function ListeningGym() {
           <div>
             <h1 className="text-2xl font-black tracking-tight">Listening gym</h1>
             <p className="text-sm text-dim">Real, fast, accented English, until it stops being hard.</p>
+            <HowItWorks
+              steps={[
+                "Pick Dictation (type what you hear) or Shadowing (say it back the same way).",
+                "Listen. Tap the snail to hear it slower, or replay as often as you need.",
+                "Three right in a row and the speed goes up a little. A miss brings it down.",
+              ]}
+              why="Real people speak fast and with accents. This trains your ear to keep up."
+            />
           </div>
         </header>
 

@@ -4,6 +4,8 @@
  * recurring mistakes, and ends with a task the analyzer can check as done or not done.
  */
 
+import { planScenario } from "./plan";
+
 export type ScenarioCategory = "interview" | "free" | "work" | "abroad" | "world";
 
 export interface Scenario {
@@ -716,5 +718,5 @@ export function characterName(scenario: Scenario): string | null {
 }
 
 export function scenarioById(id: string): Scenario | undefined {
-  return SCENARIOS.find((s) => s.id === id);
+  return SCENARIOS.find((s) => s.id === id) ?? planScenario(id);
 }

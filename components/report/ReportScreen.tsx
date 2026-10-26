@@ -24,7 +24,9 @@ import { usePrefs } from "@/lib/client/prefs";
 import { analyzeSession, ApiError, API_ERROR_TEXT } from "@/lib/client/api";
 import { usageCostUsd } from "@/lib/cost/pricing";
 import { criterionMet, wordCount } from "@/lib/text/compare";
-import { recommendScenario } from "@/lib/learner/model";
+import { planDayByKey, planWeek } from "@/content/plan";
+import { planPosition } from "@/lib/learner/plan";
+import { phraseUsedIn, recommendScenario } from "@/lib/learner/model";
 import { CorrectionCard } from "./CorrectionCard";
 import { InterviewCard } from "./InterviewCard";
 import { demoAnalysis } from "@/lib/client/demo";
@@ -88,8 +90,15 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
   const words = englishTurns.reduce((n, t) => n + wordCount(t.text), 0);
   const voiceSeconds = session.speakingSeconds;
   const wpm = session.mode === "voice" && voiceSeconds > 20 ? Math.round(words / (voiceSeconds / 60)) : null;
-  // Chosen after this report is saved, so it already reflects today's mistakes.
-  const next = recommendScenario(state);
+  // Chosen after this report is saved, so it already reflects today's mistakes. A plan day
+  // leads to the next plan day instead.
+  const planNext = session.planDay ? planPosition(state, session.day).next : null;
+  const next = planNext ? scenarioById(planNext.scenarioId)! : recommendScenario(state);
+  const nextHref = planNext ? `/session/${planNext.scenarioId}?plan=${planNext.key}` : `/session/${next.id}`;
+  // This week's words he used in this conversation.
+  const week = session.planDay ? planWeek(planDayByKey(session.planDay)?.week ?? 0) : undefined;
+  const said = englishTurns.map((t) => t.text).join(" ");
+  const wordsUsed = week ? week.words.filter((w) => phraseUsedIn(said, w.text)) : [];
   const isMet = (c: string) => criterionMet(report?.task.met ?? [], c);
 
   return (
@@ -273,13 +282,44 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
         </ol>
       </details>
 
-      {report && !session.demo && next.id !== scenario.id && (
+      {week && (
+        <section aria-labelledby="words-title" className="tile space-y-2 p-4">
+          <h2 id="words-title" className="font-black">
+            Words of the week
+          </h2>
+          {wordsUsed.length ? (
+            <p className="text-sm text-dim">
+              You used{" "}
+              {wordsUsed.map((w, i) => (
+                <span key={w.text}>
+                  {i ? ", " : ""}
+                  <span className="font-extrabold text-good">{w.text}</span>
+                </span>
+              ))}
+              . Two good uses make a word yours.
+            </p>
+          ) : (
+            <p className="text-sm text-dim">
+              None this time. Next conversation, try one of:{" "}
+              {week.words
+                .slice(0, 3)
+                .map((w) => w.text)
+                .join(", ")}
+              .
+            </p>
+          )}
+        </section>
+      )}
+
+      {report && !session.demo && (planNext ? true : next.id !== scenario.id) && (
         <Link
-          href={`/session/${next.id}`}
+          href={nextHref}
           className="tile flex items-center gap-3 border-accent/50 p-4 transition-colors hover:border-accent"
         >
           <span className="flex-1">
-            <span className="block text-xs font-extrabold uppercase tracking-wider text-faint">Up next</span>
+            <span className="block text-xs font-extrabold uppercase tracking-wider text-faint">
+              {planNext ? `Up next · Week ${planNext.week}, day ${planNext.day}` : "Up next"}
+            </span>
             <span className="block font-extrabold">{next.title}</span>
             <span className="block text-sm text-dim">{next.summary}</span>
           </span>

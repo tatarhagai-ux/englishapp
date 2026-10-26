@@ -1,14 +1,23 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("app shell", () => {
-  test("home shows the mission, boss mistake, stats and setup prompt", async ({ page }) => {
+  test("home shows today's plan day, the week's words, the boss mistake and the setup prompt", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Hagai");
-    await expect(page.getByRole("heading", { name: "Tell me about yourself" })).toBeVisible();
-    await expect(page.getByText("Say “I've been … for …” 3 times")).toBeVisible();
+    await expect(page.getByText("Week 1 of 12 · You and your days")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Your week" })).toBeVisible();
+    await expect(page.getByText(/Day 1 of 5/)).toBeVisible();
+    await expect(page.getByText(/This week's focus/)).toBeVisible();
+    await expect(page.getByRole("list", { name: "This week" }).getByRole("listitem")).toHaveCount(5);
+    // Words of the week: tap one for its meaning in English and Hebrew.
+    await page.getByRole("button", { name: "routine" }).click();
+    await expect(page.getByText("שגרה")).toBeVisible();
+    await expect(page.getByText("0 of 8 yours")).toBeVisible();
+    await page.getByRole("button", { name: "How the plan works" }).click();
+    await expect(page.getByText(/Missed a day\? It waits for you/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Boss mistake: Present perfect for “how long”" })).toBeVisible();
     await expect(page.getByText("Finish setup to start talking")).toBeVisible();
-    await expect(page.getByRole("link", { name: /Start talking/ })).toHaveAttribute("href", "/setup");
+    await expect(page.getByRole("link", { name: "Finish setup", exact: true })).toHaveAttribute("href", "/setup");
     await expect(page.getByLabel("0 day streak")).toBeVisible();
   });
 
