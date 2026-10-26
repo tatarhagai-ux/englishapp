@@ -35,6 +35,7 @@ import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
 import { cardQueue, rankedErrors, warmupItems } from "@/lib/learner/model";
 import { STORIES } from "@/content/stories";
+import { DECKS } from "@/content/decks";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { HowItWorks } from "./HowItWorks";
 import { Avatar } from "./Avatar";
@@ -164,7 +165,7 @@ export function PracticeLibrary() {
           href="/words"
           icon={Layers}
           title="Word cards"
-          detail={cardsDue > 0 ? `${cardsDue} for today` : "10 packs · say the word"}
+          detail={cardsDue > 0 ? `${cardsDue} for today` : `${DECKS.length} packs · say the word`}
           badge={cardsDue}
         />
         <SkillTile href="/read" icon={BookOpen} title="Short reads" detail="Tap a phrase for help" />
