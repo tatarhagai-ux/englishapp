@@ -66,7 +66,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           </span>
           <span className="flex-1">
             <span className="block font-extrabold">Finish setup to start talking</span>
-            <span className="block text-sm text-dim">Connect the speech and AI services. About 20 minutes.</span>
+            <span className="block text-sm text-dim">Connect the AI tutor (OpenRouter). About 10 minutes.</span>
           </span>
           <ArrowRight className="size-5 text-dim" aria-hidden />
         </Link>

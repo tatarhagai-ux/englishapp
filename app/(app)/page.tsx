@@ -5,5 +5,5 @@ export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   const status = setupStatus();
-  return <HomeDashboard ready={status.azure && status.llm} />;
+  return <HomeDashboard ready={status.llm} />;
 }

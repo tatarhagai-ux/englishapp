@@ -6,6 +6,7 @@ import { Check, ChevronLeft, Loader2, Play, Square, Wrench } from "lucide-react"
 import clsx from "clsx";
 import { VOICES, sampleLine, type Gender, type Voice } from "@/content/voices";
 import { usePrefs } from "@/lib/client/prefs";
+import { browserSpeechActive } from "@/lib/client/browser-speech";
 import { useClipPlayer, type TtsError } from "@/lib/client/tts";
 import { Avatar } from "@/components/Avatar";
 
@@ -72,6 +73,12 @@ export default function VoicePickerPage() {
             </Link>
           )}
         </div>
+      )}
+
+      {browserSpeechActive() && (
+        <p role="status" className="text-sm text-dim">
+          Playing your browser&apos;s closest voice. The exact voice comes once Azure is connected.
+        </p>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">

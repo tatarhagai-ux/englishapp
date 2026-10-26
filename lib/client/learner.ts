@@ -23,6 +23,7 @@ import type { Analysis } from "@/lib/prompts/analyzer";
 import { monthKey } from "@/lib/cost/budget";
 import { sttCostUsd, ttsCostUsd } from "@/lib/cost/pricing";
 import { dayKey } from "@/lib/game/streak";
+import { browserSpeechActive } from "./browser-speech";
 
 /**
  * Browser copy of the learner model. One JSON blob in localStorage; small enough (a year
@@ -179,6 +180,8 @@ export const learner = {
 
   /** Azure usage: priced against this month's free tier, then added to spend. */
   addSpeechUsage(sessionId: string | null, usage: { ttsChars?: number; sttSeconds?: number }) {
+    // The browser's own speech is free and isn't Azure usage.
+    if (browserSpeechActive()) return;
     const state = get();
     const month = monthKey();
     const used = state.speechUsage?.[month] ?? { ttsChars: 0, sttSeconds: 0 };

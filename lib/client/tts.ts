@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { browserSpeechActive, markAzureMissing, speakInBrowser, stopSpeaking } from "./browser-speech";
 
 export type TtsError = "not_configured" | "unauthorized" | "budget" | "network" | "provider";
 
@@ -20,7 +21,10 @@ export async function fetchSpeech(text: string, voiceId: string, rate: number, s
     throw new TtsRequestError("network");
   });
   if (res.ok) return res.blob();
-  if (res.status === 503) throw new TtsRequestError("not_configured");
+  if (res.status === 503) {
+    markAzureMissing();
+    throw new TtsRequestError("not_configured");
+  }
   if (res.status === 401) throw new TtsRequestError("unauthorized");
   if (res.status === 402) throw new TtsRequestError("budget");
   throw new TtsRequestError("provider");
@@ -30,7 +34,7 @@ type PlayState = { key: string; status: "loading" | "playing" } | null;
 
 /**
  * Plays one clip at a time. Clips are cached as object URLs for the life of the page,
- * so replaying a sample costs nothing.
+ * so replaying a sample costs nothing. Without Azure it uses the browser's voice instead.
  */
 export function useClipPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -51,7 +55,14 @@ export function useClipPlayer() {
   const stop = useCallback(() => {
     abortRef.current?.abort();
     audioRef.current?.pause();
+    stopSpeaking();
     setState(null);
+  }, []);
+
+  const speakFree = useCallback(async (key: string, text: string, voiceId: string, rate: number) => {
+    setState({ key, status: "playing" });
+    await speakInBrowser(text, voiceId, rate);
+    setState((s) => (s?.key === key ? null : s));
   }, []);
 
   const play = useCallback(
@@ -60,11 +71,19 @@ export function useClipPlayer() {
       setError(null);
       setState({ key, status: "loading" });
       try {
+        if (browserSpeechActive()) return await speakFree(key, text, voiceId, rate);
         let url = cache.current.get(key);
         if (!url) {
           const ctrl = new AbortController();
           abortRef.current = ctrl;
-          url = URL.createObjectURL(await fetchSpeech(text, voiceId, rate, ctrl.signal));
+          try {
+            url = URL.createObjectURL(await fetchSpeech(text, voiceId, rate, ctrl.signal));
+          } catch (err) {
+            if (err instanceof TtsRequestError && err.kind === "not_configured") {
+              return await speakFree(key, text, voiceId, rate);
+            }
+            throw err;
+          }
           cache.current.set(key, url);
         }
         audioRef.current ??= new Audio();
@@ -79,7 +98,7 @@ export function useClipPlayer() {
         setError(err instanceof TtsRequestError ? err.kind : "provider");
       }
     },
-    [stop],
+    [stop, speakFree],
   );
 
   return { play, stop, state, error };

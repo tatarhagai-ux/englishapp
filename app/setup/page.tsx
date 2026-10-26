@@ -14,9 +14,9 @@ const STEPS = [
   },
   {
     key: "azure" as const,
-    title: "Azure Speech (free tier)",
+    title: "Azure Speech (optional, free tier)",
     vars: ["AZURE_SPEECH_KEY", "AZURE_SPEECH_REGION"],
-    why: "Hears you, speaks back, and scores pronunciation. The F0 tier covers about 5 hours a month for free.",
+    why: "Natural voices and pronunciation scores. Without it, the app uses your browser's own voices and speech recognition (best in Edge or Chrome), and checks which words were heard instead of scoring sounds.",
     link: {
       href: "https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices",
       label: "Create Speech resource",

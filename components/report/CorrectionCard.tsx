@@ -23,6 +23,7 @@ const MIC_ERROR: Record<SpeechSetupError["kind"], string> = {
   unauthorized: "Session expired. Reload and unlock again.",
   network: "Couldn't reach the speech service. Try again.",
   mic_denied: "The microphone is blocked. Allow it in the browser settings.",
+  unsupported: "This browser can't recognize speech. Chrome, Edge or Safari can.",
   unknown: "Couldn't start the microphone. Try again.",
 };
 
@@ -123,7 +124,15 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
             {attempt.ok ? "Nailed it. +15 XP" : "Close. Try once more, matching the green sentence."}
           </p>
           <p className="mt-1 text-sm text-dim">You said: “{attempt.result.text || "…"}”</p>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold">
+          {!attempt.result.scored && (
+            <p className="mt-1 text-xs text-faint">Word check only. Sound scores come once Azure is connected.</p>
+          )}
+          <div
+            className={clsx(
+              "mt-2 flex-wrap gap-x-4 gap-y-1 text-sm font-bold",
+              attempt.result.scored ? "flex" : "hidden",
+            )}
+          >
             <span>
               Pronunciation{" "}
               <span className={scoreTone(attempt.result.pronunciation)}>

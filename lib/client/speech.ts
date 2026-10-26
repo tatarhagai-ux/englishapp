@@ -1,12 +1,24 @@
 "use client";
 
 import type * as SpeechSdk from "microsoft-cognitiveservices-speech-sdk";
-import { fetchSpeech } from "./tts";
+import { fetchSpeech, TtsRequestError } from "./tts";
+import { diffWords } from "@/lib/text/diff";
+import {
+  browserSpeechActive,
+  createRecognition,
+  markAzureMissing,
+  primeBrowserSpeech,
+  speakInBrowser,
+  stopSpeaking,
+  type BrowserRecognition,
+} from "./browser-speech";
 
 /**
  * Browser speech layer. Recognition runs in the browser with Azure's SDK and a short-lived
  * token, so audio never passes through our server and partial captions appear while
  * Hagai is still talking. The SDK is large, so it loads only when a session starts.
+ *
+ * Without Azure, the same classes fall back to the browser's own speech (browser-speech.ts).
  */
 
 type Sdk = typeof SpeechSdk;
@@ -17,7 +29,9 @@ function loadSdk(): Promise<Sdk> {
 }
 
 export class SpeechSetupError extends Error {
-  constructor(public readonly kind: "not_configured" | "unauthorized" | "network" | "mic_denied" | "unknown") {
+  constructor(
+    public readonly kind: "not_configured" | "unauthorized" | "network" | "mic_denied" | "unsupported" | "unknown",
+  ) {
     super(kind);
   }
 }
@@ -29,7 +43,10 @@ async function speechToken() {
   const res = await fetch("/api/speech-token", { method: "POST" }).catch(() => {
     throw new SpeechSetupError("network");
   });
-  if (res.status === 503) throw new SpeechSetupError("not_configured");
+  if (res.status === 503) {
+    markAzureMissing();
+    throw new SpeechSetupError("not_configured");
+  }
   if (res.status === 401) throw new SpeechSetupError("unauthorized");
   if (!res.ok) throw new SpeechSetupError("unknown");
   cachedToken = (await res.json()) as { token: string; region: string; expiresAt: number };
@@ -68,6 +85,7 @@ export interface ListenHandlers {
  */
 export class Listener {
   private recognizer: SpeechSdk.SpeechRecognizer | null = null;
+  private browser: BrowserRecognition | null = null;
   /** Set by stop(), even if start() is still connecting, so a late start never runs on. */
   private cancelled = false;
 
@@ -78,7 +96,15 @@ export class Listener {
 
   /** Each Listener is single-use: start once, stop once. */
   async start(h: ListenHandlers): Promise<void> {
-    const { sdk, cfg } = await speechConfig(this.language);
+    if (browserSpeechActive()) return this.startBrowser(h);
+    let config: Awaited<ReturnType<typeof speechConfig>>;
+    try {
+      config = await speechConfig(this.language);
+    } catch (err) {
+      if (err instanceof SpeechSetupError && err.kind === "not_configured") return this.startBrowser(h);
+      throw err;
+    }
+    const { sdk, cfg } = config;
     if (this.cancelled) return;
     cfg.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, String(this.silenceMs));
     // Never mask words with asterisks: the analyzer needs exactly what he said.
@@ -109,8 +135,55 @@ export class Listener {
     if (this.cancelled) await this.shutdown(recognizer);
   }
 
+  /** Web Speech fallback. Chrome ends a "continuous" session after a long silence, so it restarts. */
+  private startBrowser(h: ListenHandlers): void {
+    if (this.cancelled) return;
+    const rec = createRecognition();
+    if (!rec) throw new SpeechSetupError("unsupported");
+    this.browser = rec;
+    rec.lang = this.language;
+    rec.continuous = true;
+    rec.interimResults = true;
+    let segmentStart = 0;
+    rec.onresult = (e) => {
+      if (this.cancelled) return;
+      segmentStart ||= Date.now();
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        const text = r[0].transcript.trim();
+        if (!r.isFinal) interim += `${text} `;
+        else if (text) {
+          const seconds = Math.max(1, (Date.now() - segmentStart) / 1000);
+          segmentStart = 0;
+          h.onFinal(text, seconds);
+        }
+      }
+      if (interim.trim()) h.onPartial(interim.trim());
+    };
+    rec.onerror = (e) => {
+      if (this.cancelled || e.error === "no-speech" || e.error === "aborted") return;
+      this.cancelled = true;
+      const kind = /not-allowed|service-not-allowed|audio-capture/.test(e.error) ? "mic_denied" : "network";
+      h.onError(new SpeechSetupError(kind));
+    };
+    rec.onend = () => {
+      if (this.cancelled) return;
+      try {
+        rec.start();
+      } catch {
+        // Already restarting.
+      }
+    };
+    rec.start();
+  }
+
   async stop(): Promise<void> {
     this.cancelled = true;
+    if (this.browser) {
+      this.browser.abort();
+      this.browser = null;
+    }
     const r = this.recognizer;
     this.recognizer = null;
     if (r) await this.shutdown(r);
@@ -137,11 +210,68 @@ export interface PronunciationResult {
   completeness: number;
   prosody: number | null;
   words: WordScore[];
+  /** False with the browser fallback: only the words are checked, not how they sounded. */
+  scored: boolean;
+}
+
+/**
+ * Browser fallback for one attempt: no sound scores, but each target word is marked heard or
+ * not. A word the recognizer missed is often a sound to work on ("vest" for "west").
+ */
+function recognizeOnceInBrowser(reference: string, language: string): Promise<PronunciationResult> {
+  const rec = createRecognition();
+  if (!rec) return Promise.reject(new SpeechSetupError("unsupported"));
+  rec.lang = language;
+  rec.continuous = false;
+  rec.interimResults = false;
+  const started = Date.now();
+  return new Promise((resolve, reject) => {
+    let text = "";
+    rec.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) text += `${e.results[i][0].transcript} `;
+    };
+    rec.onerror = (e) => {
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      reject(
+        new SpeechSetupError(/not-allowed|service-not-allowed|audio-capture/.test(e.error) ? "mic_denied" : "network"),
+      );
+    };
+    rec.onend = () => {
+      const { tokens, accuracy } = diffWords(text, reference);
+      resolve({
+        text: text.trim(),
+        seconds: Math.max(1, (Date.now() - started) / 1000),
+        pronunciation: 0,
+        accuracy: Math.round(accuracy * 100),
+        fluency: 0,
+        completeness: 0,
+        prosody: null,
+        words: tokens
+          .filter((t) => t.status !== "extra")
+          .map((t) => ({
+            word: t.word,
+            accuracy: t.status === "ok" ? 100 : 0,
+            error: t.status === "ok" ? "None" : "Omission",
+          })),
+        scored: false,
+      });
+    };
+    rec.start();
+  });
 }
 
 /** Score one attempt at a known sentence ("Say it again"). Resolves after one utterance. */
 export async function assessPronunciation(reference: string, language = "en-US"): Promise<PronunciationResult> {
-  const { sdk, cfg } = await speechConfig(language);
+  if (browserSpeechActive()) return recognizeOnceInBrowser(reference, language);
+  let config: Awaited<ReturnType<typeof speechConfig>>;
+  try {
+    config = await speechConfig(language);
+  } catch (err) {
+    if (err instanceof SpeechSetupError && err.kind === "not_configured")
+      return recognizeOnceInBrowser(reference, language);
+    throw err;
+  }
+  const { sdk, cfg } = config;
   const pa = new sdk.PronunciationAssessmentConfig(
     reference,
     sdk.PronunciationAssessmentGradingSystem.HundredMark,
@@ -172,6 +302,7 @@ export async function assessPronunciation(reference: string, language = "en-US")
       completeness: scores.completenessScore ?? 0,
       prosody: typeof scores.prosodyScore === "number" ? scores.prosodyScore : null,
       words,
+      scored: true,
     };
   } finally {
     recognizer.close();
@@ -187,6 +318,7 @@ export function primeAudio() {
   sharedAudio ??= new Audio();
   sharedAudio.src = SILENT_WAV;
   sharedAudio.play().catch(() => {});
+  primeBrowserSpeech();
 }
 
 /**
@@ -194,7 +326,8 @@ export function primeAudio() {
  * as it arrives, so sentence two downloads while sentence one plays.
  */
 export class SpeechQueue {
-  private queue: { text: string; audio: Promise<Blob | null> }[] = [];
+  /** "browser" = speak this one with the browser's voice (no Azure). */
+  private queue: { text: string; audio: Promise<Blob | "browser" | null> }[] = [];
   private current: HTMLAudioElement | null = null;
   private playing = false;
   private generation = 0;
@@ -217,16 +350,22 @@ export class SpeechQueue {
   speak(text: string) {
     const clean = text.trim();
     if (!clean) return;
-    const audio = fetchSpeech(clean, this.opts.voiceId, this.opts.getRate()).then(
-      (blob) => {
-        this.opts.onChars?.(clean.length);
-        return blob;
-      },
-      (err) => {
-        this.opts.onError?.(err);
-        return null;
-      },
-    );
+    const audio: Promise<Blob | "browser" | null> = browserSpeechActive()
+      ? Promise.resolve("browser")
+      : fetchSpeech(clean, this.opts.voiceId, this.opts.getRate()).then(
+          (blob) => {
+            this.opts.onChars?.(clean.length);
+            return blob;
+          },
+          (err) => {
+            if (err instanceof TtsRequestError && err.kind === "not_configured") {
+              markAzureMissing();
+              return "browser" as const;
+            }
+            this.opts.onError?.(err);
+            return null;
+          },
+        );
     this.queue.push({ text: clean, audio });
     if (!this.playing) void this.drain(this.generation);
   }
@@ -238,6 +377,12 @@ export class SpeechQueue {
       const next = this.queue.shift()!;
       const blob = await next.audio;
       if (!blob || gen !== this.generation) continue;
+      if (blob === "browser") {
+        await speakInBrowser(next.text, this.opts.voiceId, this.opts.getRate()).catch((err) =>
+          this.opts.onError?.(err),
+        );
+        continue;
+      }
       const url = URL.createObjectURL(blob);
       try {
         await new Promise<void>((resolve) => {
@@ -276,6 +421,7 @@ export class SpeechQueue {
     this.queue = [];
     this.current?.pause();
     this.current = null;
+    stopSpeaking();
     if (this.playing) {
       this.playing = false;
       this.opts.onIdle?.();

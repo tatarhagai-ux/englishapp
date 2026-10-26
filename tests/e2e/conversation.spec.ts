@@ -214,3 +214,45 @@ test("warm-up: recall the correct sentence by typing, then the conversation star
   await page.getByRole("button", { name: /Warm up \(2\)/ }).click();
   await expect(page.getByText("An Azure exam that called AZ-900.")).toBeVisible();
 });
+
+test("without Azure the tutor speaks with the browser's voice and the conversation flows", async ({ page }) => {
+  // A fake speechSynthesis that records what it was asked to say and "finishes" right away.
+  await page.addInitScript(() => {
+    const said: string[] = [];
+    (window as unknown as { __said: string[] }).__said = said;
+    const synth = {
+      // The real utterance only accepts genuine voice objects, so offer none.
+      getVoices: () => [],
+      speak(u: SpeechSynthesisUtterance) {
+        if (u.text) said.push(u.text);
+        setTimeout(() => u.onend?.(new Event("end") as SpeechSynthesisEvent), 20);
+      },
+      cancel() {},
+      addEventListener() {},
+    };
+    Object.defineProperty(window, "speechSynthesis", { value: synth });
+  });
+  const chatBodies: unknown[] = [];
+  await mockApis(page, chatBodies);
+  await page.route("**/api/tts", (route: Route) =>
+    route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' }),
+  );
+
+  await page.goto("/session/free-your-week");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
+  const said = () => page.evaluate(() => (window as unknown as { __said: string[] }).__said);
+  await expect.poll(said).toContain("Hey! So, what have you been up to this week?");
+
+  const box = page.getByLabel("Your reply");
+  await box.fill("I study for AZ-900 two weeks");
+  await box.press("Enter");
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+  await expect.poll(said).toContain("What's the hardest part so far?");
+  await expect(page.getByRole("alert").filter({ hasText: /voice|Azure/i })).toHaveCount(0);
+
+  await box.fill("Remembering all the service names");
+  await box.press("Enter");
+  await expect.poll(() => chatBodies.length).toBe(2);
+});

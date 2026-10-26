@@ -95,13 +95,11 @@ test.describe("voice picker", () => {
     await expect(page.getByText("Your tutor", { exact: true })).toBeVisible();
   });
 
-  test("playing a sample without Azure explains what to do", async ({ page }) => {
+  test("without Azure, samples play with the browser's own voice", async ({ page }) => {
     await page.goto("/settings/voice");
     await page.getByRole("button", { name: "Play Ava" }).click();
-    // Next.js renders its own (empty) route announcer with role="alert".
-    const alert = page.getByRole("alert").filter({ hasText: "Azure" });
-    await expect(alert).toContainText("Finish setup first");
-    await expect(alert.getByRole("link", { name: "Setup" })).toHaveAttribute("href", "/setup");
+    await expect(page.getByRole("status").filter({ hasText: "browser's closest voice" })).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: "Azure" })).toHaveCount(0);
   });
 });
 

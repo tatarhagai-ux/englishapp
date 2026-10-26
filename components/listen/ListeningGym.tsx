@@ -97,7 +97,7 @@ export function ListeningGym() {
     try {
       const pron = await assessPronunciation(item.text);
       learner.addSpeechUsage(null, { sttSeconds: pron.seconds });
-      settle(saidCorrectly(pron.text, item.text) && pron.pronunciation >= 60, { pron });
+      settle(saidCorrectly(pron.text, item.text) && (!pron.scored || pron.pronunciation >= 60), { pron });
     } catch (err) {
       const kind = err instanceof SpeechSetupError ? err.kind : "unknown";
       setMicError(
@@ -368,7 +368,10 @@ export function ListeningGym() {
               ))}
             </p>
           )}
-          {result.pron && (
+          {result.pron && !result.pron.scored && (
+            <p className="text-xs text-faint">Word check only. Sound scores come once Azure is connected.</p>
+          )}
+          {result.pron?.scored && (
             <p className="text-sm font-bold">
               Pronunciation {Math.round(result.pron.pronunciation)} · Fluency {Math.round(result.pron.fluency)}
               {result.pron.prosody !== null ? ` · Intonation ${Math.round(result.pron.prosody)}` : ""}

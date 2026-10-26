@@ -42,6 +42,7 @@ const SPEECH_ERROR_TEXT: Record<SpeechSetupError["kind"], string> = {
   unauthorized: "Your session expired. Reload and unlock again.",
   network: "Lost the connection to the speech service. Tap the mic to try again.",
   mic_denied: "The microphone is blocked. Allow it in the browser settings, or use quiet mode.",
+  unsupported: "This browser can't recognize speech. Use Chrome, Edge or Safari, or quiet mode.",
   unknown: "The microphone couldn't start. Tap to try again, or use quiet mode.",
 };
 
@@ -92,6 +93,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const wrapSentRef = useRef(false);
   const elapsedRef = useRef(0);
   const pttBuffer = useRef<{ text: string; seconds: number }>({ text: "", seconds: 0 });
+  /** Words heard but not yet finalized, so a quick tap-to-send doesn't drop the end of the sentence. */
+  const interimRef = useRef("");
   const listenerRef = useRef<Listener | null>(null);
   const queueRef = useRef<SpeechQueue | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -171,16 +174,21 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       await stopListening();
       setError(null);
       pttBuffer.current = { text: "", seconds: 0 };
+      interimRef.current = "";
       const listener = new Listener(language, language === "he-IL" ? 1500 : 1200);
       listenerRef.current = listener;
       setOrb("listening");
       const stuck = language === "he-IL";
       try {
         await listener.start({
-          onPartial: (t) => setPartial(t),
+          onPartial: (t) => {
+            interimRef.current = t;
+            setPartial(`${pttBuffer.current.text} ${t}`.trim());
+          },
           onFinal: (t, secs) => {
             // A second segment can arrive before the first submit has stopped this listener.
             if (listenerRef.current !== listener) return;
+            interimRef.current = "";
             // Hands-free (and Hebrew "stuck" turns) end on the first pause; push-to-talk collects until stopped.
             if (handsFreeRef.current || stuck) {
               void submitLearner(t, secs, stuck ? "stuck" : "voice");
@@ -424,9 +432,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       return;
     }
     if (orb === "listening") {
-      if (!handsFree && pttBuffer.current.text) {
-        const { text, seconds } = pttBuffer.current;
+      const pending = interimRef.current;
+      if (!handsFree && (pttBuffer.current.text || pending)) {
+        const text = `${pttBuffer.current.text} ${pending}`.trim();
+        const seconds = pttBuffer.current.seconds + typedSeconds(pending);
         pttBuffer.current = { text: "", seconds: 0 };
+        interimRef.current = "";
         await submitLearner(text, seconds, "voice");
       } else {
         await stopListening();

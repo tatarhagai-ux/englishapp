@@ -35,7 +35,7 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
     try {
       const r = await assessPronunciation(sentence);
       learner.addSpeechUsage(null, { sttSeconds: r.seconds });
-      learner.recordPronunciation(unit.id, r.pronunciation);
+      if (r.scored) learner.recordPronunciation(unit.id, r.pronunciation);
       setAttempts((a) => ({ ...a, [i]: r }));
     } catch (err) {
       const kind = err instanceof SpeechSetupError ? err.kind : "unknown";
@@ -166,7 +166,10 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
               {a && typeof a === "object" && "error" in a && <p className="text-sm font-bold text-bad">{a.error}</p>}
               {result && (
                 <div className="space-y-2 rounded-xl bg-elev-2 p-3" aria-live="polite">
-                  <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold">
+                  {!result.scored && (
+                    <p className="text-xs text-faint">Word check only. Sound scores come once Azure is connected.</p>
+                  )}
+                  <p className={clsx("flex-wrap gap-x-4 gap-y-1 text-sm font-bold", result.scored ? "flex" : "hidden")}>
                     <span>
                       Pronunciation{" "}
                       <span className={scoreTone(result.pronunciation)}>{Math.round(result.pronunciation)}</span>
