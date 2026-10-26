@@ -360,7 +360,10 @@ export function sessionXp(session: SessionRecord, minutesBefore: number, dailyGo
 
 // Spaced repetition ------------------------------------------------------------------------
 
-const scheduler = fsrs({ enable_fuzz: false });
+// Long-term mode: he practices once a day, so a right answer comes back in days, not in the
+// ten-minute learning steps meant for flashcard apps used several times an hour (with those,
+// every warm-up repeated the previous one).
+const scheduler = fsrs({ enable_fuzz: false, enable_short_term: false });
 
 /** Cards come back from JSON with dates as strings; FSRS needs Date objects. */
 function reviveCard(card: Card): Card {

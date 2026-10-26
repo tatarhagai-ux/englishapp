@@ -207,6 +207,28 @@ describe("warm-up", () => {
     expect(warmupItems(s, later).map((i) => i.id)).toContain("present_perfect_duration");
   });
 
+  it("spaces reviews in days: a right answer skips the next day's warm-up, a wrong one returns tomorrow", () => {
+    const base = withSession();
+    const hour = 3_600_000;
+    const right = reviewMistake(base, "present_perfect_duration", true, NOW);
+    expect(warmupItems(right, new Date(NOW.getTime() + 2 * hour)).map((i) => i.id)).not.toContain(
+      "present_perfect_duration",
+    );
+    expect(warmupItems(right, new Date(NOW.getTime() + 24 * hour)).map((i) => i.id)).not.toContain(
+      "present_perfect_duration",
+    );
+    expect(warmupItems(right, new Date(NOW.getTime() + 73 * hour)).map((i) => i.id)).toContain(
+      "present_perfect_duration",
+    );
+    const wrong = reviewMistake(base, "present_perfect_duration", false, NOW);
+    expect(warmupItems(wrong, new Date(NOW.getTime() + 2 * hour)).map((i) => i.id)).not.toContain(
+      "present_perfect_duration",
+    );
+    expect(warmupItems(wrong, new Date(NOW.getTime() + 25 * hour)).map((i) => i.id)).toContain(
+      "present_perfect_duration",
+    );
+  });
+
   it("counts warm-up reviews in session XP", () => {
     expect(sessionXp(session({ speakingSeconds: 60, reviewsDone: 3 }), 0, 12)).toBe(10 + 15);
   });
