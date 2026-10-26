@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Check, Eye, Languages, Loader2, Mic, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Eye, Languages, Mic, RotateCcw, Sparkles } from "lucide-react";
 import clsx from "clsx";
 import type { WarmupItem } from "@/lib/learner/model";
-import { assessPronunciation, SpeechSetupError } from "@/lib/client/speech";
+import { SpeechSetupError } from "@/lib/client/speech";
+import { useMicAttempt } from "@/lib/client/use-mic-attempt";
+import { MicBusyLabel, MicHeard } from "@/components/MicLive";
 import { learner } from "@/lib/client/learner";
 import { saidCorrectly, usedPhrase } from "@/lib/text/compare";
 
@@ -19,7 +21,7 @@ interface Props {
   embedded?: boolean;
 }
 
-type Attempt = { status: "idle" | "listening" | "checked" | "error"; said?: string; ok?: boolean; error?: string };
+type Attempt = { status: "idle" | "checked" | "error"; said?: string; ok?: boolean; error?: string };
 
 /**
  * Two-minute warm-up before the conversation. Mistakes are active recall: you see what you
@@ -30,6 +32,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [attempt, setAttempt] = useState<Attempt>({ status: "idle" });
+  const mic = useMicAttempt();
   const [typed, setTyped] = useState("");
   const [showHe, setShowHe] = useState(hebrewHelp);
   const [reviewed, setReviewed] = useState(0);
@@ -63,9 +66,10 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
   }
 
   async function speak() {
-    setAttempt({ status: "listening" });
+    if (mic.busy) return mic.stop();
+    setAttempt({ status: "idle" });
     try {
-      const r = await assessPronunciation(item.target);
+      const r = await mic.run(item.target);
       learner.addSpeechUsage(sessionId, { sttSeconds: r.seconds });
       const ok = isRight(r.text);
       record(ok);
@@ -78,7 +82,9 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
         error:
           kind === "mic_denied"
             ? "The microphone is blocked. Type it instead."
-            : "Couldn't listen. Try again or type it.",
+            : kind === "no_speech"
+              ? "I didn't hear anything. Tap and say it once the red dot shows."
+              : "Couldn't listen. Try again or type it.",
       });
     }
   }
@@ -216,19 +222,18 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
             <button
               type="button"
               onClick={() => void speak()}
-              disabled={attempt.status === "listening"}
+              disabled={mic.phase === "opening"}
               className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 uppercase disabled:opacity-70"
             >
-              {attempt.status === "listening" ? (
-                <>
-                  <Loader2 className="size-5 animate-spin" aria-hidden /> Listening… say it now
-                </>
+              {mic.busy ? (
+                <MicBusyLabel phase={mic.phase} />
               ) : (
                 <>
                   <Mic className="size-5" aria-hidden /> Say it
                 </>
               )}
             </button>
+            <MicHeard phase={mic.phase} heard={mic.heard} />
             {item.kind === "mistake" && (
               <button
                 type="button"

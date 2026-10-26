@@ -188,4 +188,34 @@ describe("assessPronunciation without Azure", () => {
       ["west", "Omission"],
     ]);
   });
+
+  it("says when the microphone is really open, shows words as they come, and stops on request", async () => {
+    const { assessPronunciation } = await import("@/lib/client/speech");
+    const onListening = vi.fn();
+    const onPartial = vi.fn();
+    const ctrl = new AbortController();
+    const pending = assessPronunciation("I have been here", "en-US", { onListening, onPartial, signal: ctrl.signal });
+    await vi.waitFor(() => expect(made).toHaveLength(1));
+    const rec = made[0] as unknown as { onaudiostart?: () => void; stop: () => void };
+    expect(onListening).not.toHaveBeenCalled();
+    rec.onaudiostart?.();
+    expect(onListening).toHaveBeenCalledTimes(1);
+    made[0].emit([{ text: "I have been", final: false }]);
+    expect(onPartial).toHaveBeenLastCalledWith("I have been");
+    // "Done" while words are still interim: they still count.
+    const stop = vi.spyOn(rec, "stop");
+    ctrl.abort();
+    expect(stop).toHaveBeenCalled();
+    made[0].onend?.();
+    expect((await pending).text).toBe("I have been");
+  });
+
+  it("reports silence as no_speech instead of a sentence of missed words", async () => {
+    const { assessPronunciation } = await import("@/lib/client/speech");
+    const pending = assessPronunciation("We went west");
+    await vi.waitFor(() => expect(made).toHaveLength(1));
+    made[0].onerror?.({ error: "no-speech" });
+    made[0].onend?.();
+    await expect(pending).rejects.toMatchObject({ kind: "no_speech" });
+  });
 });

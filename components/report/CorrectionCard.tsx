@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Languages, Loader2, Mic, Volume2 } from "lucide-react";
+import { Check, Languages, Mic, Volume2 } from "lucide-react";
 import clsx from "clsx";
 import type { Analysis } from "@/lib/prompts/analyzer";
-import { assessPronunciation, SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
+import { SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
+import { useMicAttempt } from "@/lib/client/use-mic-attempt";
+import { MicBusyLabel, MicHeard } from "@/components/MicLive";
 import { useClipPlayer } from "@/lib/client/tts";
 import { learner } from "@/lib/client/learner";
 import { saidCorrectly } from "@/lib/text/compare";
@@ -24,6 +26,7 @@ const MIC_ERROR: Record<SpeechSetupError["kind"], string> = {
   network: "Couldn't reach the speech service. Try again.",
   mic_denied: "The microphone is blocked. Allow it in the browser settings.",
   unsupported: "This browser can't recognize speech. Chrome, Edge or Safari can.",
+  no_speech: "I didn't hear anything. Tap and say it once the red dot shows.",
   unknown: "Couldn't start the microphone. Try again.",
 };
 
@@ -38,7 +41,7 @@ function scoreTone(score: number) {
 export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, voiceId, dailyGoalMinutes }: Props) {
   const [showHe, setShowHe] = useState(hebrewHelp);
   const [attempt, setAttempt] = useState<{
-    status: "idle" | "listening" | "done" | "error";
+    status: "idle" | "done" | "error";
     result?: PronunciationResult;
     ok?: boolean;
     error?: string;
@@ -46,12 +49,14 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
     status: "idle",
   });
   const player = useClipPlayer();
+  const mic = useMicAttempt();
 
   async function sayIt() {
+    if (mic.busy) return mic.stop();
     player.stop();
-    setAttempt({ status: "listening" });
+    setAttempt({ status: "idle" });
     try {
-      const result = await assessPronunciation(c.better);
+      const result = await mic.run(c.better);
       learner.addSpeechUsage(sessionId, { sttSeconds: result.seconds });
       const ok = saidCorrectly(result.text, c.better);
       if (ok) learner.markFixedAloud(sessionId, c.error_key, dailyGoalMinutes);
@@ -95,16 +100,14 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
         <button
           type="button"
           onClick={() => void sayIt()}
-          disabled={attempt.status === "listening"}
+          disabled={mic.phase === "opening"}
           className={clsx(
             "btn-3d flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm",
             fixed ? "btn-ghost" : "btn-go",
           )}
         >
-          {attempt.status === "listening" ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden /> Listening… say it now
-            </>
+          {mic.busy ? (
+            <MicBusyLabel phase={mic.phase} />
           ) : fixed ? (
             <>
               <Check className="size-4" strokeWidth={3} aria-hidden /> Fixed! Say it again
@@ -117,6 +120,7 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
         </button>
       </div>
 
+      <MicHeard phase={mic.phase} heard={mic.heard} />
       {attempt.status === "error" && <p className="text-sm font-bold text-bad">{attempt.error}</p>}
       {attempt.status === "done" && attempt.result && (
         <div className="rounded-xl bg-elev-2 p-3" aria-live="polite">

@@ -50,6 +50,7 @@ const SPEECH_ERROR_TEXT: Record<SpeechSetupError["kind"], string> = {
   network: "Lost the connection to the speech service. Tap the mic to try again.",
   mic_denied: "The microphone is blocked. Allow it in the browser settings, or use quiet mode.",
   unsupported: "This browser can't recognize speech. Use Chrome, Edge or Safari, or quiet mode.",
+  no_speech: "I didn't hear anything. Tap the mic and try again.",
   unknown: "The microphone couldn't start. Tap to try again, or use quiet mode.",
 };
 

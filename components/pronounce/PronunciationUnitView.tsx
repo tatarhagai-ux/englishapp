@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Languages, Loader2, Mic, Volume2 } from "lucide-react";
+import { ChevronLeft, Languages, Mic, Volume2 } from "lucide-react";
 import clsx from "clsx";
 import type { PronunciationUnit } from "@/content/pronunciation";
 import { PRONUNCIATION } from "@/content/pronunciation";
 import { learner, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
 import { useClipPlayer } from "@/lib/client/tts";
-import { assessPronunciation, SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
+import { SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
+import { useMicAttempt } from "@/lib/client/use-mic-attempt";
+import { MicBusyLabel, MicHeard } from "@/components/MicLive";
 import { scoreTone } from "./PronunciationCourse";
 import { speakable } from "@/lib/text/speakable";
 
@@ -18,7 +20,10 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
   const [prefs] = usePrefs();
   const player = useClipPlayer();
   const [showHe, setShowHe] = useState(prefs.hebrewHelp);
-  const [attempts, setAttempts] = useState<Record<number, PronunciationResult | "listening" | { error: string }>>({});
+  const [attempts, setAttempts] = useState<Record<number, PronunciationResult | { error: string }>>({});
+  const mic = useMicAttempt();
+  /** Which sentence the microphone is open for. */
+  const [active, setActive] = useState<number | null>(null);
   const best = state.pronunciation?.[unit.id]?.best;
   const index = PRONUNCIATION.findIndex((u) => u.id === unit.id);
   const next = PRONUNCIATION[index + 1];
@@ -30,10 +35,16 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
   }
 
   async function say(i: number, sentence: string) {
+    if (mic.busy) return mic.stop();
     player.stop();
-    setAttempts((a) => ({ ...a, [i]: "listening" }));
+    setActive(i);
+    setAttempts((a) => {
+      const rest = { ...a };
+      delete rest[i];
+      return rest;
+    });
     try {
-      const r = await assessPronunciation(sentence);
+      const r = await mic.run(sentence);
       learner.addSpeechUsage(null, { sttSeconds: r.seconds });
       if (r.scored) learner.recordPronunciation(unit.id, r.pronunciation);
       setAttempts((a) => ({ ...a, [i]: r }));
@@ -42,10 +53,14 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
       const error =
         kind === "mic_denied"
           ? "The microphone is blocked. Allow it in the browser settings."
-          : kind === "not_configured"
-            ? "Speech isn't connected yet. Finish setup first."
-            : "Couldn't listen. Try again.";
+          : kind === "no_speech"
+            ? "I didn't hear anything. Tap and say it once the red dot shows."
+            : kind === "not_configured"
+              ? "Speech isn't connected yet. Finish setup first."
+              : "Couldn't listen. Try again.";
       setAttempts((a) => ({ ...a, [i]: { error } }));
+    } finally {
+      setActive(null);
     }
   }
 
@@ -134,7 +149,7 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
         </h2>
         {unit.sentences.map((sentence, i) => {
           const a = attempts[i];
-          const result = a && typeof a === "object" && "pronunciation" in a ? a : null;
+          const result = a && "pronunciation" in a ? a : null;
           return (
             <article key={sentence} className="tile space-y-2.5 p-4">
               <p className="text-lg font-extrabold leading-snug">{sentence}</p>
@@ -149,13 +164,11 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
                 <button
                   type="button"
                   onClick={() => void say(i, sentence)}
-                  disabled={a === "listening"}
+                  disabled={(mic.busy && active !== i) || (active === i && mic.phase === "opening")}
                   className="btn-3d btn-go flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm disabled:opacity-70"
                 >
-                  {a === "listening" ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" aria-hidden /> Listening… say it now
-                    </>
+                  {active === i && mic.busy ? (
+                    <MicBusyLabel phase={mic.phase} />
                   ) : (
                     <>
                       <Mic className="size-4" aria-hidden /> {result ? "Try again" : "Say it"}
@@ -163,7 +176,8 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
                   )}
                 </button>
               </div>
-              {a && typeof a === "object" && "error" in a && <p className="text-sm font-bold text-bad">{a.error}</p>}
+              {active === i && <MicHeard phase={mic.phase} heard={mic.heard} />}
+              {a && "error" in a && <p className="text-sm font-bold text-bad">{a.error}</p>}
               {result && (
                 <div className="space-y-2 rounded-xl bg-elev-2 p-3" aria-live="polite">
                   {!result.scored && (

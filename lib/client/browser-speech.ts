@@ -160,6 +160,9 @@ export interface BrowserRecognition {
   onerror: ((e: { error: string }) => void) | null;
   onend: (() => void) | null;
   onspeechstart?: (() => void) | null;
+  /** The microphone actually started capturing (after permission and Chrome's beep). */
+  onaudiostart?: (() => void) | null;
+  onstart?: (() => void) | null;
   start(): void;
   stop(): void;
   abort(): void;
