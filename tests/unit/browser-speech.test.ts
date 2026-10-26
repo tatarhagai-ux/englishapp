@@ -108,6 +108,16 @@ describe("Listener without Azure", () => {
     expect(onFinal).toHaveBeenCalledWith("I have been living here", expect.any(Number));
   });
 
+  it("drops words Android Chrome repeats from the previous final", async () => {
+    const { Listener } = await import("@/lib/client/speech");
+    const onFinal = vi.fn();
+    await new Listener("en-US").start({ onPartial: vi.fn(), onFinal, onError: vi.fn() });
+    made[0].emit([{ text: "I have been", final: true }]);
+    made[0].emit([{ text: "I have been living here", final: true }]);
+    made[0].emit([{ text: "for two years", final: true }]);
+    expect(onFinal.mock.calls.map((c) => c[0])).toEqual(["I have been", "living here", "for two years"]);
+  });
+
   it("restarts after the browser ends on silence, but not after stop()", async () => {
     const { Listener } = await import("@/lib/client/speech");
     const listener = new Listener("en-US");

@@ -10,9 +10,10 @@ import {
   Lightbulb,
   LifeBuoy,
   Mic,
-  MicOff,
   Repeat,
+  RotateCcw,
   Send,
+  Square,
   Snail,
   Sparkles,
   X,
@@ -54,6 +55,9 @@ const SPEECH_ERROR_TEXT: Record<SpeechSetupError["kind"], string> = {
   unknown: "The microphone couldn't start. Tap to try again, or use quiet mode.",
 };
 
+/** Hands-free: the turn goes out after this much quiet, so a pause to think doesn't send it. */
+const HANDS_FREE_SILENCE_MS = 2500;
+
 /** Typed (quiet mode) turns have no audio duration; estimate from a relaxed 130 words a minute. */
 const typedSeconds = (text: string) => Math.round((wordCount(text) / 130) * 60);
 
@@ -69,7 +73,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const demo = useSearchParams().get("demo") === "1";
   const hydrated = useHydrated();
   const state = useLearner();
-  const [prefs] = usePrefs();
+  const [prefs, setPrefs] = usePrefs();
 
   const isTutor = scenario.voiceId === null;
   const voice = voiceById(scenario.voiceId ?? prefs.tutorVoiceId) ?? voiceById(DEFAULT_TUTOR_VOICE_ID)!;
@@ -89,7 +93,9 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const [orb, setOrb] = useState<OrbState>("idle");
   const [partial, setPartial] = useState("");
   const [pendingTutor, setPendingTutor] = useState("");
-  const [handsFree, setHandsFree] = useState(true);
+  const handsFree = prefs.micMode === "handsfree";
+  /** Tap mode: what was heard, shown to check (and fix) before it's sent. */
+  const [review, setReview] = useState<{ text: string; seconds: number; stuck: boolean } | null>(null);
   const [stuckNext, setStuckNext] = useState(false);
   const [hideText, setHideText] = useState(false);
   const [helper, setHelper] = useState<HelperState | null>(null);
@@ -108,6 +114,9 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   /** Words heard but not yet finalized, so a quick tap-to-send doesn't drop the end of the sentence. */
   const interimRef = useRef("");
   const listenerRef = useRef<Listener | null>(null);
+  /** The current listen is a Hebrew "I'm stuck" turn. */
+  const stuckListenRef = useRef(false);
+  const silenceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queueRef = useRef<SpeechQueue | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   /** True while a tutor reply is still streaming, so the audio queue going idle isn't "done". */
@@ -137,12 +146,18 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   // Speech ---------------------------------------------------------------------------------
 
+  const clearSilence = useCallback(() => {
+    if (silenceRef.current) clearTimeout(silenceRef.current);
+    silenceRef.current = null;
+  }, []);
+
   const stopListening = useCallback(async () => {
+    clearSilence();
     const l = listenerRef.current;
     listenerRef.current = null;
     setPartial("");
     if (l) await l.stop();
-  }, []);
+  }, [clearSilence]);
 
   const finish = useCallback(async () => {
     endedRef.current = true;
@@ -167,6 +182,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       const clean = text.trim();
       if (!clean || endedRef.current) return;
       await stopListening();
+      setReview(null);
       setStuckNext(false);
       setHelper(null);
       const turn: Turn = { role: "learner", text: clean, input };
@@ -180,37 +196,59 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     [setTurnsBoth, stopListening],
   );
 
+  /** Everything heard so far in this turn, including words not yet finalized. */
+  const takeHeard = useCallback(() => {
+    const pending = interimRef.current;
+    const text = `${pttBuffer.current.text} ${pending}`.trim();
+    const seconds = pttBuffer.current.seconds + typedSeconds(pending);
+    pttBuffer.current = { text: "", seconds: 0 };
+    interimRef.current = "";
+    return { text, seconds };
+  }, []);
+
   const startListening = useCallback(
-    async (language: "en-US" | "he-IL" = "en-US") => {
+    async (language: "en-US" | "he-IL" = "en-US", keep?: { text: string; seconds: number }) => {
       if (endedRef.current || modeRef.current !== "voice") return;
       await stopListening();
       setError(null);
-      pttBuffer.current = { text: "", seconds: 0 };
+      setReview(null);
+      pttBuffer.current = keep ?? { text: "", seconds: 0 };
       interimRef.current = "";
       const listener = new Listener(language, language === "he-IL" ? 1500 : 1200);
       listenerRef.current = listener;
       setOrb("listening");
+      setPartial(pttBuffer.current.text);
       const stuck = language === "he-IL";
+      stuckListenRef.current = stuck;
+      // Hands-free sends after a real silence; every word heard pushes the deadline back.
+      const armSilence = () => {
+        if (!handsFreeRef.current) return;
+        clearSilence();
+        silenceRef.current = setTimeout(() => {
+          if (listenerRef.current !== listener) return;
+          const heard = takeHeard();
+          if (heard.text) void submitLearner(heard.text, heard.seconds, stuck ? "stuck" : "voice");
+        }, HANDS_FREE_SILENCE_MS);
+      };
       try {
         await listener.start({
           onPartial: (t) => {
+            if (listenerRef.current !== listener) return;
             interimRef.current = t;
             setPartial(`${pttBuffer.current.text} ${t}`.trim());
+            armSilence();
           },
           onFinal: (t, secs) => {
             // A second segment can arrive before the first submit has stopped this listener.
             if (listenerRef.current !== listener) return;
             interimRef.current = "";
-            // Hands-free (and Hebrew "stuck" turns) end on the first pause; push-to-talk collects until stopped.
-            if (handsFreeRef.current || stuck) {
-              void submitLearner(t, secs, stuck ? "stuck" : "voice");
-            } else {
-              pttBuffer.current = {
-                text: `${pttBuffer.current.text} ${t}`.trim(),
-                seconds: pttBuffer.current.seconds + secs,
-              };
-              setPartial(pttBuffer.current.text);
-            }
+            // Both modes collect the whole turn; it goes out on a tap or after a real silence.
+            pttBuffer.current = {
+              text: `${pttBuffer.current.text} ${t}`.trim(),
+              seconds: pttBuffer.current.seconds + secs,
+            };
+            setPartial(pttBuffer.current.text);
+            armSilence();
           },
           onError: (err) => {
             setOrb("idle");
@@ -224,7 +262,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         setError({ message: SPEECH_ERROR_TEXT[kind] });
       }
     },
-    [stopListening, submitLearner],
+    [stopListening, submitLearner, clearSilence, takeHeard],
   );
 
   const afterTutorSpoke = useCallback(() => {
@@ -468,17 +506,17 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       return;
     }
     if (orb === "listening") {
-      const pending = interimRef.current;
-      if (!handsFree && (pttBuffer.current.text || pending)) {
-        const text = `${pttBuffer.current.text} ${pending}`.trim();
-        const seconds = pttBuffer.current.seconds + typedSeconds(pending);
-        pttBuffer.current = { text: "", seconds: 0 };
-        interimRef.current = "";
-        await submitLearner(text, seconds, "voice");
-      } else {
-        await stopListening();
-        setOrb("idle");
+      const stuck = stuckListenRef.current;
+      const heard = takeHeard();
+      if (handsFree && heard.text) {
+        // Hands-free: a tap sends right away instead of waiting for the silence.
+        await submitLearner(heard.text, heard.seconds, stuck ? "stuck" : "voice");
+        return;
       }
+      await stopListening();
+      setOrb("idle");
+      // Tap mode: show what was heard, to send, fix, add to or redo.
+      if (heard.text) setReview({ ...heard, stuck });
       return;
     }
     await startListening();
@@ -506,6 +544,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       await stopListening();
       if (!busy) setOrb("idle");
     }
+    setReview(null);
     setMode(next);
     modeRef.current = next;
     if (next === "voice" && !busy && handsFree) void startListening();
@@ -650,7 +689,51 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       </div>
 
       <footer className="border-t-2 border-line px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-        {mode === "voice" ? (
+        {mode === "voice" && review ? (
+          <div className="space-y-2" role="group" aria-label="Check before sending">
+            <label htmlFor="heard" className="text-xs font-extrabold text-dim">
+              {review.stuck ? "Heard (Hebrew). Fix anything, then send." : "Heard. Fix anything, then send."}
+            </label>
+            <textarea
+              id="heard"
+              value={review.text}
+              onChange={(e) => setReview({ ...review, text: e.target.value })}
+              dir={review.stuck ? "rtl" : "auto"}
+              lang={review.stuck ? "he" : "en"}
+              rows={2}
+              className="max-h-32 w-full resize-none rounded-xl border-2 border-line bg-elev-2 px-3 py-2.5 font-bold outline-none focus:border-accent"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void startListening(review.stuck ? "he-IL" : "en-US")}
+                className="btn-3d btn-ghost flex flex-1 items-center justify-center gap-1.5 px-3 py-3 text-sm"
+              >
+                <RotateCcw className="size-4" aria-hidden />
+                Redo
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  void startListening(review.stuck ? "he-IL" : "en-US", { text: review.text, seconds: review.seconds })
+                }
+                className="btn-3d btn-ghost flex flex-1 items-center justify-center gap-1.5 px-3 py-3 text-sm"
+              >
+                <Mic className="size-4" aria-hidden />
+                Keep talking
+              </button>
+              <button
+                type="button"
+                onClick={() => void submitLearner(review.text, review.seconds, review.stuck ? "stuck" : "voice")}
+                disabled={!review.text.trim()}
+                className="btn-3d btn-go flex flex-1 items-center justify-center gap-1.5 px-3 py-3 text-sm disabled:opacity-50"
+              >
+                <Send className="size-4" aria-hidden />
+                Send
+              </button>
+            </div>
+          </div>
+        ) : mode === "voice" ? (
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -667,16 +750,16 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
                 type="button"
                 onClick={() => void onMic()}
                 disabled={orb === "thinking"}
-                aria-label={orb === "listening" ? (handsFree ? "Pause listening" : "Send") : "Start talking"}
+                aria-label={orb === "listening" ? (handsFree ? "Send now" : "Done talking") : "Start talking"}
                 className={clsx(
                   "btn-3d grid size-20 place-items-center rounded-[1.75rem] disabled:opacity-60",
                   orb === "listening" ? "btn-accent" : "btn-go",
                 )}
               >
                 {orb === "listening" && !handsFree ? (
-                  <Send className="size-8" />
+                  <Square className="size-7" fill="currentColor" />
                 ) : orb === "listening" ? (
-                  <MicOff className="size-8" />
+                  <Send className="size-8" />
                 ) : (
                   <Mic className="size-8" />
                 )}
@@ -684,7 +767,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
             </div>
             <button
               type="button"
-              onClick={() => setHandsFree((v) => !v)}
+              onClick={() => setPrefs({ micMode: handsFree ? "tap" : "handsfree" })}
               aria-pressed={handsFree}
               className="flex flex-col items-center gap-1 text-[11px] font-extrabold text-dim"
             >
@@ -696,7 +779,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
               >
                 <Mic className="size-5" aria-hidden />
               </span>
-              {handsFree ? "Hands-free" : "Tap to send"}
+              {handsFree ? "Hands-free" : "Tap to talk"}
             </button>
           </div>
         ) : (
@@ -738,16 +821,20 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         <p className="mt-2 text-center text-xs font-bold text-faint">
           {orb === "listening"
             ? stuckNext
-              ? "Say it in Hebrew. You'll get the English to repeat."
+              ? handsFree
+                ? "Say it in Hebrew. It sends after a short silence."
+                : "Say it in Hebrew, then tap stop."
               : handsFree
-                ? "Listening. Pause for a moment when you're done."
-                : "Listening. Tap send when you're done."
+                ? "Listening. It sends after a short silence, or tap to send now."
+                : "Listening. Take your time, then tap stop to check it."
             : orb === "thinking"
               ? `${speakerName} is thinking…`
               : orb === "speaking"
                 ? `${speakerName} is talking…`
                 : mode === "voice"
-                  ? "Tap the mic to talk."
+                  ? review
+                    ? "Nothing is sent until you tap Send."
+                    : "Tap the mic to talk."
                   : "Quiet mode: type, and listen to the reply."}
         </p>
         {sessionId && elapsed >= limitSeconds && !wrapSentRef.current && (
