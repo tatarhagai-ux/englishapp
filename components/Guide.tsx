@@ -20,8 +20,20 @@ const METHOD = [
     body: "Every mistake has a status: New, then Practicing once you use it correctly, then Mastered after two clean conversations in a row. Make it again and it comes back.",
   },
   {
-    title: "Spaced repetition",
-    body: "Phrases and mistakes return in the warm-up right before you would forget them, and less often as they stick.",
+    title: "Spaced repetition, in days",
+    body: "Phrases, words and mistakes return right before you would forget them: a right answer in 3 days, then about two weeks; a miss tomorrow. A mistake you make again while speaking comes back at once.",
+  },
+  {
+    title: "The rule, not one sentence",
+    body: "Each time a mistake comes back it's a different sentence with the same pattern, first your own, then prepared ones. Each mistake also has a mini-lesson: the rule, wrong and right, and a drill.",
+  },
+  {
+    title: "Learn, practice, then use",
+    body: "On plan days you first meet three of the week's words (hear them, say them), then the conversation gives you chances to use them. Two real uses make a word yours.",
+  },
+  {
+    title: "Recall from meaning",
+    body: "Word cards show the meaning and a sentence with a gap; you say the word. Pulling it out of memory is what makes it come to you while speaking. Recognizing it isn't enough.",
   },
   {
     title: "Listening a little above comfortable",
@@ -29,14 +41,15 @@ const METHOD = [
   },
 ];
 
+/** The plan day on Home is the core; one short extra a day keeps every skill moving. */
 const WEEK = [
-  { day: "Sun", plan: "Free talk with your tutor (10 min)" },
-  { day: "Mon", plan: "Job interview: one question, or the full mock every other week (12 to 15 min)" },
-  { day: "Tue", plan: "Listening gym: dictation, mixed accents (8 min)" },
-  { day: "Wed", plan: "At work scenario (10 min)" },
-  { day: "Thu", plan: "Pronunciation unit + shadowing (10 min)" },
-  { day: "Fri", plan: "Life abroad scenario (8 min)" },
-  { day: "Sat", plan: "Rest, or a World & ideas debate if you feel like it" },
+  { day: "Sun", plan: "Plan day + word cards (5 min)" },
+  { day: "Mon", plan: "Plan day + a listening story (4 min)" },
+  { day: "Tue", plan: "Plan day + a one-minute talk (4 min)" },
+  { day: "Wed", plan: "Plan day + a short read (3 min)" },
+  { day: "Thu", plan: "Plan day + a pronunciation unit, record yourself (5 min)" },
+  { day: "Fri", plan: "Word cards, and drill your top mistake (5 min)" },
+  { day: "Sat", plan: "Rest, or a job interview question if you feel like it" },
 ];
 
 const TIPS = [
@@ -86,7 +99,7 @@ export function Guide() {
 
       <section aria-labelledby="week-title" className="space-y-2.5">
         <h2 id="week-title" className="font-black">
-          A balanced week, 10 to 15 minutes a day
+          A balanced week: the plan day, plus one short extra
         </h2>
         <ul className="tile divide-y-2 divide-line overflow-hidden">
           {WEEK.map((w) => (
