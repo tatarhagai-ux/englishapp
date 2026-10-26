@@ -178,7 +178,14 @@ export function applyAnalysis(
 
   for (const key of madeKeys) {
     const e = errors[key];
-    errors[key] = { ...e, cleanSessions: 0, status: e.status === "mastered" ? "practicing" : e.status };
+    errors[key] = {
+      ...e,
+      cleanSessions: 0,
+      status: e.status === "mastered" ? "practicing" : e.status,
+      // Making it again while speaking outweighs a correct answer in a drill: it comes back in
+      // the very next warm-up instead of waiting out a long review interval.
+      ...(e.card ? { card: { ...e.card, due: now } } : {}),
+    };
   }
   for (const key of new Set(analysis.correct_uses)) {
     const e = errors[key];
