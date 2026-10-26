@@ -1,5 +1,11 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+/** End before the time is up: the X asks first, so a stray tap doesn't end the talk. */
+async function endEarly(page: Page) {
+  await page.getByRole("button", { name: "End conversation" }).click();
+  await page.getByRole("button", { name: "End and see report" }).click();
+}
+
 /** 0.1 s of silent 8 kHz mono WAV, so the audio queue really plays and finishes. */
 function silentWav(): Buffer {
   const samples = 800;
@@ -112,7 +118,11 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await expect.poll(() => chatBodies.length).toBe(2);
   expect(chatBodies[1].history.at(-1)).toMatchObject({ input: "stuck" });
 
+  // A stray tap on the X asks first; "Keep talking" goes back to the conversation.
   await page.getByRole("button", { name: "End conversation" }).click();
+  await page.getByRole("button", { name: "Keep talking" }).click();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await endEarly(page);
   await expect(page).toHaveURL(/\/report\//);
   await expect(page.getByText("Mission complete!")).toBeVisible();
   await expect(page.getByText("I've been studying for AZ-900 for two weeks")).toBeVisible();
@@ -169,7 +179,7 @@ test("the plan: day 1 from its link, the week's words reach the tutor, the repor
   );
   expect(chatBodies[0].targetKeys).toContain("present_perfect_duration");
 
-  await page.getByRole("button", { name: "End conversation" }).click();
+  await endEarly(page);
   await expect(page).toHaveURL(/\/report\//);
   await expect(page.getByRole("heading", { name: "Words of the week" })).toBeVisible();
   await expect(page.getByText("routine", { exact: true })).toBeVisible();
@@ -269,7 +279,7 @@ test("warm-up: recall the correct sentence by typing, then the conversation star
   await page.getByLabel("Your reply").fill("Yesterday I finished the report");
   await page.getByLabel("Your reply").press("Enter");
   await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
-  await page.getByRole("button", { name: "End conversation" }).click();
+  await endEarly(page);
   await expect(page).toHaveURL(/\/report\//);
 
   await page.goto("/session/free-your-week");
@@ -540,7 +550,7 @@ test("quick review: two minutes on due items without a conversation", async ({ p
   await page.getByLabel("Your reply").fill("Yesterday I finished the report");
   await page.getByLabel("Your reply").press("Enter");
   await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
-  await page.getByRole("button", { name: "End conversation" }).click();
+  await endEarly(page);
   await expect(page).toHaveURL(/\/report\//);
 
   await page.goto("/practice");
@@ -575,7 +585,7 @@ test("demo mode: a full conversation and sample report with no keys at all", asy
   await box.press("Enter");
   await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
 
-  await page.getByRole("button", { name: "End conversation" }).click();
+  await endEarly(page);
   await expect(page).toHaveURL(/\/report\//);
   await expect(page.getByRole("note")).toContainText("Sample report from the demo");
   await expect(page.getByText("I've been living in Shoham for ten years.")).toBeVisible();

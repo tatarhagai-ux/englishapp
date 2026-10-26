@@ -115,6 +115,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [draft, setDraft] = useState("");
+  /** Asking before ending early: the X sits where a thumb lands by accident. */
+  const [confirmEnd, setConfirmEnd] = useState(false);
   useWakeLock(phase !== "intro");
 
   const turnsRef = useRef<Turn[]>([]);
@@ -498,10 +500,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     if (!lastTutor || busy) return;
     await stopListening();
     learner.noteHelp(sessionRef.current, "replay");
-    const previous = rateRef.current;
-    rateRef.current = rate;
-    ensureQueue().speak(lastTutor);
-    rateRef.current = previous;
+    // The rate goes with the sentence: the device voice reads it only after an await.
+    ensureQueue().speak(lastTutor, rate);
   }
 
   async function runAssist(kind: "hint" | "better" | "simplify") {
@@ -638,7 +638,11 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       <header className="flex items-center gap-3 px-4 pb-2 pt-4">
         <button
           type="button"
-          onClick={() => void finish()}
+          onClick={() => {
+            const early = elapsedRef.current < limitSeconds && turnsRef.current.some((t) => t.role === "learner");
+            if (early) setConfirmEnd(true);
+            else void finish();
+          }}
           aria-label="End conversation"
           className="grid size-10 place-items-center rounded-xl border-2 border-line bg-elev text-dim hover:text-text"
         >
@@ -676,6 +680,26 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
           {hideText ? <CaptionsOff className="size-5" /> : <Captions className="size-5" />}
         </button>
       </header>
+
+      {confirmEnd && (
+        <div
+          role="alertdialog"
+          aria-labelledby="end-title"
+          className="mx-4 mb-2 space-y-2 rounded-xl border-2 border-line bg-elev p-3"
+        >
+          <p id="end-title" className="text-sm font-extrabold">
+            End now? Your report covers what you&apos;ve said so far.
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => void finish()} className="btn-3d btn-accent flex-1 py-2 text-sm">
+              End and see report
+            </button>
+            <button type="button" onClick={() => setConfirmEnd(false)} className="btn-3d btn-ghost flex-1 py-2 text-sm">
+              Keep talking
+            </button>
+          </div>
+        </div>
+      )}
 
       {!scenario.hidden && <MissionBar task={scenario.task} phrases={scenario.phrases} />}
 

@@ -458,7 +458,7 @@ export function primeAudio() {
  */
 export class SpeechQueue {
   /** "browser" = speak this one with the browser's voice (no Azure). */
-  private queue: { text: string; audio: Promise<Blob | "browser" | null> }[] = [];
+  private queue: { text: string; rate?: number; audio: Promise<Blob | "browser" | null> }[] = [];
   private current: HTMLAudioElement | null = null;
   private playing = false;
   private generation = 0;
@@ -478,12 +478,13 @@ export class SpeechQueue {
     return this.playing || this.queue.length > 0;
   }
 
-  speak(text: string) {
+  /** `rate` fixes the speed for this sentence (Slower); otherwise getRate() decides. */
+  speak(text: string, rate?: number) {
     const clean = text.trim();
     if (!clean) return;
     const audio: Promise<Blob | "browser" | null> = browserSpeechActive()
       ? Promise.resolve("browser")
-      : fetchSpeech(clean, this.opts.voiceId, this.opts.getRate()).then(
+      : fetchSpeech(clean, this.opts.voiceId, rate ?? this.opts.getRate()).then(
           (blob) => {
             this.opts.onChars?.(clean.length);
             return blob;
@@ -497,7 +498,7 @@ export class SpeechQueue {
             return null;
           },
         );
-    this.queue.push({ text: clean, audio });
+    this.queue.push({ text: clean, rate, audio });
     if (!this.playing) void this.drain(this.generation);
   }
 
@@ -509,7 +510,7 @@ export class SpeechQueue {
       const blob = await next.audio;
       if (!blob || gen !== this.generation) continue;
       if (blob === "browser") {
-        await speakInBrowser(next.text, this.opts.voiceId, this.opts.getRate()).catch((err) =>
+        await speakInBrowser(next.text, this.opts.voiceId, next.rate ?? this.opts.getRate()).catch((err) =>
           this.opts.onError?.(err),
         );
         continue;
