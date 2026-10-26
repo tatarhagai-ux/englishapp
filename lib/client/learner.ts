@@ -101,7 +101,7 @@ export function useHydrated(): boolean {
 export const learner = {
   get,
 
-  startSession(scenarioId: string, mode: SessionRecord["mode"], opener: string): string {
+  startSession(scenarioId: string, mode: SessionRecord["mode"], opener: string, demo = false): string {
     const now = new Date();
     const id = `${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const session: SessionRecord = {
@@ -116,6 +116,7 @@ export const learner = {
       fixedAloud: [],
       xp: 0,
       costUsd: 0,
+      ...(demo ? { demo: true } : {}),
     };
     set({ ...get(), sessions: [...get().sessions, session] });
     return id;
@@ -152,6 +153,11 @@ export const learner = {
     const before = minutesOnDay({ ...state, sessions: state.sessions.filter((s) => s.id !== id) }, session.day);
     const xp = sessionXp(session, before, dailyGoalMinutes);
     set({ ...state, sessions: state.sessions.map((s) => (s.id === id ? { ...s, xp } : s)) });
+  },
+
+  /** A demo report is shown but never folded into the learner model. */
+  saveDemoReport(id: string, analysis: Analysis) {
+    learner.updateSession(id, (s) => ({ ...s, report: analysis }));
   },
 
   markFixedAloud(id: string, errorKey: string, dailyGoalMinutes: number) {

@@ -17,7 +17,7 @@ export function PracticeLibrary() {
   const hydrated = useHydrated();
   const [prefs] = usePrefs();
   const recommended = recommendScenario(state);
-  const done = new Set(state.sessions.filter((s) => s.report?.task.completed).map((s) => s.scenarioId));
+  const done = new Set(state.sessions.filter((s) => !s.demo && s.report?.task.completed).map((s) => s.scenarioId));
   const tutorName = voiceById(prefs.tutorVoiceId)?.displayName ?? "Your tutor";
   const due = hydrated ? warmupItems(state, new Date(), QUICK_REVIEW_MAX).length : 0;
 

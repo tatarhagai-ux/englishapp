@@ -65,6 +65,8 @@ export interface SessionRecord {
   reviewsDone?: number;
   xp: number;
   costUsd: number;
+  /** A demo conversation (scripted tutor, no AI key). Never counts toward progress. */
+  demo?: boolean;
 }
 
 export interface LearnerState {
@@ -130,7 +132,7 @@ function humanize(key: string): string {
 
 /** A session counts once it has at least one learner turn. */
 export function isRealSession(s: SessionRecord): boolean {
-  return s.turns.some((t) => t.role === "learner");
+  return !s.demo && s.turns.some((t) => t.role === "learner");
 }
 
 /**
@@ -227,7 +229,7 @@ export function targetKeysForNext(state: LearnerState, max = 3): string[] {
 export function recommendScenario(state: LearnerState): Scenario {
   const [top] = rankedErrors(state);
   const recent = state.sessions
-    .slice()
+    .filter((s) => !s.demo)
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
     .slice(0, 5)
     .map((s) => s.scenarioId);
@@ -238,7 +240,7 @@ export function recommendScenario(state: LearnerState): Scenario {
 }
 
 export function minutesOnDay(state: LearnerState, day: string): number {
-  const seconds = state.sessions.filter((s) => s.day === day).reduce((sum, s) => sum + s.speakingSeconds, 0);
+  const seconds = state.sessions.filter((s) => s.day === day && !s.demo).reduce((sum, s) => sum + s.speakingSeconds, 0);
   return Math.floor(seconds / 60);
 }
 
@@ -363,7 +365,7 @@ export interface LevelPoint {
 /** Speaking level estimates over time; low-confidence guesses are left out. */
 export function levelHistory(state: LearnerState): LevelPoint[] {
   return state.sessions
-    .filter((s) => s.report?.level && s.report.level.confidence !== "low")
+    .filter((s) => !s.demo && s.report?.level && s.report.level.confidence !== "low")
     .map((s) => ({ day: s.day, cefr: s.report!.level!.cefr, placement: s.scenarioId === "placement" }));
 }
 
@@ -381,7 +383,7 @@ export function currentSpeakingLevel(state: LearnerState, fallback: Cefr): Cefr 
 }
 
 export function hasPlacement(state: LearnerState): boolean {
-  return state.sessions.some((s) => s.scenarioId === "placement" && s.report);
+  return state.sessions.some((s) => !s.demo && s.scenarioId === "placement" && s.report);
 }
 
 /** Average speaking speed across voice conversations, in words per minute. */
@@ -389,7 +391,7 @@ export function averageWpm(state: LearnerState, wordsOf: (text: string) => numbe
   let words = 0;
   let seconds = 0;
   for (const s of state.sessions) {
-    if (s.mode !== "voice" || s.speakingSeconds < 20) continue;
+    if (s.demo || s.mode !== "voice" || s.speakingSeconds < 20) continue;
     seconds += s.speakingSeconds;
     words += s.turns
       .filter((t) => t.role === "learner" && t.input !== "stuck")
@@ -553,7 +555,7 @@ export interface InterviewReadiness {
 
 export function interviewReadiness(state: LearnerState): InterviewReadiness {
   const interviewIds = new Set(SCENARIOS.filter((s) => s.category === "interview" && !s.hidden).map((s) => s.id));
-  const reports = state.sessions.filter((s) => interviewIds.has(s.scenarioId) && s.report);
+  const reports = state.sessions.filter((s) => !s.demo && interviewIds.has(s.scenarioId) && s.report);
   const scored = reports.filter((s) => s.report!.interview).map((s) => s.report!.interview!);
   const recent = scored.slice(-3);
   const answers = scored.flatMap((i) => i.answers).slice(-10);

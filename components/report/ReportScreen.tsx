@@ -24,6 +24,7 @@ import { usageCostUsd } from "@/lib/cost/pricing";
 import { criterionMet, wordCount } from "@/lib/text/compare";
 import { CorrectionCard } from "./CorrectionCard";
 import { InterviewCard } from "./InterviewCard";
+import { demoAnalysis } from "@/lib/client/demo";
 
 export function ReportScreen({ sessionId }: { sessionId: string }) {
   const hydrated = useHydrated();
@@ -37,6 +38,10 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
 
   async function analyze() {
     if (!session) return;
+    if (session.demo && scenario) {
+      learner.saveDemoReport(session.id, demoAnalysis(scenario, session.turns));
+      return;
+    }
     setStatus("analyzing");
     try {
       const res = await analyzeSession(session.scenarioId, session.turns);
@@ -88,6 +93,13 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
         <p className="text-xs font-extrabold uppercase tracking-wider text-faint">Session report</p>
         <h1 className="text-2xl font-black leading-tight">{scenario.title}</h1>
       </header>
+
+      {session.demo && (
+        <p role="note" className="rounded-xl border-2 border-xp/50 bg-xp/10 p-3 text-sm font-bold">
+          Sample report from the demo. Once the AI key is connected, every fix and score here comes from what you
+          actually said. Demo conversations don&apos;t count toward your progress.
+        </p>
+      )}
 
       {status === "analyzing" && (
         <section className="tile flex items-center gap-3 p-5" aria-live="polite">
@@ -143,12 +155,14 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
                 {report.praise_en}
               </p>
             )}
-            <span
-              className="shrink-0 rounded-2xl bg-xp px-4 py-3 text-lg font-black text-[#3a2a00]"
-              aria-label={`${session.xp} XP earned`}
-            >
-              +{session.xp} XP
-            </span>
+            {!session.demo && (
+              <span
+                className="shrink-0 rounded-2xl bg-xp px-4 py-3 text-lg font-black text-[#3a2a00]"
+                aria-label={`${session.xp} XP earned`}
+              >
+                +{session.xp} XP
+              </span>
+            )}
           </div>
 
           <section aria-labelledby="fixes-title" className="space-y-3">

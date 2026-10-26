@@ -40,7 +40,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
   const next = recommendScenario(state);
   const mission = boss?.mission ?? next.task;
   const goalMet = minutesToday >= goal;
-  const lastReport = [...state.sessions].reverse().find((s) => s.report);
+  const lastReport = [...state.sessions].reverse().find((s) => s.report && !s.demo);
   // A brand-new learner gets one clear first step, the level check, instead of two competing ones.
   const firstTime = hydrated && ready && stats.sessions === 0 && !hasPlacement(state);
   const dueReviews = hydrated ? warmupItems(state, new Date(), QUICK_REVIEW_MAX).length : 0;
@@ -82,6 +82,15 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
             <span className="block text-sm text-dim">Connect the AI tutor (OpenRouter). About 10 minutes.</span>
           </span>
           <ArrowRight className="size-5 text-dim" aria-hidden />
+        </Link>
+      )}
+
+      {!ready && (
+        <Link
+          href="/session/free-your-week?demo=1"
+          className="btn-3d btn-accent flex w-full items-center justify-center gap-2 py-3.5"
+        >
+          Try a demo conversation <ArrowRight className="size-5" aria-hidden />
         </Link>
       )}
 

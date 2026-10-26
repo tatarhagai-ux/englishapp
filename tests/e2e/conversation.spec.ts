@@ -376,3 +376,30 @@ test("quick review: two minutes on due items without a conversation", async ({ p
   await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Done." })).toBeVisible();
 });
+
+test("demo mode: a full conversation and sample report with no keys at all", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: /Try a demo conversation/ }).click();
+  await expect(page.getByRole("heading", { name: "Your week" })).toBeVisible();
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: "Start conversation" }).click();
+  await expect(page.getByText("Demo", { exact: true })).toBeVisible();
+
+  const box = page.getByLabel("Your reply");
+  await box.fill("I study for AZ-900 two weeks");
+  await box.press("Enter");
+  await expect(page.getByText("How long have you been doing that?")).toBeVisible();
+  await box.fill("Two weeks, it's hard but fun");
+  await box.press("Enter");
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+
+  await page.getByRole("button", { name: "End conversation" }).click();
+  await expect(page).toHaveURL(/\/report\//);
+  await expect(page.getByRole("note")).toContainText("Sample report from the demo");
+  await expect(page.getByText("I've been living in Shoham for ten years.")).toBeVisible();
+  await expect(page.getByLabel(/XP earned/)).toHaveCount(0);
+
+  // It doesn't count: progress still shows no conversations.
+  await page.goto("/progress");
+  await expect(page.getByRole("heading", { name: "Recent conversations" })).toHaveCount(0);
+});

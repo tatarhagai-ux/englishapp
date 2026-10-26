@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Captions,
@@ -35,6 +35,7 @@ import { Intro } from "./Intro";
 import { Warmup } from "./Warmup";
 import { Transcript } from "./Transcript";
 import { MissionBar } from "./MissionBar";
+import { demoReply } from "@/lib/client/demo";
 import { HelperPanel, type HelperState } from "./HelperPanel";
 import { Orb, type OrbState } from "./Orb";
 
@@ -58,6 +59,8 @@ interface Props {
 export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const scenario = scenarioById(scenarioId)!;
   const router = useRouter();
+  // Demo mode: a scripted tutor so the flow can be tried before an AI key is connected.
+  const demo = useSearchParams().get("demo") === "1";
   const hydrated = useHydrated();
   const state = useLearner();
   const [prefs] = usePrefs();
@@ -114,7 +117,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     const cutoff = Date.now() - 2 * 60 * 60 * 1000;
     return (
       state.sessions
-        .filter((s) => s.scenarioId === scenarioId && !s.endedAt && new Date(s.startedAt).getTime() > cutoff)
+        .filter((s) => !s.demo && s.scenarioId === scenarioId && !s.endedAt && new Date(s.startedAt).getTime() > cutoff)
         .find((s) => s.turns.some((t) => t.role === "learner")) ?? null
     );
   }, [hydrated, state.sessions, scenarioId]);
@@ -263,6 +266,18 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
+      if (demo) {
+        await new Promise((r) => setTimeout(r, 900));
+        if (ctrl.signal.aborted) return;
+        const text = demoReply(scenario, turnsRef.current);
+        for (const sentence of chunker.push(text)) queue.speak(sentence);
+        for (const rest of chunker.flush()) queue.speak(rest);
+        setTurnsBoth([...turnsRef.current, { role: "tutor", text }]);
+        if (sessionRef.current) learner.appendTurn(sessionRef.current, { role: "tutor", text });
+        pendingRef.current = false;
+        if (!queue.busy) afterTutorSpoke();
+        return;
+      }
       const res = await streamChat(
         {
           scenarioId,
@@ -299,7 +314,18 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       const kind = err instanceof ApiError ? err.kind : "provider";
       setError({ message: API_ERROR_TEXT[kind], retry: () => void requestTutorRef.current() });
     }
-  }, [ensureQueue, limitSeconds, scenarioId, prefs.correctionMode, tutorName, setTurnsBoth, addCost, afterTutorSpoke]);
+  }, [
+    ensureQueue,
+    limitSeconds,
+    scenarioId,
+    scenario,
+    demo,
+    prefs.correctionMode,
+    tutorName,
+    setTurnsBoth,
+    addCost,
+    afterTutorSpoke,
+  ]);
 
   requestTutorRef.current = requestTutor;
 
@@ -348,13 +374,13 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       setTurnsBoth(resumable.turns);
       elapsedRef.current = Math.min(resumable.speakingSeconds * 2, limitSeconds - 60);
     } else {
-      id = learner.startSession(scenarioId, chosen, scenario.opener);
+      id = learner.startSession(scenarioId, chosen, scenario.opener, demo);
       setTurnsBoth([{ role: "tutor", text: scenario.opener }]);
     }
     sessionRef.current = id;
     setSessionId(id);
     setStarting(false);
-    const items = resume ? [] : warmupItems(learner.get());
+    const items = resume || demo ? [] : warmupItems(learner.get());
     if (items.length) {
       setWarmup(items);
       setPhase("warmup");
@@ -527,7 +553,14 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         <Orb state={orb} size={36} showLabel={false} />
         <div className="flex-1">
           <div className="flex items-baseline justify-between">
-            <p className="font-extrabold">{speakerName}</p>
+            <p className="font-extrabold">
+              {speakerName}
+              {demo && (
+                <span className="ml-2 rounded-md bg-xp/20 px-1.5 py-0.5 text-xs font-black uppercase text-xp">
+                  Demo
+                </span>
+              )}
+            </p>
             <p className="font-mono text-xs text-dim" aria-label="Elapsed time">
               {minutes}:{seconds}
             </p>
@@ -577,6 +610,11 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
           {error.message.includes("setup") && (
             <Link href="/setup" className="font-extrabold text-accent">
               Setup
+            </Link>
+          )}
+          {!demo && error.message === API_ERROR_TEXT.not_configured && (
+            <Link href={`/session/${scenarioId}?demo=1`} className="font-extrabold text-accent">
+              Try the demo
             </Link>
           )}
         </div>
