@@ -35,7 +35,10 @@ function description(input: ReminderInput): string {
 
 /** An .ics file most calendars accept (iPhone, Google, Outlook). */
 export function reminderIcs(input: ReminderInput, now = new Date()): string {
-  const dtstamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const dtstamp = now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
