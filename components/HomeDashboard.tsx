@@ -14,6 +14,7 @@ import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { PlanToday } from "./PlanToday";
 import { CoachCard } from "./CoachCard";
 import { KeepGoing } from "./KeepGoing";
+import { DailyQuests } from "./DailyQuests";
 
 const SESSION_STEPS = [
   { icon: Sparkles, title: "Warm-up", detail: "Say phrases from past sessions out loud" },
@@ -131,6 +132,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
       ) : (
         <>
           <PlanToday ready={ready} minutesToday={minutesToday} goal={goal} />
+          {hydrated && <DailyQuests today={today} goal={goal} />}
           {/* Today's minutes are in: more to do, without hunting through Practice. */}
           {hydrated && ready && goalMet && <KeepGoing next={null} avoid={lastReport ? [lastReport.scenarioId] : []} />}
           <CoachCard />

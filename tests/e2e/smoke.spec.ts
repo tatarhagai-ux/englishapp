@@ -17,6 +17,9 @@ test.describe("app shell", () => {
     await expect(page.getByText(/Missed a day\? It waits for you/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Boss mistake: Present perfect for “how long”" })).toBeVisible();
     await expect(page.getByText("From your English test")).toBeVisible();
+    const quests = page.getByRole("region", { name: "Today's quests" });
+    await expect(quests).toContainText("0/3");
+    await expect(quests.getByRole("link", { name: /One listening story or round/ })).toHaveAttribute("href", "/listen");
     await expect(page.getByText("Finish setup to start talking")).toBeVisible();
     await expect(page.getByRole("link", { name: "Finish setup", exact: true })).toHaveAttribute("href", "/setup");
     await expect(page.getByLabel("0 day streak")).toBeVisible();
