@@ -8,7 +8,15 @@ export function errorResponse(err: unknown) {
     return NextResponse.json({ error: "not_configured", service: err.service }, { status: 503 });
   }
   if (err instanceof ProviderError) {
-    const status = err.status === 401 || err.status === 403 ? 502 : err.status >= 500 ? 502 : err.status;
+    // A rejected key and an empty balance can't be fixed by retrying, so the client gets
+    // a distinct code for each and can say exactly what to do.
+    if (err.status === 401 || err.status === 403) {
+      return NextResponse.json({ error: "provider_auth", provider: err.provider }, { status: 502 });
+    }
+    if (err.status === 402) {
+      return NextResponse.json({ error: "provider_credit", provider: err.provider }, { status: 402 });
+    }
+    const status = err.status >= 500 ? 502 : err.status;
     return NextResponse.json({ error: "provider_error", provider: err.provider, status: err.status }, { status });
   }
   console.error(err);

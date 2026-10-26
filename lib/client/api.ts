@@ -5,7 +5,16 @@ import type { Analysis } from "@/lib/prompts/analyzer";
 import type { AssistRequest } from "@/lib/prompts/assist";
 import type { Usage } from "@/lib/providers/llm/types";
 
-export type ApiErrorKind = "not_configured" | "unauthorized" | "rate_limited" | "provider" | "network" | "bad_request";
+export type ApiErrorKind =
+  | "not_configured"
+  | "unauthorized"
+  | "rate_limited"
+  | "provider"
+  | "provider_auth"
+  | "provider_credit"
+  | "network"
+  | "offline"
+  | "bad_request";
 
 export class ApiError extends Error {
   constructor(public readonly kind: ApiErrorKind) {
@@ -18,12 +27,31 @@ export const API_ERROR_TEXT: Record<ApiErrorKind, string> = {
   unauthorized: "Your session expired. Reload and unlock again.",
   rate_limited: "The AI service is busy. Wait a few seconds and try again.",
   provider: "The AI service had a problem. Try again.",
-  network: "No connection. Check your internet and try again.",
+  provider_auth: "The AI key was rejected. Check OPENROUTER_API_KEY (or DEEPSEEK_API_KEY) in Vercel, then redeploy.",
+  provider_credit: "Your AI credit ran out. Top up at openrouter.ai/credits (a few dollars lasts weeks).",
+  network: "Couldn't reach the server. Check your internet and try again.",
+  offline: "You're offline. Reconnect and try again; your progress is saved on this device.",
   bad_request: "Something in the request was wrong. Try again.",
 };
 
-function kindFor(status: number): ApiErrorKind {
+/** Read the server's error code when there is one; fall back to the HTTP status. */
+async function kindOf(res: Response): Promise<ApiErrorKind> {
+  const code = await res
+    .clone()
+    .json()
+    .then((b: { error?: string }) => b?.error)
+    .catch(() => undefined);
+  if (code === "provider_auth" || code === "provider_credit") return code;
+  return kindFor(res.status);
+}
+
+function networkError(): ApiError {
+  return new ApiError(typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "network");
+}
+
+export function kindFor(status: number): ApiErrorKind {
   if (status === 503) return "not_configured";
+  if (status === 402) return "provider_credit";
   if (status === 401) return "unauthorized";
   if (status === 429) return "rate_limited";
   if (status === 400) return "bad_request";
@@ -38,9 +66,9 @@ async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Pr
     signal,
   }).catch((err: unknown) => {
     if (err instanceof DOMException && err.name === "AbortError") throw err;
-    throw new ApiError("network");
+    throw networkError();
   });
-  if (!res.ok) throw new ApiError(kindFor(res.status));
+  if (!res.ok) throw new ApiError(await kindOf(res));
   return (await res.json()) as T;
 }
 
@@ -63,9 +91,9 @@ export async function streamChat(
     signal,
   }).catch((err: unknown) => {
     if (err instanceof DOMException && err.name === "AbortError") throw err;
-    throw new ApiError("network");
+    throw networkError();
   });
-  if (!res.ok || !res.body) throw new ApiError(kindFor(res.status));
+  if (!res.ok || !res.body) throw new ApiError(res.ok ? "provider" : await kindOf(res));
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

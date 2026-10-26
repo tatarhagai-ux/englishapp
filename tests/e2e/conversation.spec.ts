@@ -333,6 +333,10 @@ test("interview reports show answer structure, and progress shows readiness", as
   await expect(card.getByText("Missing: ")).toHaveCount(1);
   await expect(card).toContainText("Result or lesson");
   await expect(card).toContainText("Strong start: Last year, our main server went down");
+  await card.getByRole("button", { name: "What do these four mean?" }).click();
+  await expect(card).toContainText("They are hiring you, not your team.");
+  await card.getByRole("button", { name: "Translate" }).click();
+  await expect(card.getByText(/מגייסים אותך/)).toBeVisible();
   await card.getByRole("button", { name: "Save the strong start to practice" }).click();
   await expect(card.getByLabel("Saved to your phrase bank")).toBeVisible();
   await expect(page.getByText("States a clear result or lesson")).toBeVisible();

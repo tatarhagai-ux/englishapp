@@ -88,10 +88,34 @@ export const analysisSchema = z.object({
 
 /** The four parts of a strong interview answer, in the order an interviewer listens for them. */
 export const ANSWER_PARTS = [
-  { key: "direct", label: "Answered directly", missing: "a direct answer up front" },
-  { key: "example", label: "Real example", missing: "a real example" },
-  { key: "actions", label: "Your actions (I)", missing: "what you did yourself" },
-  { key: "result", label: "Result or lesson", missing: "how it ended (result or lesson)" },
+  {
+    key: "direct",
+    label: "Answered directly",
+    missing: "a direct answer up front",
+    why: "Answer the question in your first sentence, then explain. Interviewers decide early whether you understood them.",
+    whyHe: "עונים על השאלה כבר במשפט הראשון, ורק אחר כך מסבירים. מראיינים מחליטים מהר אם הבנת את השאלה.",
+  },
+  {
+    key: "example",
+    label: "Real example",
+    missing: "a real example",
+    why: "One true story with a time and place beats three general claims like “I'm a hard worker”.",
+    whyHe: "סיפור אמיתי אחד, עם זמן ומקום, שווה יותר משלוש טענות כלליות כמו “אני עובד קשה”.",
+  },
+  {
+    key: "actions",
+    label: "Your actions (I)",
+    missing: "what you did yourself",
+    why: "Say “I did”, not only “we did”. They are hiring you, not your team.",
+    whyHe: "אומרים “I did” ולא רק “we did”. מגייסים אותך, לא את הצוות.",
+  },
+  {
+    key: "result",
+    label: "Result or lesson",
+    missing: "how it ended (result or lesson)",
+    why: "End with what changed: a number, an outcome, or what you learned. Stories without an ending are forgotten.",
+    whyHe: "מסיימים במה שהשתנה: מספר, תוצאה או מה למדת. סיפור בלי סוף נשכח.",
+  },
 ] as const;
 
 export type Analysis = z.infer<typeof analysisSchema>;

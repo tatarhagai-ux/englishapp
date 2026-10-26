@@ -173,7 +173,9 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
             ))}
           </section>
 
-          {report.interview && <InterviewCard interview={report.interview} voiceId={prefs.tutorVoiceId} />}
+          {report.interview && (
+            <InterviewCard interview={report.interview} voiceId={prefs.tutorVoiceId} hebrewHelp={prefs.hebrewHelp} />
+          )}
 
           {report.level && report.level.confidence !== "low" && (
             <section className="tile flex items-center gap-4 p-4" aria-label="Speaking level in this conversation">

@@ -1,6 +1,7 @@
 "use client";
 
-import { Bookmark, BookmarkCheck, Briefcase, Check, Volume2, X } from "lucide-react";
+import { useState } from "react";
+import { Bookmark, BookmarkCheck, Briefcase, Check, HelpCircle, Languages, Volume2, X } from "lucide-react";
 import clsx from "clsx";
 import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
 import { useClipPlayer } from "@/lib/client/tts";
@@ -12,7 +13,17 @@ type Interview = NonNullable<Analysis["interview"]>;
  * How each interview answer was built. Hiring managers listen for a direct answer, a real
  * example, what you did yourself, and how it ended (the STAR idea, in plain words).
  */
-export function InterviewCard({ interview, voiceId }: { interview: Interview; voiceId: string }) {
+export function InterviewCard({
+  interview,
+  voiceId,
+  hebrewHelp = false,
+}: {
+  interview: Interview;
+  voiceId: string;
+  hebrewHelp?: boolean;
+}) {
+  const [explain, setExplain] = useState(false);
+  const [showHe, setShowHe] = useState(hebrewHelp);
   const player = useClipPlayer();
   const state = useLearner();
   const saved = new Set(state.phrases.map((p) => p.text.toLowerCase()));
@@ -34,6 +45,44 @@ export function InterviewCard({ interview, voiceId }: { interview: Interview; vo
           <span className="block text-xs font-bold text-faint">ready</span>
         </p>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setExplain((v) => !v)}
+        aria-expanded={explain}
+        className="inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+      >
+        <HelpCircle className="size-4" aria-hidden /> What do these four mean?
+      </button>
+      {explain && (
+        <div className="space-y-2 rounded-xl bg-elev-2 p-3 text-sm">
+          <ul className="space-y-2">
+            {ANSWER_PARTS.map((p) => (
+              <li key={p.key}>
+                <span className="font-extrabold">{p.label}: </span>
+                <span className="text-dim">{p.why}</span>
+                {showHe && (
+                  <p dir="rtl" lang="he" className="mt-0.5">
+                    {p.whyHe}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+          {!showHe && (
+            <button
+              type="button"
+              onClick={() => setShowHe(true)}
+              className="inline-flex items-center gap-1 font-extrabold text-accent"
+            >
+              <Languages className="size-4" aria-hidden /> Translate
+            </button>
+          )}
+          <p className="text-xs text-faint">
+            It&apos;s the STAR method (Situation, Task, Action, Result) in plain words.
+          </p>
+        </div>
+      )}
 
       <ol className="space-y-3">
         {interview.answers.map((a, i) => (
