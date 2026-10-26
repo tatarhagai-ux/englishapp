@@ -195,6 +195,32 @@ export async function verifySignInCode(email: string, code: string): Promise<voi
   if (error) throw new Error(error.message);
 }
 
+const MIN_PASSWORD = 8;
+
+/** Why a password isn't acceptable, or null when it is. */
+export function passwordProblem(password: string): string | null {
+  return password.length < MIN_PASSWORD ? `Use at least ${MIN_PASSWORD} characters.` : null;
+}
+
+/** Sign in with email and password; works on any device, with no email each time. */
+export async function signInWithPassword(email: string, password: string): Promise<void> {
+  const sb = await supabase();
+  if (!sb) throw new Error("Sync isn't set up yet.");
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error)
+    throw new Error(error.message === "Invalid login credentials" ? "Wrong email or password." : error.message);
+}
+
+/** For a signed-in user: set (or change) the password used by signInWithPassword. */
+export async function setPassword(password: string): Promise<void> {
+  const problem = passwordProblem(password);
+  if (problem) throw new Error(problem);
+  const sb = await supabase();
+  if (!sb) throw new Error("Sync isn't set up yet.");
+  const { error } = await sb.auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}
+
 export async function signOut(): Promise<void> {
   await (await supabase())?.auth.signOut();
   setStatus({ kind: "signed-out" });
