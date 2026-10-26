@@ -54,14 +54,11 @@
 
 בלי השלב הזה האפליקציה עובדת רגיל, וכל ההתקדמות נשמרת במכשיר שבו התאמנת. עם Supabase אתה נכנס עם המייל בכל מכשיר, וההתקדמות מתמזגת לבד.
 
-1. **פרויקט.** בתוכנית החינמית של Supabase אפשר להחזיק 2 פרויקטים פעילים. אם כבר יש לך שניים, יש שתי אפשרויות: להשהות (Pause) פרויקט שלא בשימוש ולפתוח חדש בשם `speakwise` באזור Frankfurt (eu-central-1), או להשתמש בפרויקט קיים. הטבלה של Speakwise נקראת `learner_state` ולא נוגעת בשום דבר אחר.
-2. **הטבלה.** ב-SQL Editor של הפרויקט מריצים את הקובץ `supabase/migrations/20261026000000_learner_state.sql`. בפרויקט חדש מריצים קודם את `20261025000000_init.sql`, כי הוא מגדיר פונקציה שהקובץ השני משתמש בה. (או שתגיד לי, ואני מריץ דרך החיבור ל-Supabase.)
-3. **כתובות.** ב-Authentication → URL Configuration:
-   - **Site URL:** הכתובת של האפליקציה ב-Vercel, למשל `https://speakwise-xxx.vercel.app`.
-   - **Redirect URLs:** אותה כתובת עם `/settings` בסוף.
-4. **קוד במייל (מומלץ).** ב-Authentication → Emails → Magic Link מוסיפים לתבנית את השורה `Your code: {{ .Token }}`. ככה, אם הקישור נפתח בדפדפן אחר מהאפליקציה המותקנת (קורה הרבה באייפון), מקלידים את 6 הספרות בהגדרות.
-5. **Vercel.** ב-Project Settings → API ב-Supabase מעתיקים את ה-URL ואת ה-anon key, ומכניסים אותם ב-Vercel כ-`NEXT_PUBLIC_SUPABASE_URL` ו-`NEXT_PUBLIC_SUPABASE_ANON_KEY`. אחרי זה עושים Redeploy, כי המשתנים האלה נכנסים לאפליקציה בזמן הבנייה.
-6. **כניסה.** בהגדרות, "Sync across devices", מכניסים את המייל ונכנסים. חוזרים על זה בטלפון ובמחשב.
+1. **פרויקט.** Speakwise יושב בפרויקט **dayframe**, בטבלה נפרדת בשם `speakwise_learner_state` (כבר נוצרה). היא לא נוגעת באף טבלה של dayframe, וכל משתמש רואה רק את השורה שלו. אם יום אחד תרצה פרויקט נפרד: מריצים בו את `supabase/migrations/20261026000000_learner_state.sql` ומחליפים את שני המשתנים בסעיף 4.
+2. **כתובת חזרה.** ב-Authentication → URL Configuration → **Redirect URLs** מוסיפים את כתובת Speakwise ב-Vercel עם `/settings` בסוף, למשל `https://speakwise-xxx.vercel.app/settings`. **לא משנים את Site URL**, הוא שייך ל-dayframe.
+3. **קוד במייל (מומלץ).** ב-Authentication → Emails → Magic Link מוסיפים לתבנית את השורה `Your code: {{ .Token }}`. זה רק מוסיף שורה למייל, גם במיילים של dayframe, ולא משנה בו שום דבר אחר. ככה, אם הקישור נפתח בדפדפן אחר מהאפליקציה המותקנת (קורה הרבה באייפון), מקלידים את 6 הספרות בהגדרות.
+4. **Vercel.** בפרויקט Speakwise ב-Vercel (לא ב-dayframe) מכניסים את כתובת הפרויקט ואת ה-publishable key של dayframe כ-`NEXT_PUBLIC_SUPABASE_URL` ו-`NEXT_PUBLIC_SUPABASE_ANON_KEY`. אחרי זה עושים Redeploy, כי המשתנים האלה נכנסים לאפליקציה בזמן הבנייה.
+5. **כניסה.** בהגדרות, "Sync across devices", מכניסים את המייל ונכנסים. חוזרים על זה בטלפון ובמחשב.
 
 שתי הערות:
 - "Delete all" מוחק גם מהעותק המסונכרן. המכשירים האחרים מתנקים בסנכרון הבא שלהם.

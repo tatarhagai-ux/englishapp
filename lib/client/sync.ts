@@ -9,7 +9,7 @@ import type { LearnerState } from "@/lib/learner/model";
 /**
  * Sync between devices. localStorage stays the source of truth on each device, so the app
  * works offline; when signed in, the whole learner model is also kept as one JSON document
- * per user in Supabase (table learner_state, row level security). Every sync pulls that
+ * per user in Supabase (table speakwise_learner_state, row level security). Every sync pulls that
  * document, merges it with the local copy (lib/learner/merge.ts) and writes the result to
  * both places.
  */
@@ -51,12 +51,18 @@ function supabase(): SupabaseClient | null {
 function tableStore(sb: SupabaseClient, userId: string): SyncStore {
   return {
     async pull() {
-      const { data, error } = await sb.from("learner_state").select("doc").eq("user_id", userId).maybeSingle();
+      const { data, error } = await sb
+        .from("speakwise_learner_state")
+        .select("doc")
+        .eq("user_id", userId)
+        .maybeSingle();
       if (error) throw new Error(error.message);
       return (data?.doc as LearnerState | undefined) ?? null;
     },
     async push(doc) {
-      const { error } = await sb.from("learner_state").upsert({ user_id: userId, doc }, { onConflict: "user_id" });
+      const { error } = await sb
+        .from("speakwise_learner_state")
+        .upsert({ user_id: userId, doc }, { onConflict: "user_id" });
       if (error) throw new Error(error.message);
     },
   };
