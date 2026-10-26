@@ -716,3 +716,30 @@ test("plan days start by learning three of the week's words, then the next three
   await page.getByRole("button", { name: /start/i }).click();
   await expect(page.getByRole("heading", { name: "to juggle" })).toBeVisible();
 });
+
+test("one-minute talk: pick a topic card, the tutor reads it out, a long answer, then a report", async ({ page }) => {
+  const chatBodies: { history: { role: string; text: string }[]; scenarioId: string }[] = [];
+  await mockApis(page, chatBodies);
+  await page.goto("/practice");
+  await page.getByRole("link", { name: /One-minute talk/ }).click();
+  const card = page.getByRole("region", { name: "Your topic" });
+  const first = await card.locator("p").nth(1).textContent();
+  await page.getByRole("button", { name: "Another topic" }).click();
+  await expect(card.locator("p").nth(1)).not.toHaveText(first!);
+  const title = (await card.locator("p").nth(1).textContent())!;
+  await page.getByRole("link", { name: /Talk about it/ }).click();
+
+  await expect(page.getByRole("region", { name: "Your topic" })).toContainText(title);
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  await expect(page.getByText(`Your topic: ${title}.`, { exact: false })).toBeVisible();
+  await page
+    .getByLabel("Your reply")
+    .fill("First of all I usually wake up early. Then I go to the office and the busiest part is noon.");
+  await page.getByLabel("Your reply").press("Enter");
+  await expect.poll(() => chatBodies.length).toBe(1);
+  expect(chatBodies[0].scenarioId).toBe("minute-talk");
+  expect(chatBodies[0].history[0].text).toContain(title);
+  await endEarly(page);
+  await expect(page).toHaveURL(/\/report\//);
+});

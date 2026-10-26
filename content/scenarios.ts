@@ -45,6 +45,8 @@ export const CATEGORY_INFO: Record<ScenarioCategory, { label: string; goal: stri
 };
 
 export const PLACEMENT_ID = "placement";
+/** The one-minute talk; its topic card comes from content/topics.ts (the ?topic= link). */
+export const MINUTE_TALK_ID = "minute-talk";
 
 export const SCENARIOS: readonly Scenario[] = [
   // Placement: a short chat that climbs from easy to hard so the analyzer can place him.
@@ -66,6 +68,29 @@ export const SCENARIOS: readonly Scenario[] = [
     tutorNotes: `This is a placement check. Ask exactly five questions, one per turn, each a little harder:
 1 (already asked) about himself now. 2 a past experience he remembers well. 3 his plans for the next few years. 4 his opinion on something that matters to him, and why. 5 a hypothetical: what he would change if he could.
 Do not correct anything. React in a few words, then ask the next question. After his fifth answer, thank him and say his report is ready.`,
+  },
+
+  // One-minute talk: a long turn on a topic card (reached from Practice, not listed).
+  {
+    id: MINUTE_TALK_ID,
+    category: "free",
+    title: "One-minute talk",
+    summary: "One topic, three points, about a minute without stopping.",
+    voiceId: null,
+    setting: "A speaking drill with your tutor: a topic card and a long answer",
+    task: "Talk for about a minute about the topic, cover all three points, and give one real example.",
+    successCriteria: [
+      "Talks for about a minute in one go",
+      "Covers all three points on the card",
+      "Gives a concrete example",
+    ],
+    targets: ["answer_all_parts", "present_perfect_duration"],
+    phrases: ["The first thing I'd say is…", "For example…", "On top of that…", "So overall…"],
+    opener: "Ready for your topic?",
+    minutes: 4,
+    hidden: true,
+    tutorNotes: `This is a one-minute talk drill. Your first message was his topic card. He will now talk for about a minute: do not interrupt and do not correct.
+After his long answer: react in one sentence to something specific he said, then ask exactly one follow-up question that needs a 20 to 30 second answer (why, how, or an example). If he skipped one of the three points, ask about that point. After his second answer, thank him in one sentence and tell him his report is ready. Never ask more than one follow-up.`,
   },
 
   // Job interview track (6). Completing all six unlocks "Interview ready".

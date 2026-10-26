@@ -10,6 +10,7 @@ import {
   Check,
   Clock,
   Headphones,
+  Timer,
   BookOpenText,
   Wrench,
   Layers,
@@ -152,6 +153,11 @@ export function PracticeLibrary() {
         />
       </div>
 
+      <SkillGroup title="Speaking">
+        <SkillTile href="/talk" icon={Timer} title="One-minute talk" detail="A topic card, a long answer" />
+        <SkillTile href="/pronounce" icon={AudioLines} title="Pronunciation" detail="10 sounds · record yourself" />
+      </SkillGroup>
+
       <SkillGroup title="Words">
         <SkillTile
           href="/words"
@@ -163,7 +169,7 @@ export function PracticeLibrary() {
         <SkillTile href="/phrases" icon={BookMarked} title="Phrase bank" detail="Everything you saved" />
       </SkillGroup>
 
-      <SkillGroup title="Listening and sounds">
+      <SkillGroup title="Listening">
         <SkillTile
           href="/listen#stories"
           icon={BookOpenText}
@@ -171,7 +177,6 @@ export function PracticeLibrary() {
           detail={storiesNew > 0 ? `${storiesNew} new · 3 questions each` : "Replay to beat your best"}
         />
         <SkillTile href="/listen" icon={Headphones} title="Listening gym" detail="Dictation and shadowing" />
-        <SkillTile href="/pronounce" icon={AudioLines} title="Pronunciation" detail="10 sounds · record yourself" />
       </SkillGroup>
 
       <SkillGroup title="Fix your mistakes">

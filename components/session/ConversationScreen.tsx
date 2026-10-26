@@ -19,7 +19,8 @@ import {
   X,
 } from "lucide-react";
 import clsx from "clsx";
-import { characterName, scenarioById } from "@/content/scenarios";
+import { characterName, MINUTE_TALK_ID, scenarioById } from "@/content/scenarios";
+import { TALK_TOPICS, topicById, topicOpener } from "@/content/topics";
 import { voiceById, DEFAULT_TUTOR_VOICE_ID } from "@/content/voices";
 import type { Turn, TurnInput } from "@/lib/conversation/types";
 import { usePrefs } from "@/lib/client/prefs";
@@ -83,6 +84,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const demo = params.get("demo") === "1";
   // Started from the 12-week plan: the day must belong to this scenario.
   const planParam = params.get("plan");
+  // The one-minute talk reads out its topic card as the first line.
+  const topic =
+    scenarioId === MINUTE_TALK_ID
+      ? (topicById(params.get("topic") ?? "") ?? TALK_TOPICS[Math.floor(Date.now() / 86_400_000) % TALK_TOPICS.length])
+      : undefined;
+  const opener = topic ? topicOpener(topic) : scenario.opener;
   const planDay = planParam && planDayByKey(planParam)?.scenarioId === scenarioId ? planParam : undefined;
   const planWeekInfo = planDay ? planWeek(planDayByKey(planDay)!.week) : undefined;
   const hydrated = useHydrated();
@@ -471,8 +478,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       setTurnsBoth(resumable.turns);
       elapsedRef.current = Math.min(resumable.speakingSeconds * 2, limitSeconds - 60);
     } else {
-      id = learner.startSession(scenarioId, chosen, scenario.opener, demo, planDay);
-      setTurnsBoth([{ role: "tutor", text: scenario.opener }]);
+      id = learner.startSession(scenarioId, chosen, opener, demo, planDay);
+      setTurnsBoth([{ role: "tutor", text: opener }]);
     }
     sessionRef.current = id;
     setSessionId(id);
@@ -628,6 +635,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         blockedReason={blockedReason}
         starting={starting}
         warmupCount={hydrated ? warmupItems(state).length : 0}
+        topic={topic}
       />
     );
   }
