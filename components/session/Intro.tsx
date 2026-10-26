@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronLeft, Keyboard, Mic, Target } from "lucide-react";
 import clsx from "clsx";
 import type { Scenario } from "@/content/scenarios";
-import { CATEGORY_INFO, characterName } from "@/content/scenarios";
+import { CATEGORY_INFO, characterName, scenarioLevel } from "@/content/scenarios";
 import type { Voice } from "@/content/voices";
 import { Avatar } from "../Avatar";
 
@@ -50,6 +50,7 @@ export function Intro({
         <div>
           <p className="text-xs font-extrabold uppercase tracking-wider text-faint">
             {CATEGORY_INFO[scenario.category].label} · {scenario.minutes} min
+            {scenarioLevel(scenario) && <> · Level {scenarioLevel(scenario)}</>}
           </p>
           <h1 className="text-2xl font-black leading-tight">{scenario.title}</h1>
           <p className="text-sm font-bold text-dim">

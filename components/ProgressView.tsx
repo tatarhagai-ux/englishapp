@@ -1,5 +1,8 @@
 "use client";
 
+import { PLAN } from "@/content/plan";
+import { ownedStretchWords } from "@/lib/learner/plan";
+import { speakingChecks, weeklySummary } from "@/lib/learner/weekly";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Award, Briefcase, ChevronRight, Lock } from "lucide-react";
@@ -9,7 +12,7 @@ import { scenarioById } from "@/content/scenarios";
 import { ACHIEVEMENTS } from "@/lib/game/achievements";
 import { levelFromXp } from "@/lib/game/xp";
 import { dayKey, friendlyDay } from "@/lib/game/streak";
-import { useLearner } from "@/lib/client/learner";
+import { useHydrated, useLearner } from "@/lib/client/learner";
 import {
   averageWpm,
   currentSpeakingLevel,
@@ -48,6 +51,8 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-black tracking-tight">Progress</h1>
+
+      <WeekSection />
 
       <section className="tile p-4" aria-labelledby="level-title">
         <div className="flex items-end justify-between">
@@ -299,5 +304,115 @@ function InterviewReadinessCard({ state }: { state: Parameters<typeof interviewR
         </Link>
       )}
     </section>
+  );
+}
+
+/** This week against last week, the plan's speaking checks, and the words he owns. */
+function WeekSection() {
+  const state = useLearner();
+  const hydrated = useHydrated();
+  if (!hydrated) return null;
+  const today = dayKey(new Date());
+  const { thisWeek, lastWeek } = weeklySummary(state, today);
+  const checks = speakingChecks(state);
+  const owned = ownedStretchWords(state);
+  const totalWords = PLAN.reduce((n, w) => n + w.words.length, 0);
+  const rows: { label: string; now: number; before: number; goal?: number }[] = [
+    { label: "Days practiced", now: thisWeek.daysPracticed, before: lastWeek.daysPracticed, goal: 5 },
+    { label: "Minutes spoken", now: thisWeek.minutesSpoken, before: lastWeek.minutesSpoken },
+    { label: "Plan days done", now: thisWeek.planDays, before: lastWeek.planDays, goal: 5 },
+    { label: "Fixes said out loud", now: thisWeek.fixesSaidAloud, before: lastWeek.fixesSaidAloud },
+  ];
+  return (
+    <>
+      <section className="tile space-y-3 p-4" aria-labelledby="week-title">
+        <h2 id="week-title" className="font-black">
+          This week
+        </h2>
+        <ul className="space-y-2">
+          {rows.map((r) => (
+            <li key={r.label} className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="text-dim">{r.label}</span>
+              <span className="font-extrabold">
+                {r.now}
+                {r.goal ? ` / ${r.goal}` : ""}
+                <span
+                  className={clsx(
+                    "ml-2 text-xs",
+                    r.now > r.before ? "text-good" : r.now < r.before ? "text-warn" : "text-faint",
+                  )}
+                >
+                  {r.now === r.before
+                    ? "same as last week"
+                    : `${r.now > r.before ? "+" : ""}${r.now - r.before} vs last week`}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs font-bold text-faint">
+          Weeks run Sunday to Saturday. Two rest days in a row keep your streak.
+        </p>
+      </section>
+
+      <section className="tile space-y-3 p-4" aria-labelledby="checks-title">
+        <h2 id="checks-title" className="font-black">
+          Speaking checks
+        </h2>
+        <p className="text-sm text-dim">
+          The same 4-minute chat at the start and at the end of weeks 4, 8 and 12, so you can compare like with like.
+        </p>
+        {checks.length ? (
+          <ol className="space-y-2">
+            {checks.map((c, i) => (
+              <li key={c.sessionId}>
+                <Link
+                  href={`/report/${c.sessionId}`}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-elev-2 p-3 text-sm hover:bg-line"
+                >
+                  <span className="font-extrabold">
+                    {c.week ? `End of week ${c.week}` : i === 0 ? "Start" : "Extra check"}
+                  </span>
+                  <span className="text-dim">
+                    {c.cefr ?? "…"}
+                    {c.wpm ? ` · ${c.wpm} words/min` : ""} · {c.stuck} stuck
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-sm font-bold text-faint">No check yet. The first one is on Home when you start.</p>
+        )}
+      </section>
+
+      <section className="tile space-y-2 p-4" aria-labelledby="vocab-title">
+        <div className="flex items-baseline justify-between">
+          <h2 id="vocab-title" className="font-black">
+            Words you own
+          </h2>
+          <span className="font-extrabold text-good">
+            {owned} / {totalWords}
+          </span>
+        </div>
+        <div
+          className="h-2.5 overflow-hidden rounded-full bg-elev-2"
+          role="progressbar"
+          aria-label="Stretch words you own"
+          aria-valuemin={0}
+          aria-valuemax={totalWords}
+          aria-valuenow={owned}
+        >
+          <div className="h-full rounded-full bg-good" style={{ width: `${(owned / totalWords) * 100}%` }} />
+        </div>
+        <p className="text-sm text-dim">
+          Stretch words from the plan that you used twice in conversation. They&apos;re in your{" "}
+          <Link href="/phrases" className="font-extrabold text-accent">
+            phrase bank
+          </Link>
+          .
+        </p>
+      </section>
+    </>
   );
 }

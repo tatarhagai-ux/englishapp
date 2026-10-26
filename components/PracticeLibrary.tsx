@@ -17,7 +17,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import clsx from "clsx";
-import { CATEGORY_INFO, SCENARIOS, characterName, type Scenario, type ScenarioCategory } from "@/content/scenarios";
+import {
+  CATEGORY_INFO,
+  SCENARIOS,
+  characterName,
+  scenarioLevel,
+  type Scenario,
+  type ScenarioCategory,
+} from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
@@ -300,6 +307,7 @@ function ScenarioCard({
         <span className="block text-sm text-dim">{scenario.summary}</span>
         <span className="mt-1 flex items-center gap-1 text-xs font-bold text-faint">
           {who} · <Clock className="size-3" aria-hidden /> {scenario.minutes} min
+          {scenarioLevel(scenario) && <> · {scenarioLevel(scenario)}</>}
         </span>
       </span>
       <ArrowRight className="size-5 shrink-0 text-faint" aria-hidden />

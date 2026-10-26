@@ -134,6 +134,10 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await expect(page.getByRole("heading", { name: "Recent conversations" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Your week/ })).toBeVisible();
   await expect(page.getByText("Phrases saved").locator("..")).toContainText("1");
+  const week = page.getByRole("region", { name: "This week" });
+  await expect(week).toContainText("Days practiced");
+  await expect(week).toContainText("1 / 5");
+  await expect(page.getByRole("region", { name: "Speaking checks" })).toContainText("No check yet");
 
   // Continuity: the fact from the report is listed in settings and sent to the tutor next time.
   await page.goto("/settings");
