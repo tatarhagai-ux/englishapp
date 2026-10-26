@@ -49,7 +49,7 @@ export function requireAzure() {
 }
 
 const DEFAULT_MODELS = {
-  openrouter: { chat: "deepseek/deepseek-v3.2", analyzer: "deepseek/deepseek-v3.2" },
+  openrouter: { chat: "deepseek/deepseek-v4-flash", analyzer: "deepseek/deepseek-v4-flash" },
   deepseek: { chat: "deepseek-chat", analyzer: "deepseek-chat" },
 } as const;
 
