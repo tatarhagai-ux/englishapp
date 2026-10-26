@@ -17,7 +17,8 @@ interface Props {
   /** The conversation it warms up for; null for a standalone quick review. */
   sessionId: string | null;
   hebrewHelp: boolean;
-  onDone: () => void;
+  /** Called with how many items he actually answered (Skip counts only those). */
+  onDone: (reviewed: number) => void;
   /** Inside a page with the bottom bar: leave room for it so the buttons stay visible. */
   embedded?: boolean;
 }
@@ -54,17 +55,18 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
     item.kind === "phrase" ? usedPhrase(answer, item.target) : saidCorrectly(answer, item.target);
 
   function next() {
-    if (index + 1 >= items.length) {
-      if (sessionId) learner.addReviews(sessionId, reviewed);
-      onDone();
-      return;
-    }
+    if (index + 1 >= items.length) return finish();
     setIndex(index + 1);
     setRevealed(false);
     setRecorded(false);
     setAttempt({ status: "idle" });
     setTyped("");
     setShowHe(hebrewHelp);
+  }
+
+  function finish() {
+    if (sessionId && reviewed) learner.addReviews(sessionId, reviewed);
+    onDone(reviewed);
   }
 
   async function speak() {
@@ -120,7 +122,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
           <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-faint">
             <Sparkles className="size-4 text-xp" aria-hidden /> Warm-up
           </p>
-          <button type="button" onClick={onDone} className="text-sm font-extrabold text-dim hover:text-text">
+          <button type="button" onClick={finish} className="text-sm font-extrabold text-dim hover:text-text">
             Skip
           </button>
         </div>
