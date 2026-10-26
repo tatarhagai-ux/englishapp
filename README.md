@@ -11,7 +11,7 @@ gentle in-flow corrections, a report after every session, and spaced review.
 ## Stack
 
 Next.js (App Router, TypeScript strict), Tailwind CSS, PWA · Azure Speech (STT, TTS,
-pronunciation assessment) · OpenRouter (DeepSeek V3.2 by default) · Supabase (Postgres, auth,
+pronunciation assessment) · OpenRouter (DeepSeek V4 Flash by default) · Supabase (Postgres, auth,
 RLS) · Vercel.
 
 Providers sit behind interfaces in `lib/providers/*`, so swapping a vendor is a config change.
@@ -41,5 +41,5 @@ CI runs all of the above on every push.
 model, how many mistakes it caught and how many already-natural sentences it "fixed" anyway. Costs a few cents.
 
 ```bash
-OPENROUTER_API_KEY=... EVAL_MODELS="deepseek/deepseek-v3.2,moonshotai/kimi-k2" npm run eval
+OPENROUTER_API_KEY=... EVAL_MODELS="deepseek/deepseek-v4-flash,deepseek/deepseek-v3.2" npm run eval
 ```

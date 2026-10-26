@@ -10,9 +10,9 @@ async function loadEnv(vars: Record<string, string>) {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("llmConfig", () => {
-  it("uses OpenRouter with DeepSeek V3.2 when only that key exists", async () => {
+  it("uses OpenRouter with DeepSeek V4 Flash when only that key exists", async () => {
     const { llmConfig } = await loadEnv({ OPENROUTER_API_KEY: "sk-or-1234567890" });
-    expect(llmConfig()).toMatchObject({ provider: "openrouter", chatModel: "deepseek/deepseek-v3.2" });
+    expect(llmConfig()).toMatchObject({ provider: "openrouter", chatModel: "deepseek/deepseek-v4-flash" });
   });
 
   it("uses DeepSeek direct when only its key exists", async () => {

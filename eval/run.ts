@@ -36,7 +36,7 @@ const endpoint =
   (provider === "deepseek"
     ? "https://api.deepseek.com/chat/completions"
     : "https://openrouter.ai/api/v1/chat/completions");
-const models = (process.env.EVAL_MODELS ?? (provider === "deepseek" ? "deepseek-chat" : "deepseek/deepseek-v3.2"))
+const models = (process.env.EVAL_MODELS ?? (provider === "deepseek" ? "deepseek-chat" : "deepseek/deepseek-v4-flash"))
   .split(",")
   .map((m) => m.trim())
   .filter(Boolean);
@@ -70,6 +70,8 @@ async function analyze(model: string, item: Item): Promise<Outcome> {
       temperature: 0.2,
       max_tokens: 1500,
       response_format: { type: "json_object" },
+      // Same as the app: no thinking, or hybrid models can return nothing.
+      ...(provider === "openrouter" ? { reasoning: { enabled: false } } : {}),
     }),
   });
   const ms = Date.now() - started;
