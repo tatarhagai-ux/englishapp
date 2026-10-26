@@ -131,6 +131,10 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await expect(page.getByText("Saved to your phrase bank")).toBeVisible();
   await expect(page.getByText("Your tutor will remember:")).toBeVisible();
   await expect(page.getByRole("link", { name: /Up next/ })).toBeVisible();
+  // Wanting more: something different (another kind of conversation) and short skill rounds.
+  const more = page.getByRole("region", { name: "Want more?" });
+  await expect(more.getByRole("link", { name: /Something different/ })).toBeVisible();
+  await expect(more.getByRole("link", { name: /Listening round/ })).toHaveAttribute("href", "/listen");
   await expect(page.getByLabel(/XP earned/)).toContainText("+");
   await expect(page.getByRole("list", { name: "Session stats" }).or(page.getByLabel("Session stats"))).toContainText(
     "“I'm stuck”",

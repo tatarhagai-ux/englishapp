@@ -336,6 +336,27 @@ export function recommendScenario(state: LearnerState): Scenario {
   return pool.find((s) => !recent.includes(s.id)) ?? pool[0];
 }
 
+/**
+ * "Something different" after a conversation: a scenario from another category than the
+ * ones just named, not done recently, so wanting more never means the same thing again.
+ */
+export function differentScenario(state: LearnerState, avoid: string[]): Scenario | null {
+  const recent = new Set(
+    state.sessions
+      .filter((s) => !s.demo)
+      .slice(-8)
+      .map((s) => s.scenarioId),
+  );
+  const avoidCats = new Set(avoid.map((id) => scenarioById(id)?.category).filter(Boolean));
+  const listed = SCENARIOS.filter((s) => !s.hidden && !avoid.includes(s.id));
+  const fresh = listed.filter((s) => !recent.has(s.id));
+  const pool = fresh.filter((s) => !avoidCats.has(s.category));
+  const list = pool.length ? pool : fresh.length ? fresh : listed;
+  if (!list.length) return null;
+  // Rotates with the number of conversations, so it isn't always the first one in the list.
+  return list[state.sessions.filter((s) => !s.demo).length % list.length];
+}
+
 export function minutesOnDay(state: LearnerState, day: string): number {
   const seconds = state.sessions.filter((s) => s.day === day && !s.demo).reduce((sum, s) => sum + s.speakingSeconds, 0);
   return Math.floor(seconds / 60);

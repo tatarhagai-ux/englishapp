@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
   Brain,
   Check,
   Circle,
@@ -30,6 +29,7 @@ import { phraseUsedIn, recommendScenario } from "@/lib/learner/model";
 import { CorrectionCard } from "./CorrectionCard";
 import { InterviewCard } from "./InterviewCard";
 import { demoAnalysis } from "@/lib/client/demo";
+import { KeepGoing } from "@/components/KeepGoing";
 
 export function ReportScreen({ sessionId }: { sessionId: string }) {
   const hydrated = useHydrated();
@@ -311,20 +311,20 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-      {report && !session.demo && (planNext ? true : next.id !== scenario.id) && (
-        <Link
-          href={nextHref}
-          className="tile flex items-center gap-3 border-accent/50 p-4 transition-colors hover:border-accent"
-        >
-          <span className="flex-1">
-            <span className="block text-xs font-extrabold uppercase tracking-wider text-faint">
-              {planNext ? `Up next · Week ${planNext.week}, day ${planNext.day}` : "Up next"}
-            </span>
-            <span className="block font-extrabold">{next.title}</span>
-            <span className="block text-sm text-dim">{next.summary}</span>
-          </span>
-          <ArrowRight className="size-5 text-accent" aria-hidden />
-        </Link>
+      {report && !session.demo && (
+        <KeepGoing
+          avoid={[scenario.id]}
+          next={
+            planNext || next.id !== scenario.id
+              ? {
+                  href: nextHref,
+                  label: planNext ? `Up next · Week ${planNext.week}, day ${planNext.day}` : "Up next",
+                  title: next.title,
+                  summary: next.summary,
+                }
+              : null
+          }
+        />
       )}
 
       <div className="grid grid-cols-2 gap-3 pb-6">

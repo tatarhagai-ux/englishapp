@@ -388,3 +388,15 @@ describe("varied warm-up sentences", () => {
     expect(mergeStates(a, b).errors.missing_be.examples).toHaveLength(2);
   });
 });
+
+describe("differentScenario", () => {
+  it("offers another kind of conversation that wasn't done recently", async () => {
+    const { differentScenario } = await import("@/lib/learner/model");
+    const { scenarioById } = await import("@/content/scenarios");
+    const s = withSession(session({ scenarioId: "free-your-week" }));
+    const other = differentScenario(s, ["free-your-week", "free-book"])!;
+    expect(other.id).not.toBe("free-your-week");
+    expect(scenarioById(other.id)!.category).not.toBe("free");
+    expect(other.hidden).toBeFalsy();
+  });
+});
