@@ -340,3 +340,35 @@ test("daily reminder: download a calendar event or open Google Calendar", async 
   await section.getByRole("button", { name: "Google Calendar" }).click();
   expect((await popup).url()).toContain("calendar.google.com");
 });
+
+test("pronunciation: record yourself, then play it next to the tutor", async ({ page }) => {
+  // A fake microphone and recorder: the test checks the flow, not the audio.
+  await page.addInitScript(() => {
+    const track = { stop: () => {} };
+    Object.defineProperty(navigator, "mediaDevices", {
+      value: { getUserMedia: async () => ({ getTracks: () => [track] }) },
+    });
+    class FakeRecorder {
+      state = "inactive";
+      mimeType = "audio/webm";
+      ondataavailable: ((e: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        this.ondataavailable?.({ data: new Blob(["x"], { type: "audio/webm" }) });
+        this.onstop?.();
+      }
+    }
+    (window as unknown as { MediaRecorder: unknown }).MediaRecorder = FakeRecorder;
+  });
+  await page.goto("/pronounce/w-v");
+  const first = page.getByRole("article").first();
+  await first.getByRole("button", { name: "Record yourself" }).click();
+  await first.getByRole("button", { name: "Stop recording" }).click();
+  await expect(first.getByRole("button", { name: "You" })).toBeVisible();
+  await expect(first.getByRole("button", { name: "Tutor" })).toBeVisible();
+  await expect(first.getByRole("button", { name: "Record again" })).toBeVisible();
+});
