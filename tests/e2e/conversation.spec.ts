@@ -304,7 +304,7 @@ test("without Azure the tutor speaks with the browser's voice and the conversati
   await expect.poll(() => chatBodies.length).toBe(2);
 });
 
-test("tap to talk: speak with pauses, check and fix the text, then send; hands-free waits for silence", async ({
+test("tap to talk: pauses don't send, the second tap sends everything; hands-free waits for silence", async ({
   page,
 }) => {
   // A fake microphone and browser recognizer the test drives (Azure isn't configured here).
@@ -347,42 +347,45 @@ test("tap to talk: speak with pauses, check and fix the text, then send; hands-f
   await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
   await expect(page.getByRole("button", { name: "Tap to talk" })).toBeVisible();
 
-  // Pauses between phrases don't send anything.
+  // Tap mode: pauses between phrases don't send; the second tap sends all of it at once.
   await freshListen();
   await page.getByRole("button", { name: "Start talking" }).click();
   await say("I study for AZ-900");
   await say("two weeks");
   await page.waitForTimeout(3000);
   expect(chatBodies).toHaveLength(0);
-
-  // Stop, check, add more, fix a word, send.
-  await page.getByRole("button", { name: "Done talking" }).click();
-  const heard = page.getByLabel(/^Heard/);
-  await expect(heard).toHaveValue("I study for AZ-900 two weeks");
-  await freshListen();
-  await page.getByRole("button", { name: "Keep talking" }).click();
-  await say("and it's hard");
-  await page.getByRole("button", { name: "Done talking" }).click();
-  await expect(heard).toHaveValue("I study for AZ-900 two weeks and it's hard");
-  await heard.fill("I've been studying for AZ-900 for two weeks and it's hard");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect.poll(() => chatBodies.length).toBe(1);
   expect(chatBodies[0].history.at(-1)).toMatchObject({
     role: "learner",
-    text: "I've been studying for AZ-900 for two weeks and it's hard",
+    text: "I study for AZ-900 two weeks",
     input: "voice",
   });
 
-  // Hands-free: listening starts by itself and the turn goes out after a real silence.
+  // A long silence: the browser keeps ending its session. After a few empty rounds the app stops
+  // reopening the microphone (each reopening beeps on Android) and keeps what was said for a tap.
   await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+  await freshListen();
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await say("Hello there");
+  for (let i = 0; i < 4; i++) {
+    await page.evaluate(() => (window as unknown as { __rec: { onend: () => void } }).__rec.onend());
+  }
+  await expect(page.getByText("The microphone paused. Tap to send what you said.")).toBeVisible();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.poll(() => chatBodies.length).toBe(2);
+  expect(chatBodies[1].history.at(-1)).toMatchObject({ text: "Hello there" });
+
+  // Hands-free: listening starts by itself and the turn goes out after a real silence.
+  await expect(page.getByText("What's the hardest part so far?").last()).toBeVisible();
   await page.getByRole("button", { name: "Tap to talk" }).click();
   await expect(page.getByRole("button", { name: "Hands-free" })).toBeVisible();
   await freshListen();
   await page.getByRole("button", { name: "Start talking" }).click();
   await say("Remembering");
   await say("all the service names");
-  await expect.poll(() => chatBodies.length, { timeout: 8000 }).toBe(2);
-  expect(chatBodies[1].history.at(-1)).toMatchObject({ text: "Remembering all the service names", input: "voice" });
+  await expect.poll(() => chatBodies.length, { timeout: 8000 }).toBe(3);
+  expect(chatBodies[2].history.at(-1)).toMatchObject({ text: "Remembering all the service names", input: "voice" });
 
   // The choice is remembered for the next conversation.
   await page.reload();

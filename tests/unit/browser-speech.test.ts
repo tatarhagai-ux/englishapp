@@ -130,6 +130,29 @@ describe("Listener without Azure", () => {
     expect(made[0].starts).toBe(2);
   });
 
+  it("stops reopening the microphone after several silent rounds, and says so", async () => {
+    const { Listener } = await import("@/lib/client/speech");
+    const onIdle = vi.fn();
+    await new Listener("en-US").start({ onPartial: vi.fn(), onFinal: vi.fn(), onError: vi.fn(), onIdle });
+    for (let i = 0; i < 3; i++) made[0].onend?.();
+    expect(made[0].starts).toBe(4);
+    expect(onIdle).not.toHaveBeenCalled();
+    made[0].onend?.();
+    expect(made[0].starts).toBe(4);
+    expect(onIdle).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts a heard word as activity, so talking keeps the microphone open", async () => {
+    const { Listener } = await import("@/lib/client/speech");
+    const onIdle = vi.fn();
+    await new Listener("en-US").start({ onPartial: vi.fn(), onFinal: vi.fn(), onError: vi.fn(), onIdle });
+    for (let i = 0; i < 6; i++) {
+      made[0].emit([{ text: `word ${i}`, final: true }]);
+      made[0].onend?.();
+    }
+    expect(onIdle).not.toHaveBeenCalled();
+  });
+
   it("turns a blocked microphone into mic_denied", async () => {
     const { Listener } = await import("@/lib/client/speech");
     const onError = vi.fn();
