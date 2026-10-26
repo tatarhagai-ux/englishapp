@@ -136,7 +136,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
       <section className="tile space-y-3 p-5">
         {item.kind === "mistake" ? (
           <>
-            <p className="font-extrabold">Earlier you said:</p>
+            <p className="font-extrabold">{item.practice ? "Same mistake, new sentence:" : "Earlier you said:"}</p>
             <p className="text-lg text-bad line-through decoration-bad/60">{item.wrong}</p>
             <p className="font-extrabold">How do you say it correctly?</p>
           </>

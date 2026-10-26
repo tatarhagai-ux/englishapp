@@ -344,3 +344,47 @@ describe("unfinishedSession", () => {
     expect(unfinishedSession(withTurns(3), new Date("2026-11-05T10:00:00Z"))).toBeNull();
   });
 });
+
+describe("varied warm-up sentences", () => {
+  it("practices a mistake with a different sentence each review", () => {
+    let s = withSession();
+    const seen: string[] = [];
+    let when = NOW;
+    for (let i = 0; i < 4; i++) {
+      const item = warmupItems(s, when).find((i) => i.id === "present_perfect_duration")!;
+      seen.push(item.target);
+      s = reviewMistake(s, "present_perfect_duration", true, when);
+      when = new Date(new Date(s.errors.present_perfect_duration.card!.due).getTime() + 3_600_000);
+    }
+    expect(new Set(seen).size).toBe(4);
+    expect(seen[0]).toBe("I've been living in Shoham for ten years.");
+  });
+
+  it("uses his own later sentences, without duplicates", () => {
+    const fix = {
+      original: "I work here since March",
+      better: "I've worked here since March",
+      why_en: "x",
+      error_key: "present_perfect_duration",
+    };
+    let s = applyAnalysis(withSession(), "s1", analysis({ corrections: [fix] }), NOW);
+    s = applyAnalysis(s, "s1", analysis({ corrections: [fix] }), NOW);
+    expect(s.errors.present_perfect_duration.examples).toEqual([
+      { wrong: "I work here since March", better: "I've worked here since March" },
+    ]);
+    s = reviewMistake(s, "present_perfect_duration", true, NOW);
+    const next = warmupItems(s, new Date(NOW.getTime() + 30 * 86_400_000)).find(
+      (i) => i.id === "present_perfect_duration",
+    );
+    expect(next).toMatchObject({ wrong: "I work here since March", target: "I've worked here since March" });
+  });
+
+  it("keeps examples from both devices when syncing", async () => {
+    const { mergeStates } = await import("@/lib/learner/merge");
+    const a = withSession();
+    const b = withSession();
+    a.errors.missing_be = { ...a.errors.missing_be, examples: [{ wrong: "It called X", better: "It's called X" }] };
+    b.errors.missing_be = { ...b.errors.missing_be, examples: [{ wrong: "It used for Y", better: "It's used for Y" }] };
+    expect(mergeStates(a, b).errors.missing_be.examples).toHaveLength(2);
+  });
+});

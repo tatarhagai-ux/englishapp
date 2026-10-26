@@ -11,7 +11,14 @@
  * close enough for a budget warning.
  */
 import type { Card } from "ts-fsrs";
-import type { ErrorRecord, LearnerState, ListeningState, PhraseRecord, SessionRecord } from "./model";
+import {
+  addExample,
+  type ErrorRecord,
+  type LearnerState,
+  type ListeningState,
+  type PhraseRecord,
+  type SessionRecord,
+} from "./model";
 
 export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
   const restoredAt = later(a.restoredAt, b.restoredAt);
@@ -131,6 +138,8 @@ function mergeError(x: ErrorRecord, y: ErrorRecord): ErrorRecord {
   const other = base === x ? y : x;
   const card = !base.card ? other.card : !other.card ? base.card : moreReviewed(base.card, other.card);
   const merged: ErrorRecord = { ...base, whyHe: base.whyHe || other.whyHe };
+  const examples = (other.examples ?? []).reduce((list, ex) => addExample(list, ex, base.better), base.examples ?? []);
+  if (examples.length) merged.examples = examples;
   if (card) merged.card = card;
   else delete merged.card;
   return merged;

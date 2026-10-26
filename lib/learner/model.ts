@@ -4,7 +4,7 @@
  * same shape moves to Supabase later, so nothing here touches storage.
  */
 import { createEmptyCard, fsrs, Rating, type Card } from "ts-fsrs";
-import { SEED_ERRORS } from "@/content/learner-seed";
+import { SEED_ERRORS, seedVariants } from "@/content/learner-seed";
 import { SCENARIOS, scenarioById, type Scenario } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import type { Turn } from "@/lib/conversation/types";
@@ -32,6 +32,24 @@ export interface ErrorRecord {
   lastSeen: string;
   /** Review schedule for the warm-up ("say the correct version"). Created on first review. */
   card?: Card;
+  /** Later times he made it, newest last, so the warm-up can use his own sentences. */
+  examples?: { wrong: string; better: string }[];
+}
+
+/** How many of his own sentences are kept per mistake. */
+export const EXAMPLES_MAX = 6;
+
+/** Add an example unless it's already there; the oldest falls off past the cap. */
+export function addExample(
+  list: { wrong: string; better: string }[] | undefined,
+  ex: { wrong: string; better: string },
+  primary?: string,
+): { wrong: string; better: string }[] {
+  const key = (s: string) => s.trim().toLowerCase();
+  const all = list ?? [];
+  if (!ex.wrong.trim() || !ex.better.trim()) return all;
+  if ((primary && key(primary) === key(ex.better)) || all.some((e) => key(e.better) === key(ex.better))) return all;
+  return [...all, ex].slice(-EXAMPLES_MAX);
 }
 
 export interface PhraseRecord {
@@ -198,7 +216,13 @@ export function applyAnalysis(
     madeKeys.add(c.error_key);
     const prev = errors[c.error_key];
     errors[c.error_key] = prev
-      ? { ...prev, occurrences: prev.occurrences + 1, lastSeen: iso, whyHe: prev.whyHe || c.why_he }
+      ? {
+          ...prev,
+          occurrences: prev.occurrences + 1,
+          lastSeen: iso,
+          whyHe: prev.whyHe || c.why_he,
+          examples: addExample(prev.examples, { wrong: c.original, better: c.better }, prev.better),
+        }
       : {
           key: c.error_key,
           title: humanize(c.error_key),
@@ -400,9 +424,36 @@ export function reviewMistake(state: LearnerState, key: string, good: boolean, n
   return { ...state, errors: { ...state.errors, [key]: { ...e, card } } };
 }
 
+/**
+ * Which sentence to practice a mistake with this time. Each review moves to the next one:
+ * the first sentence, then his own later sentences, then prepared ones with the same
+ * pattern. Saying a different sentence each time trains the rule, not one memorized line.
+ */
+export function practiceSentence(e: ErrorRecord): { wrong: string; better: string; own: boolean } {
+  const pool = [
+    { wrong: e.example, better: e.better, own: true },
+    ...(e.examples ?? []).map((x) => ({ ...x, own: true })),
+  ];
+  for (const [wrong, better] of seedVariants(e.key)) {
+    if (!pool.some((p) => p.better.toLowerCase() === better.toLowerCase())) pool.push({ wrong, better, own: false });
+  }
+  const sayable = pool.filter((p) => p.better && !/[=…]/.test(p.better));
+  const list = sayable.length ? sayable : pool;
+  return list[(e.card?.reps ?? 0) % list.length];
+}
+
 export type WarmupItem =
   | { kind: "phrase"; id: string; target: string; meaning: string; hebrew: string; interview?: boolean }
-  | { kind: "mistake"; id: string; target: string; wrong: string; why: string; whyHe: string };
+  | {
+      kind: "mistake";
+      id: string;
+      target: string;
+      wrong: string;
+      why: string;
+      whyHe: string;
+      /** A prepared sentence with the same pattern, not one he said himself. */
+      practice?: boolean;
+    };
 
 /**
  * The warm-up: up to `max` items, mistakes first (active recall: see the wrong sentence,
@@ -418,7 +469,18 @@ export function warmupItems(state: LearnerState, now = new Date(), max = 3): War
     .filter((e) => e.better && !/[=…]/.test(e.better))
     // Two before a conversation (it's a warm-up); about half of a longer quick review.
     .slice(0, max <= 3 ? 2 : Math.ceil(max / 2))
-    .map((e) => ({ kind: "mistake", id: e.key, target: e.better, wrong: e.example, why: e.why, whyHe: e.whyHe }));
+    .map((e) => {
+      const ex = practiceSentence(e);
+      return {
+        kind: "mistake",
+        id: e.key,
+        target: ex.better,
+        wrong: ex.wrong,
+        why: e.why,
+        whyHe: e.whyHe,
+        ...(ex.own ? {} : { practice: true }),
+      };
+    });
   const phrases: WarmupItem[] = duePhrases(state, now, max).map((p) => ({
     kind: "phrase",
     id: p.text,
