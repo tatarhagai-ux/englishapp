@@ -24,6 +24,7 @@ import { useClipPlayer } from "@/lib/client/tts";
 import { useMicAttempt } from "@/lib/client/use-mic-attempt";
 import { useWakeLock } from "@/lib/client/wake-lock";
 import { checkSay, type SayCheck } from "@/lib/text/say-check";
+import { shuffle } from "@/lib/text/shuffle";
 import { HowItWorks } from "@/components/HowItWorks";
 import { KeepGoing } from "@/components/KeepGoing";
 import { MicBusyLabel, MicHeard } from "@/components/MicLive";
@@ -127,7 +128,7 @@ interface Attempt {
  * One set: the rule at the top, then each Hebrew sentence. The score is the sentences he got
  * right on the first try; a missed one comes back once at the end.
  */
-export function SayDrill({ set }: { set: SaySet }) {
+export function SayDrill({ set, onRestart }: { set: SaySet; onRestart?: () => void }) {
   const [prefs] = usePrefs();
   const player = useClipPlayer();
   const mic = useMicAttempt();
@@ -218,10 +219,14 @@ export function SayDrill({ set }: { set: SaySet }) {
 
   /** The answer's words, mixed up: he still has to put them in order and say them. */
   function showHint() {
-    const words = item.answers[0].replace(/[.?!]$/, "").split(/\s+/);
-    let mixed = [...words];
-    for (let tries = 0; tries < 5 && mixed.join(" ") === words.join(" ") && words.length > 1; tries++) {
-      mixed = [...words].sort(() => Math.random() - 0.5);
+    const words = item.answers[0]
+      .replace(/[.?!]$/, "")
+      .split(/\s+/)
+      // A capital on the first word would give away where to start ("I" and names keep theirs).
+      .map((w, i) => (i === 0 && w !== "I" && !w.startsWith("I'") ? w.toLowerCase() : w));
+    let mixed = shuffle(words);
+    for (let tries = 0; tries < 5 && words.length > 1 && mixed.join(" ") === words.join(" "); tries++) {
+      mixed = shuffle(words);
     }
     hinted.current.add(itemIndex);
     setHint(mixed);
@@ -238,8 +243,8 @@ export function SayDrill({ set }: { set: SaySet }) {
       if (!mixed) learner.recordSayDrill(set.id, firstTry.current.size);
       // Missed on the first try: into the redo round. Right: out of it, if it was there.
       learner.recordSayMisses(
-        set.items.filter((_, i) => !firstTry.current.has(i)).map((i) => i.he),
-        set.items.filter((_, i) => firstTry.current.has(i)).map((i) => i.he),
+        set.items.filter((_, index) => !firstTry.current.has(index)).map((item) => item.he),
+        set.items.filter((_, index) => firstTry.current.has(index)).map((item) => item.he),
       );
       setScore(firstTry.current.size);
       setFinished(true);
@@ -249,6 +254,8 @@ export function SayDrill({ set }: { set: SaySet }) {
   }
 
   function restart() {
+    // The misses round starts over from what's still missed now, not the old list.
+    if (onRestart) return onRestart();
     setQueue(set.items.map((_, i) => i));
     setPos(0);
     firstTry.current = new Set();
@@ -525,9 +532,14 @@ export function SayMisses() {
   const hydrated = useHydrated();
   const state = useLearner();
   const [set, setSet] = useState<SaySet | null>(null);
+  const [round, setRound] = useState(0);
   useEffect(() => {
     if (hydrated && !set) setSet(sayMissSet(openSayMisses(state)));
   }, [hydrated, set, state]);
+  function again() {
+    setSet(sayMissSet(openSayMisses(learner.get())));
+    setRound((r) => r + 1);
+  }
   if (!set) return <p className="text-dim">Loading…</p>;
   if (!set.items.length) {
     return (
@@ -540,5 +552,5 @@ export function SayMisses() {
       </div>
     );
   }
-  return <SayDrill set={set} />;
+  return <SayDrill key={round} set={set} onRestart={again} />;
 }

@@ -10,6 +10,7 @@ import { useClipPlayer } from "@/lib/client/tts";
 import { mistakeSentences, type WarmupItem } from "@/lib/learner/model";
 import { Warmup } from "@/components/session/Warmup";
 import { saySetForMistake } from "@/content/say";
+import { shuffle } from "@/lib/text/shuffle";
 
 const DRILL_SIZE = 4;
 
@@ -46,7 +47,7 @@ export function MistakeLesson({ mistakeKey }: { mistakeKey: string }) {
 
   function startDrill() {
     // A new order each time, so it's the rule being practiced and not the sequence.
-    const picked = [...sayable].sort(() => Math.random() - 0.5).slice(0, DRILL_SIZE);
+    const picked = shuffle(sayable).slice(0, DRILL_SIZE);
     setDrill(
       picked.map((s) => ({
         kind: "mistake",

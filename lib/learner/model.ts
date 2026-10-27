@@ -7,6 +7,7 @@ import { createEmptyCard, fsrs, Rating, type Card } from "ts-fsrs";
 import { SEED_ERRORS, seedVariants } from "@/content/learner-seed";
 import { SCENARIOS, scenarioById, type Scenario } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
+import { SAY_SETS } from "@/content/say";
 import type { Turn } from "@/lib/conversation/types";
 import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
 import { bestStreak, computeStreak, dayKey, weekStart } from "@/lib/game/streak";
@@ -804,16 +805,23 @@ export function recordSayMisses(
   const at = now.toISOString();
   const misses = { ...state.sayMisses };
   for (const he of missed) misses[he] = { at, open: true };
-  for (const he of right) if (misses[he]?.open) misses[he] = { at, open: false };
+  // Written even when no miss is known here: another device may hold one this must close.
+  // The list stays small, at most one entry per sentence in the app.
+  for (const he of right) misses[he] = { at, open: false };
   return { ...state, sayMisses: misses };
 }
 
+const SAY_SENTENCES = new Set(SAY_SETS.flatMap((s) => s.items.map((i) => i.he)));
+
 /** The sentences still waiting for a redo, oldest miss first. */
 export function openSayMisses(state: LearnerState): string[] {
-  return Object.entries(state.sayMisses ?? {})
-    .filter(([, m]) => m.open)
-    .sort((a, b) => a[1].at.localeCompare(b[1].at))
-    .map(([he]) => he);
+  return (
+    Object.entries(state.sayMisses ?? {})
+      // A sentence later reworded or removed from the content can't be redone, so it doesn't count.
+      .filter(([he, m]) => m.open && SAY_SENTENCES.has(he))
+      .sort((a, b) => a[1].at.localeCompare(b[1].at))
+      .map(([he]) => he)
+  );
 }
 
 export function recordListening(state: LearnerState, itemId: string, correct: boolean): LearnerState {

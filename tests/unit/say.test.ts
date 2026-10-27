@@ -104,7 +104,7 @@ describe("say-it misses", () => {
   it("opens misses and closes them only when said right later", () => {
     let s = recordSayMisses(initialState(t1), ["קניתי טלפון חדש.", "הוא מהנדס."], ["זמן זה כסף."], t1);
     expect(openSayMisses(s)).toEqual(["קניתי טלפון חדש.", "הוא מהנדס."]);
-    expect(s.sayMisses?.["זמן זה כסף."]).toBeUndefined();
+    expect(s.sayMisses?.["זמן זה כסף."]).toEqual({ at: t1.toISOString(), open: false });
     s = recordSayMisses(s, ["הוא מהנדס."], ["קניתי טלפון חדש."], t2);
     expect(openSayMisses(s)).toEqual(["הוא מהנדס."]);
   });
@@ -114,10 +114,32 @@ describe("say-it misses", () => {
     expect(set.items.map((i) => i.pattern)).toEqual(["articles", "modal_to"]);
   });
 
+  it("ignores a miss whose sentence no longer exists", () => {
+    const s = recordSayMisses(initialState(t1), ["משפט שנמחק.", "הוא מהנדס."], [], t1);
+    expect(openSayMisses(s)).toEqual(["הוא מהנדס."]);
+  });
+
+  it("closes a miss made on a device this one hasn't synced with yet", () => {
+    const phone = recordSayMisses(initialState(t1), ["הוא מהנדס."], [], t1);
+    const laptop = recordSayMisses(initialState(t1), [], ["הוא מהנדס."], t2);
+    expect(openSayMisses(mergeStates(phone, laptop))).toEqual([]);
+  });
+
   it("the newer answer wins across devices", () => {
     const phone = recordSayMisses(initialState(t1), ["הוא מהנדס."], [], t1);
     const laptop = recordSayMisses(phone, [], ["הוא מהנדס."], t2);
     expect(openSayMisses(mergeStates(phone, laptop))).toEqual([]);
     expect(openSayMisses(mergeStates(laptop, phone))).toEqual([]);
+  });
+});
+
+describe("shuffle", () => {
+  it("keeps every item and can reorder them", async () => {
+    const { shuffle } = await import("@/lib/text/shuffle");
+    const items = [1, 2, 3, 4, 5];
+    const out = shuffle(items, () => 0);
+    expect([...out].sort()).toEqual(items);
+    expect(out).not.toEqual(items);
+    expect(items).toEqual([1, 2, 3, 4, 5]);
   });
 });

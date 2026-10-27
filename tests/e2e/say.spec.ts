@@ -58,6 +58,9 @@ test("say it in English: a missing word is named, a missed sentence comes back, 
   await page.getByRole("button", { name: "Check" }).click();
   await page.getByRole("button", { name: "Finish" }).click();
   await expect(page.getByText("All cleared from your misses.")).toBeVisible();
+  // Going again starts from what's still missed, which is nothing now.
+  await page.getByRole("button", { name: /Go again/ }).click();
+  await expect(page.getByText("Nothing to redo")).toBeVisible();
   await page.goto("/say");
   await expect(page.getByRole("link").filter({ has: page.getByText("A and the", { exact: true }) })).toBeVisible();
   await expect(page.getByRole("link", { name: /Your misses/ })).toHaveCount(0);
