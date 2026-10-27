@@ -10,6 +10,12 @@ import {
   Check,
   Clock,
   Headphones,
+  BookOpen,
+  Languages,
+  Timer,
+  BookOpenText,
+  Wrench,
+  Layers,
   MessageCircle,
   Plane,
   RotateCcw,
@@ -28,7 +34,10 @@ import {
 import { voiceById } from "@/content/voices";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
-import { warmupItems } from "@/lib/learner/model";
+import { cardQueue, openSayMisses, rankedErrors, warmupItems } from "@/lib/learner/model";
+import { STORIES } from "@/content/stories";
+import { DECKS } from "@/content/decks";
+import { PRONUNCIATION } from "@/content/pronunciation";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { HowItWorks } from "./HowItWorks";
 import { Avatar } from "./Avatar";
@@ -100,6 +109,11 @@ export function PracticeLibrary() {
   const done = new Set(state.sessions.filter((s) => !s.demo && s.report?.task.completed).map((s) => s.scenarioId));
   const tutorName = voiceById(prefs.tutorVoiceId)?.displayName ?? "Your tutor";
   const due = hydrated ? warmupItems(state, new Date(), QUICK_REVIEW_MAX).length : 0;
+  const cards = hydrated ? cardQueue(state, new Date()) : null;
+  const cardsDue = cards ? cards.due.length + cards.fresh.length : 0;
+  const sayMisses = hydrated ? openSayMisses(state).length : 0;
+  const storiesNew = hydrated ? STORIES.filter((st) => !state.stories?.[st.id]).length : STORIES.length;
+  const mistakes = hydrated ? rankedErrors(state).length : 0;
 
   const [trackId, setTrackId] = useState<TrackId>("interview");
   useEffect(() => {
@@ -136,7 +150,7 @@ export function PracticeLibrary() {
         </p>
         <HowItWorks
           steps={[
-            "Skills are short drills (2 to 5 minutes): train your ear, your sounds, or review your mistakes.",
+            "Words, listening and mistake drills take 2 to 5 minutes each. A small number means something is waiting today.",
             "Conversations are 5 to 15 minutes. Pick a goal, then a conversation. Numbered ones go from easier to harder.",
             "Every conversation ends with a report: your top fixes to say again, and new phrases.",
           ]}
@@ -144,27 +158,60 @@ export function PracticeLibrary() {
         />
       </div>
 
-      <section aria-labelledby="skills-title" className="space-y-2.5">
-        <h2 id="skills-title" className="font-black">
-          Skills
-        </h2>
-        <div className="grid grid-cols-2 gap-2.5">
-          <SkillTile
-            href="/listen"
-            icon={Headphones}
-            title="Listening gym"
-            detail="Dictation and shadowing, 4 accents"
-          />
-          <SkillTile href="/pronounce" icon={AudioLines} title="Pronunciation" detail="10 units for Hebrew speakers" />
-          <SkillTile
-            href="/review"
-            icon={RotateCcw}
-            title="Quick review"
-            detail={due > 0 ? `${due} due now` : "Mistakes and phrases"}
-          />
-          <SkillTile href="/phrases" icon={BookMarked} title="Phrase bank" detail="Everything you saved" />
-        </div>
-      </section>
+      <SkillGroup title="Speaking">
+        <SkillTile href="/talk" icon={Timer} title="One-minute talk" detail="A topic card, a long answer" />
+        <SkillTile
+          href="/pronounce"
+          icon={AudioLines}
+          title="Pronunciation"
+          detail={`${PRONUNCIATION.length} sounds · record yourself`}
+        />
+        <SkillTile
+          href="/say"
+          icon={Languages}
+          title="Say it in English"
+          detail={sayMisses > 0 ? `${sayMisses} to say again` : "From Hebrew, out loud · the classic traps"}
+          badge={sayMisses}
+        />
+      </SkillGroup>
+
+      <SkillGroup title="Words">
+        <SkillTile
+          href="/words"
+          icon={Layers}
+          title="Word cards"
+          detail={cardsDue > 0 ? `${cardsDue} for today` : `${DECKS.length} packs · say the word`}
+          badge={cardsDue}
+        />
+        <SkillTile href="/read" icon={BookOpen} title="Short reads" detail="Tap a phrase for help" />
+        <SkillTile href="/phrases" icon={BookMarked} title="Phrase bank" detail="Everything you saved" />
+      </SkillGroup>
+
+      <SkillGroup title="Listening">
+        <SkillTile
+          href="/listen#stories"
+          icon={BookOpenText}
+          title="Stories"
+          detail={storiesNew > 0 ? `${storiesNew} new · 3 questions each` : "Replay to beat your best"}
+        />
+        <SkillTile href="/listen" icon={Headphones} title="Listening gym" detail="Dictation and shadowing" />
+      </SkillGroup>
+
+      <SkillGroup title="Fix your mistakes">
+        <SkillTile
+          href="/review"
+          icon={RotateCcw}
+          title="Quick review"
+          detail={due > 0 ? `${due} due now` : "Nothing due"}
+          badge={due}
+        />
+        <SkillTile
+          href="/mistakes"
+          icon={Wrench}
+          title="Your mistakes"
+          detail={mistakes > 0 ? `${mistakes} to work on · rule and drill` : "Rule and drill"}
+        />
+      </SkillGroup>
 
       <section aria-labelledby="conv-title" className="space-y-3">
         <h2 id="conv-title" className="font-black">
@@ -212,7 +259,7 @@ export function PracticeLibrary() {
               {track.label}
             </p>
             <p className="mt-1 text-sm font-bold text-dim">{track.builds}</p>
-            <p className="mt-1 text-xs font-bold text-faint">Goal: {CATEGORY_INFO[track.categories[0]].goal}</p>
+            <p className="mt-1 text-xs font-bold text-dim">Goal: {CATEGORY_INFO[track.categories[0]].goal}</p>
           </div>
           <ol className="space-y-2.5">
             {scenarios.map((s, i) => (
@@ -234,21 +281,42 @@ export function PracticeLibrary() {
   );
 }
 
+function SkillGroup({ title, children }: { title: string; children: React.ReactNode[] }) {
+  const id = `group-${title.toLowerCase().replace(/\W+/g, "-")}`;
+  return (
+    <section aria-labelledby={id} className="space-y-2.5">
+      <h2 id={id} className="font-black">
+        {title}
+      </h2>
+      {/* Two columns; an odd last tile takes the full row. */}
+      <div className="grid grid-cols-2 gap-2.5 [&>*:last-child:nth-child(odd)]:col-span-2">{children}</div>
+    </section>
+  );
+}
+
 function SkillTile({
   href,
   icon: Icon,
   title,
   detail,
+  badge = 0,
 }: {
   href: string;
   icon: LucideIcon;
   title: string;
   detail: string;
+  /** Something waiting today: shown as a small count on the icon. */
+  badge?: number;
 }) {
   return (
     <Link href={href} className="tile flex flex-col gap-2 p-3.5 transition-colors hover:border-accent/60">
-      <span className="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent">
+      <span className="relative grid size-9 place-items-center rounded-xl bg-accent-soft text-accent">
         <Icon className="size-5" aria-hidden />
+        {badge > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 grid min-w-5 place-items-center rounded-full bg-streak px-1 text-[11px] font-black text-white">
+            {badge}
+          </span>
+        )}
       </span>
       <span>
         <span className="block font-extrabold leading-tight">{title}</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { planDayByKey, planWeek } from "@/content/plan";
+import { deckById } from "@/content/decks";
 import { addWeekWords } from "@/lib/learner/plan";
 import { useSyncExternalStore } from "react";
 import {
@@ -22,10 +23,18 @@ import {
   type HelpKind,
   type SessionRecord,
   type WeekFeeling,
+  ratePhrase,
+  recordStory,
+  recordReading,
+  recordSayDrill,
+  recordSayMisses,
+  markPerfectDay,
+  type CardRating,
 } from "@/lib/learner/model";
 import type { Turn } from "@/lib/conversation/types";
 import type { Analysis } from "@/lib/prompts/analyzer";
 import { monthKey } from "@/lib/cost/budget";
+import { backupSummary, parseBackup, restoreBackup, type BackupError } from "@/lib/learner/backup";
 import { sttCostUsd, ttsCostUsd } from "@/lib/cost/pricing";
 import { dayKey } from "@/lib/game/streak";
 import { browserSpeechActive } from "./browser-speech";
@@ -236,6 +245,44 @@ export const learner = {
     set(reviewPhrase(get(), text, good));
   },
 
+  recordStory(id: string, correct: number) {
+    set(recordStory(get(), id, correct));
+  },
+
+  markPerfectDay(day: string) {
+    const next = markPerfectDay(get(), day);
+    if (next !== get()) set(next);
+  },
+
+  recordReading(id: string, correct: number) {
+    set(recordReading(get(), id, correct));
+  },
+
+  recordSayDrill(id: string, correct: number) {
+    set(recordSayDrill(get(), id, correct));
+  },
+
+  recordSayMisses(missed: string[], right: string[]) {
+    set(recordSayMisses(get(), missed, right));
+  },
+
+  ratePhrase(text: string, rating: CardRating) {
+    set(ratePhrase(get(), text, rating));
+  },
+
+  /** Add a word pack to the phrase bank; returns how many words were new. */
+  addDeck(deckId: string): number {
+    const deck = deckById(deckId);
+    if (!deck) return 0;
+    const r = addPhrases(
+      get(),
+      deck.words.map((w) => ({ ...w, deck: deck.id })),
+      deck.title,
+    );
+    set(r.state);
+    return r.added;
+  },
+
   reviewMistake(key: string, good: boolean) {
     set(reviewMistake(get(), key, good));
   },
@@ -272,6 +319,14 @@ export const learner = {
 
   exportJson(): string {
     return JSON.stringify(get(), null, 2);
+  },
+
+  /** Merge an exported backup into this device's copy. */
+  restore(text: string): { summary: string } | { error: BackupError } {
+    const parsed = parseBackup(text);
+    if ("error" in parsed) return parsed;
+    set(restoreBackup(get(), parsed.state));
+    return { summary: backupSummary(parsed.state) };
   },
 
   /** Swap in a merged state from sync. */

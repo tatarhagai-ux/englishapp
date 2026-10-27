@@ -1,20 +1,17 @@
 # Speakwise: סיכום מפורט למעבר לשיחה חדשה
 
-עודכן ב-26.10.2026 (ערב). מי שקורא: Claude בשיחה החדשה. המשתמש הוא חגי תתר. תקרא את כל הקובץ לפני שמתחילים, ואל תתחיל לבנות לפני שאישרת עם חגי מה הוא רוצה.
+עודכן ב-27.10.2026 (לילה). מי שקורא: Claude בשיחה החדשה. המשתמש הוא חגי תתר. תקרא את כל הקובץ לפני שמתחילים, ואל תתחיל לבנות לפני שאישרת עם חגי מה הוא רוצה.
 
 ## 0. איפה עצרנו
 
-האפליקציה באוויר, עובדת עם מפתחות אמיתיים, והכול ממוזג ל-`claude/loving-sagan-htpldu`. הבדיקות ירוקות (267 בדיקות יחידה, 68 בדיקות e2e בטלפון ובמחשב). אין PR פתוח ואין משימה באמצע.
+**עדכון 27.10.2026 (לילה):** PR גדול פתוח, [tatarhagai-ux/englishapp#15](https://github.com/tatarhagai-ux/englishapp/pull/15), מענף `claude/intelligent-fermat-go7dia` אל `claude/loving-sagan-htpldu`. **הוא לא ממוזג, וזה בכוונה:** חגי ביקש לעבור על כל העבודה לפני מיזוג. בתיאור ה-PR יש טבלה של כל ה-commits, ולכל אחד מה לבדוק בטלפון. ה-CI ירוק.
 
-**מה חגי עוד לא בדק בטלפון, ועל זה הוא יחזור אליך:**
-1. המיקרופון אחרי תיקון PR #12: האם ב-warmup (כפתורי "Say it") כבר לא עוצר אותו ברגע שהוא מתחיל, והאם בשיחה הוא לא נחתך באמצע.
-2. הקולות: האם הדמויות הגבריות נשמעות גבריות ושונות זו מזו. בהגדרות הקול יש כפתור "Show which voice this device uses" שמראה איזה קול של הטלפון כל דמות מקבלת. אם משהו נשמע רע, שיצלם את הרשימה.
-3. המורה המתאים את עצמו (PR #13): השאלה "How did this week feel?" תופיע רק אחרי 3 ימי תרגול באותו שבוע.
-4. שאלה שביקשתי ממנו ועוד לא ענה: אחרי כשבוע, האם מילות השבוע ברמה הנכונה (קלות, קשות או מתאימות).
+**מה חגי צריך לעשות:**
+1. לעבור על ה-PR ועל ה-preview של Vercel (הקישור בתגובה של vercel[bot] ב-PR).
+2. להגיד אם למזג הכול, או מה להוציא.
+3. בסמסונג: הגדרות ← "המרת טקסט לדיבור" ← מנוע של Google, כדי שהקולות יישמעו טבעיים. יש על זה כרטיס בבית.
 
-**מה הוא ביקש להשאיר להמשך:** "מסלולים" (tracks) בתרגול.
-
-**משימה אחת פתוחה אצלו:** הוא החליף זמנית את `DIAG_TOKEN` ב-Vercel לערך שנכתב בצ'אט, כדי שאריץ בדיקת מודלים. אמרתי לו להחליף אותו שוב או למחוק אותו. הערך הישן לא נשמר כאן בכוונה. אם הבדיקה (`/api/diagnostics`) לא עובדת, כנראה שהטוקן הוחלף, ואז צריך לבקש ממנו להמציא חדש ולהגיד לך. לא לנסות לשלוף טוקנים מההיסטוריה (המערכת חוסמת את זה, וצדק).
+**מה עדיין לא נבדק במכשיר אמיתי:** הקול, המיקרופון וההקלטה (Record yourself, כרטיסיות). הכול נבדק רק בדפדפן מדומה.
 
 ## 1. מי חגי ומה הוא רוצה
 
@@ -39,15 +36,15 @@
 - **מפתחות API לא נכנסים לצ'אט ולא לקוד.** רק משתני סביבה ב-Vercel. לא מדפיסים סודות או טוקנים בפלט (גם לא את טוקן הסנכרון). המערכת חוסמת "Credential Materialization", אז לא ממש לנסות לשלוף טוקן מקבצים או מההיסטוריה.
 - לא מעלים קוד אדום. לפני כל push: `npm run check`, `npm run format:check`, `npx playwright test`.
 - שליחה החוצה, מחיקה או הוצאה כספית: לשאול קודם.
-- **מיזוג:** חגי לא רוצה להיכנס ל-GitHub. Claude פותח PR (draft), מחכה ל-CI ירוק, מסמן ready וממזג בעצמו (squash עם `expectedHeadSha`). הוא אישר את זה במפורש.
+- **מיזוג (עדכון 26.10 בלילה):** חגי ביקש **לא למזג** עבודה גדולה לפני שהוא עובר עליה. Claude פותח PR כ-draft, מחכה ל-CI ירוק ומשאיר אותו פתוח. לפני כן הכלל היה למזג לבד; אם רוצים לחזור לזה, צריך לשאול אותו קודם.
 - המשימה המתוזמנת (כל 5 שעות) כבויה. לא להפעיל מחדש.
 - פרויקטי Vercel הישנים `helpapp` ו-`habits-app`: הוא ביקש להשהות או למחוק. הושהו, לא נמחקו. לא קריטי.
 
 ## 3. איפה הכול נמצא
 
-- **ריפו:** `tatarhagai-ux/englishapp`. ענף ה-production: `claude/loving-sagan-htpldu` (מיזוג אליו מעלה לאוויר תוך דקה-שתיים). ענף עבודה: `claude/beautiful-darwin-2illsn`.
+- **ריפו:** `tatarhagai-ux/englishapp`. ענף ה-production: `claude/loving-sagan-htpldu` (מיזוג אליו מעלה לאוויר תוך דקה-שתיים). ענף העבודה של PR #15: `claude/intelligent-fermat-go7dia` (לפני כן: `claude/beautiful-darwin-2illsn`).
 - **אחרי כל מיזוג:** `git fetch origin claude/loving-sagan-htpldu && git checkout -B claude/beautiful-darwin-2illsn origin/claude/loving-sagan-htpldu` (עם `git stash` אם יש שינויים מקומיים). הענף המרוחק של העבודה מחזיק commits שכבר מוזגו, ו-force push נחסם. לכן לפני דחיפה: `git fetch origin claude/beautiful-darwin-2illsn && git merge --no-edit -X ours origin/claude/beautiful-darwin-2illsn`, ולבדוק ש-`git diff HEAD^1 HEAD --stat` ריק (העץ זהה למה שנבדק), ואז push רגיל.
-- **זרימת PR:** ליצור PR כ-draft, `subscribe_pr_activity`, `send_later` ל-50 דקות כרשת ביטחון, למזג כשה-CI ירוק (ריצה אחת ירוקה על אותו SHA מספיקה, ריצה כפולה שבוטלה אינה כישלון), ואז `delete_trigger`.
+- **זרימת PR:** ליצור PR כ-draft, `subscribe_pr_activity`, `send_later` ל-50 דקות כרשת ביטחון, ולחכות ל-CI ירוק (ריצה אחת ירוקה על אותו SHA מספיקה, ריצה כפולה שבוטלה אינה כישלון). **לא ממזגים:** חגי עובר ומחליט (ראו למעלה).
 - **באוויר:** https://englishapp-sepia-three.vercel.app (פרויקט Vercel `englishapp`, `prj_xagocUe2R3u9Bu7kQlJgWfGavhG6`, צוות `team_8QzA1AyyDJCTVQ5SkkKiFPUb`). מותקן אצלו כאפליקציה בטלפון.
 - **משתנים ב-Vercel (שמות בלבד, חגי הגדיר):** `OPENROUTER_API_KEY`, `APP_ACCESS_CODE`, `APP_SESSION_SECRET`, `DIAG_TOKEN`, `MONTHLY_BUDGET_USD`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - **Supabase:** פרויקט dayframe (`khrsvgygnexlzdnfpndg`, אזור eu-central-1). סכמה `speakwise_private` עם `sync_owner` (שומר רק SHA-256 של הטוקן) ושתי פונקציות security definer: `speakwise_sync_pull`, `speakwise_sync_push`. מיגרציה: `supabase/migrations/20261026120000_speakwise_server_sync.sql` (כבר הוחלה). הטבלה הישנה `speakwise_learner_state` כבר לא בשימוש.
@@ -81,6 +78,39 @@ Next.js 15 (App Router), TypeScript strict, Tailwind v4, PWA (service worker `sw
 12. **#12 מיקרופון וקולות:** "Say it" ו-warm-up מקשיבים ברצף ופותחים מחדש כשאנדרואיד מסיים סשן בהפסקה (במקום לעצור מיד). מיקרופון השיחה נעצר אחרי 20 שניות שקטות (במקום 3 סבבים). לא מורידים את ה-SDK הגדול של Azure לפני הקשבה כש-Azure כבוי. קולות גברים עם גובה צליל נמוך כשהקול של המכשיר לא ידוע, וטון וקצב ייחודיים לכל דמות. כפתור בהגדרות שמראה איזה קול של המכשיר כל דמות מקבלת.
 13. **#13 מורה שמתאים את עצמו** (`lib/learner/adapt.ts`): רמת המורה (easier / steady / stretch) מחושבת משלוש השיחות האחרונות (כמה נתקע, כמה ביקש Repeat/Slower/What did they say, אורך תשובות) ומתשובתו ל-"How did this week feel?". הפרומפט מתאים את האנגלית (B1 / B2 / B2+), והמורה תמיד סבלני ("Go on", מילה אחת כשמחפשים מילה, שבח ספציפי). ב-Home: אחרי 3 ימים בשבוע, שאלה בלחיצה אחת, אחרת "Coach's tip" אחד. ב-Progress: "How your tutor adapts" עם הסיבה. נספרות פעולות עזרה בכל שיחה, והתשובות השבועיות מסתנכרנות.
 
+### PR #15 (ערב 26.10 ולילה 27.10, פתוח ולא ממוזג)
+
+מבוסס על סקירת QA ועל מחקר על אפליקציות מובילות (`docs/research/03-learning-methods.md`). הטבלה המלאה בתיאור ה-PR. בקצרה:
+- **יציבות:**
+  - Wake Lock.
+  - קול רך יותר (pitch בין 0.75 ל-1.2) והסבר למנוע של Google.
+  - תיקון Slower בלי Azure, אישור לפני סיום, ושיחה שנקטעה מופיעה בבית.
+  - גיבוי ושחזור, אופליין (Service Worker `sw-shell-v6`).
+  - תיקונים משלוש סקירות קוד.
+  - דפי פרט שנפתחו (`/say/...`, `/read/...`) נשמרים לאופליין (`VISITED_PREFIXES` ב-`public/sw.js`).
+- **למידה:**
+  - FSRS במצב long-term (`enable_short_term: false`). קודם תשובה נכונה חזרה אחרי 10 דקות, ולכן החימום חזר על עצמו.
+  - משפט אחר בכל חזרה (`examples` לכל טעות ו-`variants` ב-`content/learner-seed.ts`).
+  - שלב Learn לפני יום תוכנית (`wordsToLearn`).
+  - מיני-שיעור לכל טעות (`/mistakes`).
+  - "Your best sentence" בדוח (`best_sentence` בסכמה).
+  - Shadow it אחרי סיפור (`components/listen/ShadowDrill.tsx`).
+  - שלושה דפוסים חדשים ב-`content/l1/he.ts` (`question_order`, `ever_perfect`, `calques`). הם נכנסים גם לפרומפט של הדוח.
+- **תוכן חדש:**
+  - כרטיסיות `/words` (16 חבילות ב-`content/decks.ts`, FSRS עם 4 דירוגים, 10 חדשות ביום).
+  - 19 סיפורים (`content/stories.ts`) ו-10 פרקי Radio (`content/radio.ts`). ביטוי שנשמר מסיפור מקבל את השורה שבה נאמר כדוגמה, גם בנטייה (`blankOut` ב-`lib/text/cloze.ts`).
+  - 14 קריאות `/read` (`content/readings.ts`).
+  - One-minute talk `/talk` (36 נושאים, `content/topics.ts`, תרחיש נסתר `minute-talk`).
+  - Say it in English `/say` (`content/say.ts`, `lib/text/say-check.ts`): 17 סטים של 6 משפטים בעברית, כל סט קשור לדפוס ב-`content/l1/he.ts`. הבדיקה מחמירה: התאמה מדויקת אחרי נרמול, "'s" נחשב is או has, ספרות כמו מילים. השיא נשמר ב-`sayDrills` ומסתנכרן. מיני-שיעור של טעות ותיקון בדוח מקשרים לסט המתאים (`saySetForMistake`). משפט שפוספס נשמר ב-`sayMisses` (מפתח: הטקסט בעברית, `open`, וה-`at` החדש גובר בסנכרון) וחוזר בסבב מעורב ב-`/say/misses`. יש כפתור Hint (מילים מעורבבות; משפט עם רמז לא נחשב ניסיון ראשון), הישג Trap breaker, ומשפטים שנענו נספרים במשימה היומית של המילים.
+  - 50 משפטי האזנה ו-8 תרחישים.
+- **סדר ומוטיבציה:**
+  - "Want more?" (`KeepGoing`).
+  - 3 משימות יומיות ושבוע מושלם (`lib/learner/quests.ts`, `perfectDays`).
+  - Practice בקבוצות, "Practice areas" ב-Progress (`lib/learner/skills.ts`), מדריך מעודכן.
+- **נגישות:**
+  - צבעים לפי WCAG AA. טוקני `--accent-ink`, `--xp-ink` ו-`--accent-2-ink`, ו-`.text-accent` משתמש ב-ink.
+  - בדיקת axe ב-e2e (`tests/e2e/a11y.spec.ts`). הפעם `@axe-core/playwright` נמצא ב-lockfile.
+
 ## 6. החלטות והסיבות להן
 
 - **מודל:** `deepseek/deepseek-v4-flash` לשיחה ולדוח. נבדק ב-26.10: תפס 100% מהטעויות, 0% תיקונים מיותרים. V3.2 עשה אותו דבר אבל כמעט פי 5 יקר יותר (בערך 0.37 סנט לעומת 0.07 לבדיקה). Gemini 2.5 Flash Lite נחסם זמנית (429) ולא נבדק. מילה ראשונה: 0.4 שניות בבדיקה אחת ו-3.5 בבדיקה אחרת, ייתכן שזו תנודה. לא כדאי לשדרג את מודל השיחה (המהירות חשובה). אם רוצים שדרוג, הכי משתלם במודל הדוח בלבד (`LLM_ANALYZER_MODEL`), כי הוא רץ פעם אחת לשיחה. לא הוחלט, ולא נעשה בלי אישור ובדיקה.
@@ -93,18 +123,19 @@ Next.js 15 (App Router), TypeScript strict, Tailwind v4, PWA (service worker `sw
 
 ## 7. רעיונות פתוחים (לפי חשיבות)
 
-1. מסלולים בתרגול (חגי ביקש, להמשך).
-2. לבדוק איתו אחרי שבוע: האם הקצב נכון, האם המילים ברמה הנכונה, האם האפליקציה מרגישה נעימה.
-3. אם עדיין יש בעיות במיקרופון: לבקש ממנו לתאר בדיוק מתי (באיזה מסך, באיזה סוג מכשיר). הקוד הרלוונטי: `lib/client/speech.ts` (`Listener`, `recognizeOnceInBrowser`), `components/session/ConversationScreen.tsx`.
-4. לבדוק שוב מודל Gemini Flash Lite כשהוא לא מוגבל, ואולי מודל חזק יותר רק לדוח.
-5. תזכורת Web Push אמיתית (Supabase כבר מחובר).
-6. לעדכן את `docs/QA.md` עם הסבבים האחרונים.
-7. אפשרות עתידית: Azure לקולות טובים וציוני הגייה, רק כשיחליט.
+1. **לחכות להחלטה של חגי על PR #15.** אחר כך לבדוק איתו בטלפון את הקול, המיקרופון וההקלטה.
+2. לבדוק איתו אחרי שבוע:
+   - האם הקצב נכון והמילים ברמה הנכונה.
+   - האם הכרטיסיות, הסיפורים והקריאות שימושיים, או שיש יותר מדי.
+3. מסלול אחרי שבוע 12 (שבועות 13 ואילך, או חזרה ממוקדת).
+4. Web Push: דורש מפתחות VAPID ב-Vercel, ולכן צריך את חגי.
+5. מודל חזק יותר רק לדוח (`LLM_ANALYZER_MODEL`), אחרי בדיקה ואישור.
+6. Azure לקולות טובים וציוני הגייה, רק כשיחליט.
 
 ## 8. הערות טכניות שחסכו זמן
 
 - להרים שרת בדיקה: `npm run build`, ואז `OPENROUTER_API_KEY=sk-or-dummy-1234567890 APP_ACCESS_CODE= npx next start -p 3200`. מפתח קצר מ-10 תווים גורם ל-500. לא להריץ `pkill` על next באותה פקודה (קוד 144), להרוג לפי PID. שרת תקוע שומר את הפורט: `ps aux | grep next-server`.
-- e2e: `E2E_PORT=31xx npx playwright test` (פורט ייחודי לכל הרצה). בלי מפתח השרת לא "ready", ולכן הכפתור ב-Home הוא "Finish setup".
+- e2e: `E2E_PORT=31xx npx playwright test --workers=2` (פורט ייחודי לכל הרצה; בלי הגבלת workers הקונטיינר נפל פעם על זיכרון). בלי מפתח השרת לא "ready", ולכן הכפתור ב-Home הוא "Finish setup".
 - לא לחבר בדיקות עם `| tail` בתוך שרשרת `&&`, זה מסתיר כישלון.
 - ה-proxy חוסם גישה ישירה ל-openrouter.ai, supabase.co ו-vercel.app. לאתר החי ניגשים דרך `mcp__Vercel__web_fetch_vercel_url`. בדיקת סנכרון: `/api/diagnostics?token=...&check=sync` מחזיר מספרים בלבד.
 - בדיקות מיקרופון ב-e2e: מקבלים `FakeRecognition` דרך `addInitScript`, וממתינים ל-`"__rec" in window` לפני שמדמים דיבור. בדיקות הניתוק (שקט של 20 שניות) מקדמות את `Date.now` בדפדפן.

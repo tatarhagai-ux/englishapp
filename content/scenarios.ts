@@ -45,6 +45,8 @@ export const CATEGORY_INFO: Record<ScenarioCategory, { label: string; goal: stri
 };
 
 export const PLACEMENT_ID = "placement";
+/** The one-minute talk; its topic card comes from content/topics.ts (the ?topic= link). */
+export const MINUTE_TALK_ID = "minute-talk";
 
 export const SCENARIOS: readonly Scenario[] = [
   // Placement: a short chat that climbs from easy to hard so the analyzer can place him.
@@ -66,6 +68,29 @@ export const SCENARIOS: readonly Scenario[] = [
     tutorNotes: `This is a placement check. Ask exactly five questions, one per turn, each a little harder:
 1 (already asked) about himself now. 2 a past experience he remembers well. 3 his plans for the next few years. 4 his opinion on something that matters to him, and why. 5 a hypothetical: what he would change if he could.
 Do not correct anything. React in a few words, then ask the next question. After his fifth answer, thank him and say his report is ready.`,
+  },
+
+  // One-minute talk: a long turn on a topic card (reached from Practice, not listed).
+  {
+    id: MINUTE_TALK_ID,
+    category: "free",
+    title: "One-minute talk",
+    summary: "One topic, three points, about a minute without stopping.",
+    voiceId: null,
+    setting: "A speaking drill with your tutor: a topic card and a long answer",
+    task: "Talk for about a minute about the topic, cover all three points, and give one real example.",
+    successCriteria: [
+      "Talks for about a minute in one go",
+      "Covers all three points on the card",
+      "Gives a concrete example",
+    ],
+    targets: ["answer_all_parts", "present_perfect_duration"],
+    phrases: ["The first thing I'd say is…", "For example…", "On top of that…", "So overall…"],
+    opener: "Ready for your topic?",
+    minutes: 4,
+    hidden: true,
+    tutorNotes: `This is a one-minute talk drill. Your first message was his topic card. He will now talk for about a minute: do not interrupt and do not correct.
+After his long answer: react in one sentence to something specific he said, then ask exactly one follow-up question that needs a 20 to 30 second answer (why, how, or an example). If he skipped one of the three points, ask about that point. After his second answer, thank him in one sentence and tell him his report is ready. Never ask more than one follow-up.`,
   },
 
   // Job interview track (6). Completing all six unlocks "Interview ready".
@@ -709,6 +734,180 @@ After each answer, react briefly like a real interviewer (a few words, no teachi
     phrases: ["Personally, I think…", "On top of that…", "I'll give you that…", "It really depends on…"],
     opener: "Some companies are calling everyone back to the office. Are you team office or team remote?",
     minutes: 8,
+  }, // Content pass 2: more roleplays with new accents, and topics from his own life.
+  {
+    id: "abroad-refund",
+    category: "abroad",
+    title: "Get a refund",
+    summary: "Return headphones that stopped working and get your money back.",
+    voiceId: "sonia",
+    role: "Lucy, a polite but by-the-book shop assistant in a London electronics store",
+    setting: "At the returns counter of an electronics shop in London",
+    task: "Explain what's wrong, show you have the receipt, and get a refund (not just store credit).",
+    successCriteria: [
+      "Explains the problem clearly with when it started",
+      "Mentions the receipt or proof of purchase",
+      "Politely insists on a refund when offered store credit",
+    ],
+    targets: ["present_perfect_duration", "answer_all_parts"],
+    phrases: [
+      "I bought these here last week.",
+      "They've stopped working.",
+      "I'd prefer a refund, if that's possible.",
+      "I have the receipt right here.",
+    ],
+    opener: "Hi there, how can I help you today?",
+    minutes: 6,
+    tutorNotes:
+      "First offer store credit or a repair instead of a refund. Agree to a refund only after he politely insists and gives a reason.",
+  },
+  {
+    id: "abroad-lost-luggage",
+    category: "abroad",
+    title: "Lost luggage",
+    summary: "Your suitcase didn't arrive. Describe it and make sure it gets to you.",
+    voiceId: "neerja",
+    role: "Priya, an airline baggage service agent at the airport",
+    setting: "Lost and found desk at the arrivals hall",
+    task: "Describe your suitcase in detail, give where you're staying, and get a reference number and a delivery time.",
+    successCriteria: [
+      "Describes the suitcase (color, size, something special)",
+      "Gives the address or hotel where it should go",
+      "Gets a reference number and asks when it will arrive",
+    ],
+    targets: ["noun_modifier_order", "missing_be", "answer_all_parts"],
+    phrases: [
+      "My suitcase didn't come out.",
+      "It's a medium-sized black suitcase with…",
+      "Could you send it to my hotel?",
+      "When can I expect it?",
+    ],
+    opener: "Hello, I'm sorry to hear your bag hasn't arrived. Could I see your boarding pass and baggage tag?",
+    minutes: 6,
+  },
+  {
+    id: "abroad-gym",
+    category: "abroad",
+    title: "Join a gym abroad",
+    summary: "Ask about memberships and classes, and get a free trial.",
+    voiceId: "natasha",
+    role: "Mia, a chatty front-desk worker at a gym in Sydney",
+    setting: "The front desk of a gym, your first week in a new city",
+    task: "Find out the prices and the class schedule, say what kind of training you do, and get a free trial day.",
+    successCriteria: [
+      "Asks about price and at least one more detail",
+      "Describes his own training routine",
+      "Asks for and gets a trial",
+    ],
+    targets: ["present_perfect_duration", "study_for"],
+    phrases: [
+      "I've been training for about…",
+      "What does the membership include?",
+      "Do you offer a free trial?",
+      "I'm mostly into…",
+    ],
+    opener: "G'day! Welcome in. Are you looking to sign up, or just having a look around?",
+    minutes: 6,
+  },
+  {
+    id: "abroad-hostel",
+    category: "abroad",
+    title: "A new friend at the hostel",
+    summary: "Meet another traveler and make plans to explore the city together.",
+    voiceId: "william",
+    role: "Josh, a relaxed Australian backpacker who just checked into the same hostel room",
+    setting: "The common room of a hostel in Lisbon",
+    task: "Get to know him, find one thing you have in common, and agree on a plan for tomorrow (where and what time).",
+    successCriteria: [
+      "Asks at least two questions about him",
+      "Finds something in common",
+      "Agrees on a plan with a place and a time",
+    ],
+    targets: ["present_perfect_duration", "looking_forward_to_ing"],
+    phrases: ["How long have you been traveling?", "Me too!", "Do you want to…?", "I'm looking forward to…"],
+    opener: "Hey mate, are you in bed four? I'm Josh. Where are you coming from?",
+    minutes: 8,
+  },
+  {
+    id: "work-ask-help",
+    category: "work",
+    title: "Ask a busy colleague for help",
+    summary: "Politely ask for help with a task when everyone is swamped.",
+    voiceId: "jenny",
+    role: "Rachel, a helpful but very busy colleague who knows the reporting system well",
+    setting: "The office, an hour before a deadline",
+    task: "Explain what you're stuck on, ask for help politely, and agree on a time that works for her.",
+    successCriteria: [
+      "Explains the problem in a sentence or two",
+      "Asks politely (Could you…? Would you mind…?)",
+      "Agrees on when she can help",
+    ],
+    targets: ["office_idioms", "missing_be"],
+    phrases: [
+      "Sorry to bother you, but…",
+      "Would you mind taking a quick look at…?",
+      "I'm stuck on…",
+      "Whenever works for you.",
+    ],
+    opener: "Hey, I've only got a minute, I'm in the middle of something. What's up?",
+    minutes: 5,
+    tutorNotes:
+      "At first say you're busy. If he asks politely and explains clearly, offer a specific time later today.",
+  },
+  {
+    id: "work-army-service",
+    category: "work",
+    title: "Your army service, explained",
+    summary: "Explain what you do in the army and what it's teaching you.",
+    voiceId: null,
+    setting: "Chat with your tutor, who isn't from Israel and is curious",
+    task: "Explain what your role is, what a normal day looks like, and one skill it's giving you that you could use at a job.",
+    successCriteria: [
+      "Explains the role simply, for someone who doesn't know the army",
+      "Describes a normal day",
+      "Names one skill and gives an example of it",
+    ],
+    targets: ["present_perfect_duration", "missing_be", "noun_modifier_order"],
+    phrases: ["Basically, my job is to…", "On a normal day, I…", "It's taught me how to…", "For example, last week…"],
+    opener:
+      "I've heard that in Israel almost everyone serves in the army. What's that like for you, what do you actually do?",
+    minutes: 8,
+    tutorNotes:
+      "Be curious like a foreigner would be. Never ask for anything secret or sensitive; keep to daily life, people and skills.",
+  },
+  {
+    id: "free-recommend",
+    category: "free",
+    title: "Recommend something",
+    summary: "Convince your tutor to try a book, show, app or place you love.",
+    voiceId: null,
+    setting: "Chat with your tutor",
+    task: "Recommend one thing, say who it's for, give two reasons, and answer one doubt your tutor has.",
+    successCriteria: ["Says what it is and who it's for", "Gives two reasons", "Answers a doubt or objection"],
+    targets: ["answer_all_parts", "missing_be"],
+    phrases: [
+      "You should definitely check out…",
+      "It's perfect if you…",
+      "What I love about it is…",
+      "Trust me, it's worth it.",
+    ],
+    opener: "I need something new. A book, a show, an app, anything. What would you recommend?",
+    minutes: 6,
+    tutorNotes: "After his reasons, raise one honest doubt (time, price, not your style) and let him convince you.",
+  },
+  {
+    id: "world-phones-school",
+    category: "world",
+    title: "Phones in school: ban them?",
+    summary: "Take a side on a hot debate and defend it.",
+    voiceId: null,
+    setting: "Discussion with your tutor",
+    task: "Say whether schools should ban phones, give two reasons, and respond to one argument from the other side.",
+    successCriteria: ["States a clear position", "Gives two reasons", "Responds to a counterargument"],
+    targets: ["answer_all_parts", "present_perfect_duration"],
+    phrases: ["I'm in favor of…", "The main reason is…", "That's a fair point, but…", "At the end of the day…"],
+    opener: "Some countries have banned phones in schools completely. Good idea, or are they going too far?",
+    minutes: 8,
   },
 ];
 
@@ -743,6 +942,13 @@ const LEVELS: Record<string, ScenarioLevel> = {
   "work-delay": "B1+",
   "work-support-call": "B1+",
   "interview-about-you": "B1+",
+  "abroad-hostel": "B1",
+  "work-ask-help": "B1",
+  "free-recommend": "B1",
+  "abroad-refund": "B1+",
+  "abroad-lost-luggage": "B1+",
+  "abroad-gym": "B1+",
+  "work-army-service": "B1+",
 };
 
 /** Library conversations not listed above are B2; plan topics follow their week. */

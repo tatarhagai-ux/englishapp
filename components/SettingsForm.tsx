@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { BookOpen, ChevronRight, Download, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { BookOpen, ChevronRight, Download, RefreshCw, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { learner } from "@/lib/client/learner";
 import { usePrefs, type Prefs } from "@/lib/client/prefs";
 import { voiceById } from "@/content/voices";
@@ -170,10 +170,32 @@ export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
   );
 }
 
-/** Export is the backup; delete is final, and with sync on it also clears the other devices. */
+/**
+ * Export is the backup and Restore brings it back (merged, so nothing newer is lost). Delete
+ * is final unless there is a backup, and with sync on it also clears the other devices.
+ */
 function DataControls() {
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function restoreFrom(file: File | undefined) {
+    if (!file) return;
+    setDone(null);
+    setFailed(null);
+    const result = learner.restore(await file.text());
+    if ("error" in result) {
+      setFailed(
+        result.error === "not_json"
+          ? "That file isn't a Speakwise backup. Pick the .json file you exported."
+          : "That file isn't a Speakwise backup, or it's from a newer version.",
+      );
+    } else {
+      setDone(`Backup restored: ${result.summary}. Anything newer on this device was kept.`);
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
 
   function exportData() {
     const blob = new Blob([learner.exportJson()], { type: "application/json" });
@@ -213,8 +235,23 @@ function DataControls() {
         </button>
         <button
           type="button"
+          onClick={() => fileRef.current?.click()}
+          className="btn-3d btn-ghost flex items-center justify-center gap-2 py-2.5 text-sm"
+        >
+          <Upload className="size-4" aria-hidden /> Restore backup
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          aria-label="Backup file"
+          className="hidden"
+          onChange={(e) => void restoreFrom(e.target.files?.[0])}
+        />
+        <button
+          type="button"
           onClick={() => setConfirming(true)}
-          className="btn-3d btn-ghost flex items-center justify-center gap-2 py-2.5 text-sm text-bad"
+          className="btn-3d btn-ghost col-span-2 flex items-center justify-center gap-2 py-2.5 text-sm text-bad"
         >
           <Trash2 className="size-4" aria-hidden /> Delete all
         </button>
@@ -222,7 +259,7 @@ function DataControls() {
       {confirming && (
         <div role="alertdialog" aria-labelledby="del-title" className="space-y-3 rounded-xl border-2 border-bad/50 p-3">
           <p id="del-title" className="font-extrabold">
-            Delete everything? This can&apos;t be undone.
+            Delete everything? Only a backup file can bring it back.
           </p>
           <div className="flex gap-2">
             <button
@@ -242,6 +279,11 @@ function DataControls() {
       {done && (
         <p role="status" className="text-sm font-bold text-good">
           {done}
+        </p>
+      )}
+      {failed && (
+        <p role="alert" className="text-sm font-bold text-bad">
+          {failed}
         </p>
       )}
     </Section>

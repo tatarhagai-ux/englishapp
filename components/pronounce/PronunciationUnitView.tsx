@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Languages, Mic, Volume2 } from "lucide-react";
+import { ChevronLeft, Circle, Languages, Mic, Pause, Play, Square, Volume2 } from "lucide-react";
 import clsx from "clsx";
 import type { PronunciationUnit } from "@/content/pronunciation";
 import { PRONUNCIATION } from "@/content/pronunciation";
-import { learner, useLearner } from "@/lib/client/learner";
+import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
 import { useClipPlayer } from "@/lib/client/tts";
+import { useWakeLock } from "@/lib/client/wake-lock";
+import { canRecord, useRecorder } from "@/lib/client/use-recorder";
 import { SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
 import { useMicAttempt } from "@/lib/client/use-mic-attempt";
 import { MicBusyLabel, MicHeard } from "@/components/MicLive";
@@ -24,6 +26,9 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
   const mic = useMicAttempt();
   /** Which sentence the microphone is open for. */
   const [active, setActive] = useState<number | null>(null);
+  useWakeLock(true);
+  const recorder = useRecorder();
+  const hydrated = useHydrated();
   const best = state.pronunciation?.[unit.id]?.best;
   const index = PRONUNCIATION.findIndex((u) => u.id === unit.id);
   const next = PRONUNCIATION[index + 1];
@@ -37,6 +42,7 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
   async function say(i: number, sentence: string) {
     if (mic.busy) return mic.stop();
     player.stop();
+    recorder.stop();
     setActive(i);
     setAttempts((a) => {
       const rest = { ...a };
@@ -176,6 +182,60 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
                   )}
                 </button>
               </div>
+              {hydrated && canRecord() && (
+                <div className="flex flex-wrap items-center gap-2" aria-label="Hear yourself">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      player.stop();
+                      void recorder.record(sentence);
+                    }}
+                    disabled={mic.busy}
+                    className={clsx(
+                      "btn-3d btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-xs disabled:opacity-60",
+                      recorder.recordingKey === sentence && "text-bad",
+                    )}
+                  >
+                    {recorder.recordingKey === sentence ? (
+                      <>
+                        <Square className="size-3.5 fill-current" aria-hidden /> Stop recording
+                      </>
+                    ) : (
+                      <>
+                        <Circle className="size-3.5 fill-current text-bad" aria-hidden />{" "}
+                        {recorder.clips[sentence] ? "Record again" : "Record yourself"}
+                      </>
+                    )}
+                  </button>
+                  {recorder.clips[sentence] && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          player.stop();
+                          recorder.play(sentence);
+                        }}
+                        className="btn-3d btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-xs"
+                      >
+                        {recorder.playingKey === sentence ? (
+                          <Pause className="size-3.5" aria-hidden />
+                        ) : (
+                          <Play className="size-3.5" aria-hidden />
+                        )}{" "}
+                        You
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => listen(sentence, 0.9)}
+                        className="btn-3d btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-xs"
+                      >
+                        <Volume2 className="size-3.5" aria-hidden /> Tutor
+                      </button>
+                      <span className="text-xs text-faint">Same rhythm? Same sound?</span>
+                    </>
+                  )}
+                </div>
+              )}
               {active === i && <MicHeard phase={mic.phase} heard={mic.heard} />}
               {a && "error" in a && <p className="text-sm font-bold text-bad">{a.error}</p>}
               {result && (
@@ -222,6 +282,12 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
           );
         })}
       </section>
+
+      {recorder.error && (
+        <p role="alert" className="text-sm font-bold text-bad">
+          {recorder.error}
+        </p>
+      )}
 
       {player.error && (
         <p role="alert" className="text-sm font-bold text-bad">

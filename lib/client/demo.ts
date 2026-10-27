@@ -58,6 +58,7 @@ export function demoReply(scenario: Scenario, history: Turn[]): string {
  */
 export function demoAnalysis(scenario: Scenario, turns: Turn[]): Analysis {
   const said = turns.find((t) => t.role === "learner" && t.input !== "stuck")?.text ?? "";
+  const lastSaid = [...turns].reverse().find((t) => t.role === "learner" && t.input !== "stuck")?.text ?? "";
   const picks = SEED_ERRORS.filter((e) => e.key === "present_perfect_duration" || e.key === "looking_forward_to_ing");
   return analysisSchema.parse({
     corrections: picks.map((e) => ({
@@ -76,6 +77,8 @@ export function demoAnalysis(scenario: Scenario, turns: Turn[]): Analysis {
       feedback_en: "This is a sample. With the AI connected, this line reacts to what you actually said.",
     },
     praise_en: said ? `You answered in full sentences: “${said.slice(0, 80)}”` : "You kept the conversation going.",
+    // The latest thing he said, so it isn't the same line the praise quotes.
+    best_sentence: (lastSaid || said).split(/(?<=[.!?])\s+/)[0].slice(0, 160),
     level: { cefr: "B1+", confidence: "medium", note_en: "Sample estimate. The real one comes from your own words." },
     ...(scenario.category === "interview"
       ? {

@@ -73,6 +73,37 @@ export function weekWordsToPractice(state: LearnerState, week: PlanWeek, max = 3
     .map((x) => x.w.text);
 }
 
+/**
+ * The "learn" step before a plan conversation: up to `max` of the week's words he hasn't met
+ * yet (never reviewed in the phrase bank, never used), in the week's order. Three today,
+ * three next time, so the week's eight are introduced over the first days.
+ */
+export function wordsToLearn(state: LearnerState, week: PlanWeek, max = 3): StretchWord[] {
+  return week.words
+    .filter((w) => {
+      const p = state.phrases.find((x) => x.text.toLowerCase() === w.text.toLowerCase());
+      return !p || (p.card.reps === 0 && !(p.usedCount ?? 0));
+    })
+    .slice(0, max);
+}
+
+/**
+ * After the plan: the week whose words he owns least (ties go to the earlier week), to
+ * replay first. Its first day reopens as a normal plan session.
+ */
+export function weekToReplay(state: LearnerState): PlanWeek {
+  let best = PLAN[0];
+  let bestOwned = Infinity;
+  for (const week of PLAN) {
+    const owned = week.words.filter((w) => wordUses(state, w) >= WORD_OWNED_USES).length;
+    if (owned < bestOwned) {
+      best = week;
+      bestOwned = owned;
+    }
+  }
+  return best;
+}
+
 /** Stretch words he owns across the whole plan, for progress. */
 export function ownedStretchWords(state: LearnerState): number {
   return PLAN.flatMap((w) => w.words).filter((w) => wordUses(state, w) >= WORD_OWNED_USES).length;

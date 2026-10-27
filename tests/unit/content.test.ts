@@ -34,3 +34,28 @@ describe("scenario library", () => {
     for (const e of SEED_ERRORS) expect(practiced.has(e.key), e.key).toBe(true);
   });
 });
+
+describe("one-minute talk topics", () => {
+  it("have unique ids, three points each, and an opener that names the topic", async () => {
+    const { TALK_TOPICS, topicOpener } = await import("@/content/topics");
+    expect(TALK_TOPICS.length).toBeGreaterThanOrEqual(20);
+    expect(new Set(TALK_TOPICS.map((t) => t.id)).size).toBe(TALK_TOPICS.length);
+    for (const t of TALK_TOPICS) {
+      expect(t.points).toHaveLength(3);
+      expect(topicOpener(t)).toContain(t.title);
+    }
+  });
+});
+
+describe("short reads", () => {
+  it("mark only phrases that are really in the text, with two answerable questions", async () => {
+    const { READINGS } = await import("@/content/readings");
+    expect(new Set(READINGS.map((r) => r.id)).size).toBe(READINGS.length);
+    for (const r of READINGS) {
+      const text = r.paragraphs.join(" ");
+      for (const g of r.glossary) expect(text.includes(g.text), `${r.id}: ${g.text}`).toBe(true);
+      expect(r.questions).toHaveLength(2);
+      for (const q of r.questions) expect(q.options[q.answer]).toBeTruthy();
+    }
+  });
+});

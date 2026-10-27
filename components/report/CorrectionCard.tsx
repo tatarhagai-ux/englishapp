@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Check, Languages, Mic, Volume2 } from "lucide-react";
 import clsx from "clsx";
@@ -10,6 +11,7 @@ import { MicBusyLabel, MicHeard } from "@/components/MicLive";
 import { useClipPlayer } from "@/lib/client/tts";
 import { learner } from "@/lib/client/learner";
 import { saidCorrectly } from "@/lib/text/compare";
+import { saySetForMistake } from "@/content/say";
 
 interface Props {
   correction: Analysis["corrections"][number];
@@ -68,6 +70,8 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
   }
 
   const playing = player.state?.key === `fix:${c.better}`;
+  // The same Hebrew-speaker trap has a "Say it in English" set: six fresh sentences on it.
+  const saySet = saySetForMistake(c.error_key);
 
   return (
     <article className="tile space-y-2 p-4">
@@ -121,6 +125,11 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
       </div>
 
       <MicHeard phase={mic.phase} heard={mic.heard} />
+      {saySet && (
+        <Link href={`/say/${saySet.id}`} className="inline-flex items-center gap-1 text-sm font-extrabold text-accent">
+          <Languages className="size-4" aria-hidden /> Drill this trap from Hebrew: {saySet.title}
+        </Link>
+      )}
       {attempt.status === "error" && <p className="text-sm font-bold text-bad">{attempt.error}</p>}
       {attempt.status === "done" && attempt.result && (
         <div className="rounded-xl bg-elev-2 p-3" aria-live="polite">

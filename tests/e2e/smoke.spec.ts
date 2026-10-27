@@ -16,6 +16,10 @@ test.describe("app shell", () => {
     await page.getByRole("button", { name: "How the plan works" }).click();
     await expect(page.getByText(/Missed a day\? It waits for you/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Boss mistake: Present perfect for “how long”" })).toBeVisible();
+    await expect(page.getByText("From your English test")).toBeVisible();
+    const quests = page.getByRole("region", { name: "Today's quests" });
+    await expect(quests).toContainText("0/3");
+    await expect(quests.getByRole("link", { name: /One listening story or round/ })).toHaveAttribute("href", "/listen");
     await expect(page.getByText("Finish setup to start talking")).toBeVisible();
     await expect(page.getByRole("link", { name: "Finish setup", exact: true })).toHaveAttribute("href", "/setup");
     await expect(page.getByLabel("0 day streak")).toBeVisible();
@@ -24,11 +28,13 @@ test.describe("app shell", () => {
   test("progress lists every focus mistake and locked achievements", async ({ page }) => {
     await page.goto("/progress");
     await expect(page.getByRole("heading", { name: "Level 1" })).toBeVisible();
+    const areas = page.getByRole("region", { name: "Practice areas" });
+    await expect(areas.getByRole("link", { name: /Stories 0\/19/ })).toHaveAttribute("href", "/listen#stories");
     await expect(page.getByText("new", { exact: true })).toHaveCount(8);
     // Earned plus the two closest; the rest behind "Show all".
-    await expect(page.getByText("0 of 11")).toBeVisible();
+    await expect(page.getByText("0 of 13")).toBeVisible();
     await expect(page.getByText("Interview ready")).toHaveCount(0);
-    await page.getByRole("button", { name: "Show all 11" }).click();
+    await page.getByRole("button", { name: "Show all 13" }).click();
     await expect(page.getByText("Interview ready")).toBeVisible();
     await expect(page.getByText("First words")).toBeVisible();
   });
@@ -183,20 +189,30 @@ test.describe("setup and APIs", () => {
   });
 });
 
-test("data can be exported and deleted from settings", async ({ page }) => {
+test("data can be exported, deleted and restored from settings", async ({ page }) => {
   await page.goto("/settings");
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export backup" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toMatch(/^speakwise-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  const backupPath = await file.path();
 
   await page.getByRole("button", { name: "Delete all" }).click();
-  await expect(page.getByRole("alertdialog")).toContainText("can't be undone");
+  await expect(page.getByRole("alertdialog")).toContainText("Only a backup file can bring it back");
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await page.getByRole("button", { name: "Delete all" }).click();
   await page.getByRole("button", { name: "Yes, delete" }).click();
   await expect(page.getByRole("status").filter({ hasText: "deleted" })).toBeVisible();
+
+  await page.getByLabel("Backup file").setInputFiles(backupPath);
+  await expect(page.getByRole("status").filter({ hasText: "Backup restored" })).toBeVisible();
+  await page.getByLabel("Backup file").setInputFiles({
+    name: "notes.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"hello":1}'),
+  });
+  await expect(page.getByRole("alert").filter({ hasText: "isn't a Speakwise backup" })).toBeVisible();
 });
 
 test("phrase bank imports a list with meanings and Hebrew", async ({ page }) => {
@@ -242,8 +258,8 @@ test("pronunciation course: open a unit, hear a minimal pair, read the Hebrew ti
     await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' });
   });
   await page.goto("/practice");
-  await page.getByRole("link", { name: /^Pronunciation 10 units/ }).click();
-  await expect(page.getByText("0 / 10")).toBeVisible();
+  await page.getByRole("link", { name: /^Pronunciation \d+ sounds/ }).click();
+  await expect(page.getByText("0 / 11")).toBeVisible();
   await page.getByRole("link", { name: /W is not V/ }).click();
   await expect(page.getByRole("heading", { name: "W is not V" })).toBeVisible();
   await page.getByRole("button", { name: "west" }).click();
@@ -281,7 +297,7 @@ test("say it: the mic shows when it is really open, the words as they come, and 
     route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' }),
   );
   await page.goto("/practice");
-  await page.getByRole("link", { name: /^Pronunciation 10 units/ }).click();
+  await page.getByRole("link", { name: /^Pronunciation \d+ sounds/ }).click();
   await page.getByRole("link", { name: /W is not V/ }).click();
   const first = page.getByRole("article").first();
   const sentence = (await first.locator("p").first().innerText()).trim();
@@ -328,4 +344,107 @@ test("daily reminder: download a calendar event or open Google Calendar", async 
   const popup = page.waitForEvent("popup");
   await section.getByRole("button", { name: "Google Calendar" }).click();
   expect((await popup).url()).toContain("calendar.google.com");
+});
+
+test("pronunciation: record yourself, then play it next to the tutor", async ({ page }) => {
+  // A fake microphone and recorder: the test checks the flow, not the audio.
+  await page.addInitScript(() => {
+    const track = { stop: () => {} };
+    Object.defineProperty(navigator, "mediaDevices", {
+      value: { getUserMedia: async () => ({ getTracks: () => [track] }) },
+    });
+    class FakeRecorder {
+      state = "inactive";
+      mimeType = "audio/webm";
+      ondataavailable: ((e: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        this.ondataavailable?.({ data: new Blob(["x"], { type: "audio/webm" }) });
+        this.onstop?.();
+      }
+    }
+    (window as unknown as { MediaRecorder: unknown }).MediaRecorder = FakeRecorder;
+  });
+  await page.goto("/pronounce/w-v");
+  const first = page.getByRole("article").first();
+  await first.getByRole("button", { name: "Record yourself" }).click();
+  await first.getByRole("button", { name: "Stop recording" }).click();
+  await expect(first.getByRole("button", { name: "You" })).toBeVisible();
+  await expect(first.getByRole("button", { name: "Tutor" })).toBeVisible();
+  await expect(first.getByRole("button", { name: "Record again" })).toBeVisible();
+});
+
+test("android: a one-time Home card opens the steps for natural voices", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "The tip is for Android phones (the mobile project uses a Pixel).");
+  await page.goto("/");
+  await page.getByRole("link", { name: /Make the voices sound natural/ }).click();
+  await expect(page).toHaveURL(/\/settings\/voice#voice-tip/);
+  await expect(page.getByText("Speech Recognition and Synthesis from Google")).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: /Make the voices sound natural/ })).toHaveCount(0);
+});
+
+test("mistake mini-lesson: the rule, wrong and right, and a drill that doesn't move reviews", async ({ page }) => {
+  await page.goto("/progress");
+  await page.getByRole("link", { name: /Present perfect for “how long”/ }).click();
+  await expect(page).toHaveURL(/\/mistakes\/present_perfect_duration/);
+  await expect(page.getByRole("heading", { name: "Present perfect for “how long”" })).toBeVisible();
+  await expect(page.getByText("The rule")).toBeVisible();
+  await expect(page.getByText("I've known him for five years.")).toBeVisible();
+  await expect(page.getByText("You said this")).toHaveCount(1);
+  await page.getByRole("button", { name: /Type it/ }).click();
+  await page.getByRole("button", { name: /Drill 4 sentences/ }).click();
+  await page.getByLabel("Your answer").fill("something wrong");
+  await page.getByRole("button", { name: "Check" }).click();
+  await page.getByRole("button", { name: "Skip" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "1 done" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /From Hebrew, out loud: For and since/ })).toHaveAttribute(
+    "href",
+    "/say/for-and-since",
+  );
+});
+
+test("after the 12-week plan: what changed, and a week to replay", async ({ page }) => {
+  await page.addInitScript(() => {
+    const report = {
+      corrections: [],
+      other_errors: [],
+      correct_uses: [],
+      phrases: [],
+      task: { completed: true, met: [], feedback_en: "" },
+      praise_en: "",
+      memory: [],
+    };
+    const sessions = [];
+    for (let w = 1; w <= 12; w++)
+      for (let d = 1; d <= 5; d++) {
+        const at = new Date(Date.UTC(2026, 7, 1) + (w * 7 + d) * 86_400_000).toISOString();
+        sessions.push({
+          id: `p${w}-${d}`,
+          scenarioId: "free-your-week",
+          mode: "quiet",
+          startedAt: at,
+          endedAt: at,
+          day: at.slice(0, 10),
+          turns: [{ role: "learner", text: "hi", input: "text" }],
+          speakingSeconds: 60,
+          stuckCount: 0,
+          fixedAloud: [],
+          xp: 10,
+          costUsd: 0,
+          planDay: `w${w}d${d}`,
+          report,
+        });
+      }
+    if (!localStorage.getItem("sw_learner_v1"))
+      localStorage.setItem("sw_learner_v1", JSON.stringify({ v: 1, errors: {}, phrases: [], spend: {}, sessions }));
+  });
+  // "Ready" needs a key on the server; the e2e server has none, so check the card's pieces directly.
+  await page.goto("/");
+  await expect(page.getByText("12-week plan complete")).toBeVisible();
+  await expect(page.getByText("60 of 60 plan days done", { exact: false })).toBeVisible();
 });

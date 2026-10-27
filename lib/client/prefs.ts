@@ -25,6 +25,8 @@ export interface Prefs {
   micMode: "tap" | "handsfree";
   /** "system" follows the phone's light or dark setting. */
   theme: "dark" | "light" | "system";
+  /** The Home card about natural voices on Android was opened or dismissed. */
+  voiceTipSeen: boolean;
 }
 
 const KEY = "sw_prefs_v1";
@@ -38,6 +40,7 @@ const DEFAULTS: Prefs = {
   sessionMinutes: 10,
   micMode: "tap",
   theme: "dark",
+  voiceTipSeen: false,
 };
 
 const listeners = new Set<() => void>();

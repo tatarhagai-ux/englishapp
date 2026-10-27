@@ -37,8 +37,8 @@ export function QuickReview() {
         sessionId={null}
         embedded
         hebrewHelp={prefs.hebrewHelp}
-        onDone={() => {
-          setFinished(items.length);
+        onDone={(reviewed) => {
+          setFinished(reviewed);
           setItems(null);
         }}
       />

@@ -15,6 +15,10 @@ export interface LearnerStats {
   /** Distinct accents heard in roleplays (American, British, Australian, Indian). */
   accentsHeard: number;
   xp: number;
+  /** The most days in one week with all three daily quests done. */
+  bestPerfectWeek: number;
+  /** "Say it in English" sets done with every sentence right on the first try. */
+  saySetsPerfect: number;
 }
 
 export const EMPTY_STATS: LearnerStats = {
@@ -27,6 +31,8 @@ export const EMPTY_STATS: LearnerStats = {
   interviewScenariosDone: 0,
   accentsHeard: 0,
   xp: 0,
+  bestPerfectWeek: 0,
+  saySetsPerfect: 0,
 };
 
 export interface Achievement {
@@ -53,6 +59,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     title: "One full week",
     detail: "Practice 7 days in a row",
     progress: (s) => ratio(s.bestStreak, 7),
+  },
+  {
+    key: "perfect_week",
+    title: "Perfect week",
+    detail: "All three daily quests on 5 days of one week",
+    progress: (s) => ratio(s.bestPerfectWeek, 5),
   },
   {
     key: "streak_30",
@@ -95,6 +107,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     title: "Interview ready",
     detail: "Complete all 6 job interview scenarios, including the full mock interview",
     progress: (s) => ratio(s.interviewScenariosDone, 6),
+  },
+  {
+    key: "trap_breaker",
+    title: "Trap breaker",
+    detail: "Get every sentence right on the first try in 5 Say it in English sets",
+    progress: (s) => ratio(s.saySetsPerfect, 5),
   },
   {
     key: "accents_4",

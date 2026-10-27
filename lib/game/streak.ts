@@ -5,7 +5,7 @@
  * restDays a short gap (the plan is 5 days a week) doesn't break it either.
  */
 
-function toDayNumber(day: string): number {
+export function toDayNumber(day: string): number {
   const [y, m, d] = day.split("-").map(Number);
   return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
 }
@@ -73,4 +73,11 @@ export function friendlyDay(day: string, today: string): string {
   return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(
     d,
   );
+}
+
+/** The Sunday that starts the week containing this day (weeks run Sunday to Saturday, as in Israel). */
+export function weekStart(day: string): string {
+  const n = toDayNumber(day);
+  const weekday = new Date(n * 86_400_000).getUTCDay(); // 0 = Sunday
+  return new Date((n - weekday) * 86_400_000).toISOString().slice(0, 10);
 }

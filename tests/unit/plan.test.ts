@@ -144,3 +144,30 @@ describe("phraseUsedIn", () => {
     expect(phraseUsedIn("hi", "ok")).toBe(false);
   });
 });
+
+describe("wordsToLearn", () => {
+  it("introduces the week's words three at a time, skipping ones already met or used", async () => {
+    const { wordsToLearn } = await import("@/lib/learner/plan");
+    const { ratePhrase, initialState, addPhrases } = await import("@/lib/learner/model");
+    const { PLAN } = await import("@/content/plan");
+    const week = PLAN[0];
+    let s = initialState();
+    expect(wordsToLearn(s, week).map((w) => w.text)).toEqual(week.words.slice(0, 3).map((w) => w.text));
+    s = addPhrases(s, week.words, "Week 1").state;
+    for (const w of week.words.slice(0, 3)) s = ratePhrase(s, w.text, 2);
+    expect(wordsToLearn(s, week)[0].text).toBe(week.words[3].text);
+  });
+});
+
+describe("weekToReplay", () => {
+  it("picks the week whose words he owns least", async () => {
+    const { weekToReplay } = await import("@/lib/learner/plan");
+    const { PLAN } = await import("@/content/plan");
+    const { initialState, addPhrases } = await import("@/lib/learner/model");
+    // Every word owned except in week 3.
+    const words = PLAN.filter((w) => w.week !== 3).flatMap((w) => w.words);
+    let s = addPhrases(initialState(), words, "Plan").state;
+    s = { ...s, phrases: s.phrases.map((p) => ({ ...p, usedCount: 2 })) };
+    expect(weekToReplay(s).week).toBe(3);
+  });
+});

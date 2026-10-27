@@ -19,7 +19,8 @@ import {
   X,
 } from "lucide-react";
 import clsx from "clsx";
-import { characterName, scenarioById } from "@/content/scenarios";
+import { characterName, MINUTE_TALK_ID, scenarioById } from "@/content/scenarios";
+import { TALK_TOPICS, topicById, topicOpener } from "@/content/topics";
 import { voiceById, DEFAULT_TUTOR_VOICE_ID } from "@/content/voices";
 import type { Turn, TurnInput } from "@/lib/conversation/types";
 import { usePrefs } from "@/lib/client/prefs";
@@ -34,16 +35,20 @@ import { monthKey } from "@/lib/cost/budget";
 import {
   memoryForTutor,
   phrasesToPractice,
+  RESUME_WINDOW_MS,
   targetKeysForNext,
   warmupItems,
   type WarmupItem,
 } from "@/lib/learner/model";
 import { planDayByKey, planWeek } from "@/content/plan";
-import { weekWordsToPractice } from "@/lib/learner/plan";
+import { weekWordsToPractice, wordsToLearn } from "@/lib/learner/plan";
+import type { StretchWord } from "@/content/plan";
 import { adaptation, paceFor } from "@/lib/learner/adapt";
 import { dayKey } from "@/lib/game/streak";
+import { useWakeLock } from "@/lib/client/wake-lock";
 import { Intro } from "./Intro";
 import { Warmup } from "./Warmup";
+import { LearnWords } from "./LearnWords";
 import { Transcript } from "./Transcript";
 import { MissionBar } from "./MissionBar";
 import { demoReply } from "@/lib/client/demo";
@@ -79,6 +84,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const demo = params.get("demo") === "1";
   // Started from the 12-week plan: the day must belong to this scenario.
   const planParam = params.get("plan");
+  // The one-minute talk reads out its topic card as the first line.
+  const topic =
+    scenarioId === MINUTE_TALK_ID
+      ? (topicById(params.get("topic") ?? "") ?? TALK_TOPICS[Math.floor(Date.now() / 86_400_000) % TALK_TOPICS.length])
+      : undefined;
+  const opener = topic ? topicOpener(topic) : scenario.opener;
   const planDay = planParam && planDayByKey(planParam)?.scenarioId === scenarioId ? planParam : undefined;
   const planWeekInfo = planDay ? planWeek(planDayByKey(planDay)!.week) : undefined;
   const hydrated = useHydrated();
@@ -94,7 +105,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const limitSeconds = (isTutor && !scenario.hidden ? prefs.sessionMinutes : scenario.minutes) * 60;
   const spentThisMonth = state.spend[monthKey()] ?? 0;
 
-  const [phase, setPhase] = useState<"intro" | "warmup" | "live" | "finishing">("intro");
+  const [phase, setPhase] = useState<"intro" | "learn" | "warmup" | "live" | "finishing">("intro");
+  const [learnWords, setLearnWords] = useState<StretchWord[]>([]);
   const [warmup, setWarmup] = useState<WarmupItem[]>([]);
   const [mode, setMode] = useState<"voice" | "quiet">("voice");
   const [starting, setStarting] = useState(false);
@@ -114,6 +126,9 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [draft, setDraft] = useState("");
+  /** Asking before ending early: the X sits where a thumb lands by accident. */
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  useWakeLock(phase !== "intro");
 
   const turnsRef = useRef<Turn[]>([]);
   const sessionRef = useRef<string | null>(null);
@@ -146,10 +161,19 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   // An unfinished conversation for this scenario from the last two hours can be resumed.
   const resumable = useMemo(() => {
     if (!hydrated) return null;
-    const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+    const cutoff = Date.now() - RESUME_WINDOW_MS;
     return (
-      state.sessions
-        .filter((s) => !s.demo && s.scenarioId === scenarioId && !s.endedAt && new Date(s.startedAt).getTime() > cutoff)
+      // The newest one, like the Home card picks.
+      [...state.sessions]
+        .reverse()
+        .filter(
+          (s) =>
+            !s.demo &&
+            s.scenarioId === scenarioId &&
+            !s.endedAt &&
+            !s.report &&
+            new Date(s.startedAt).getTime() > cutoff,
+        )
         .find((s) => s.turns.some((t) => t.role === "learner")) ?? null
     );
   }, [hydrated, state.sessions, scenarioId]);
@@ -463,13 +487,25 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       setTurnsBoth(resumable.turns);
       elapsedRef.current = Math.min(resumable.speakingSeconds * 2, limitSeconds - 60);
     } else {
-      id = learner.startSession(scenarioId, chosen, scenario.opener, demo, planDay);
-      setTurnsBoth([{ role: "tutor", text: scenario.opener }]);
+      id = learner.startSession(scenarioId, chosen, opener, demo, planDay);
+      setTurnsBoth([{ role: "tutor", text: opener }]);
     }
     sessionRef.current = id;
     setSessionId(id);
     setStarting(false);
     const items = resume || demo ? [] : warmupItems(learner.get());
+    setWarmup(items);
+    // Plan days: meet a few of the week's new words first, then the warm-up, then talk.
+    const learn = planWeekInfo && !resume && !demo ? wordsToLearn(learner.get(), planWeekInfo) : [];
+    if (learn.length) {
+      setLearnWords(learn);
+      setPhase("learn");
+      return;
+    }
+    afterLearn(items);
+  }
+
+  function afterLearn(items: WarmupItem[]) {
     if (items.length) {
       setWarmup(items);
       setPhase("warmup");
@@ -496,10 +532,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     if (!lastTutor || busy) return;
     await stopListening();
     learner.noteHelp(sessionRef.current, "replay");
-    const previous = rateRef.current;
-    rateRef.current = rate;
-    ensureQueue().speak(lastTutor);
-    rateRef.current = previous;
+    // The rate goes with the sentence: the device voice reads it only after an await.
+    ensureQueue().speak(lastTutor, rate);
   }
 
   async function runAssist(kind: "hint" | "better" | "simplify") {
@@ -611,6 +645,18 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         blockedReason={blockedReason}
         starting={starting}
         warmupCount={hydrated ? warmupItems(state).length : 0}
+        topic={topic}
+      />
+    );
+  }
+
+  if (phase === "learn" && planWeekInfo) {
+    return (
+      <LearnWords
+        words={learnWords}
+        week={planWeekInfo.week}
+        mode={mode}
+        onDone={() => afterLearn(warmup.filter((i) => !learnWords.some((w) => w.text === i.id)))}
       />
     );
   }
@@ -636,7 +682,11 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       <header className="flex items-center gap-3 px-4 pb-2 pt-4">
         <button
           type="button"
-          onClick={() => void finish()}
+          onClick={() => {
+            const early = elapsedRef.current < limitSeconds && turnsRef.current.some((t) => t.role === "learner");
+            if (early) setConfirmEnd(true);
+            else void finish();
+          }}
           aria-label="End conversation"
           className="grid size-10 place-items-center rounded-xl border-2 border-line bg-elev text-dim hover:text-text"
         >
@@ -674,6 +724,26 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
           {hideText ? <CaptionsOff className="size-5" /> : <Captions className="size-5" />}
         </button>
       </header>
+
+      {confirmEnd && (
+        <div
+          role="alertdialog"
+          aria-labelledby="end-title"
+          className="mx-4 mb-2 space-y-2 rounded-xl border-2 border-line bg-elev p-3"
+        >
+          <p id="end-title" className="text-sm font-extrabold">
+            End now? Your report covers what you&apos;ve said so far.
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => void finish()} className="btn-3d btn-accent flex-1 py-2 text-sm">
+              End and see report
+            </button>
+            <button type="button" onClick={() => setConfirmEnd(false)} className="btn-3d btn-ghost flex-1 py-2 text-sm">
+              Keep talking
+            </button>
+          </div>
+        </div>
+      )}
 
       {!scenario.hidden && <MissionBar task={scenario.task} phrases={scenario.phrases} />}
 

@@ -5,10 +5,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, Headphones, Keyboard, Loader2, Mic, Play, Snail, Trophy } from "lucide-react";
 import clsx from "clsx";
+import { STORIES, type Story } from "@/content/stories";
+import { RADIO } from "@/content/radio";
 import { LISTENING, type ListeningItem } from "@/content/listening";
 import { VOICES, type Accent, type Voice } from "@/content/voices";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { useClipPlayer } from "@/lib/client/tts";
+import { useWakeLock } from "@/lib/client/wake-lock";
 import { primeAudio, SpeechSetupError, type PronunciationResult } from "@/lib/client/speech";
 import { useMicAttempt } from "@/lib/client/use-mic-attempt";
 import { MicBusyLabel, MicHeard } from "@/components/MicLive";
@@ -31,6 +34,9 @@ interface Result {
 export function ListeningGym() {
   const hydrated = useHydrated();
   const state = useLearner();
+  // Ones he hasn't heard come first, in their order; the first of them is marked Next.
+  const unheardFirst = (list: readonly Story[]) =>
+    hydrated ? [...list].sort((a, b) => Number(!!state.stories?.[a.id]) - Number(!!state.stories?.[b.id])) : list;
   const listening = state.listening ?? LISTENING_START;
   const [mode, setMode] = useState<Mode>("dictation");
   const [accent, setAccent] = useState<AccentChoice>("Mixed");
@@ -44,6 +50,7 @@ export function ListeningGym() {
   const [done, setDone] = useState(false);
   const player = useClipPlayer();
   const autoplayed = useRef(-1);
+  useWakeLock(Boolean(round) && !done);
 
   const voicePool = useMemo(() => VOICES.filter((v) => accent === "Mixed" || v.accent === accent), [accent]);
 
@@ -175,6 +182,81 @@ export function ListeningGym() {
             </p>
           </section>
         )}
+
+        <section id="stories" aria-labelledby="stories-title" className="scroll-mt-4 space-y-2.5">
+          <div>
+            <h2 id="stories-title" className="font-black">
+              Stories
+            </h2>
+            <p className="text-sm text-dim">
+              A short real conversation, then three questions. Words appear at the end.
+            </p>
+          </div>
+          <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
+            {unheardFirst(STORIES).map((s, i) => {
+              const best = hydrated ? state.stories?.[s.id]?.best : undefined;
+              const isNext = hydrated && i === 0 && best === undefined;
+              return (
+                <Link
+                  key={s.id}
+                  href={`/listen/story/${s.id}`}
+                  className="tile w-44 shrink-0 snap-start space-y-1 p-3.5 transition-colors hover:border-accent/60"
+                >
+                  <p className="text-xs font-extrabold text-faint">
+                    {s.level} · {s.lines.length} lines
+                  </p>
+                  <p className="font-extrabold leading-snug">{s.title}</p>
+                  <p
+                    className={clsx(
+                      "text-xs font-bold",
+                      isNext ? "text-accent" : best === undefined ? "text-dim" : best === 3 ? "text-good" : "text-warn",
+                    )}
+                  >
+                    {isNext ? "Next" : best === undefined ? "New" : `Best ${best}/3`}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section id="radio" aria-labelledby="radio-title" className="scroll-mt-4 space-y-2.5">
+          <div>
+            <h2 id="radio-title" className="font-black">
+              Radio
+            </h2>
+            <p className="text-sm text-dim">
+              Two to three minutes of one person talking, like a podcast. Three questions at the end.
+            </p>
+          </div>
+          <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
+            {unheardFirst(RADIO).map((s, i) => {
+              const best = hydrated ? state.stories?.[s.id]?.best : undefined;
+              const isNext = hydrated && i === 0 && best === undefined;
+              return (
+                <Link
+                  key={s.id}
+                  href={`/listen/story/${s.id}`}
+                  className="tile w-44 shrink-0 snap-start space-y-1 p-3.5 transition-colors hover:border-accent/60"
+                >
+                  <p className="text-xs font-extrabold text-faint">
+                    {s.level} ·{" "}
+                    {Math.max(1, Math.round(s.lines.reduce((n, l) => n + l.text.split(" ").length, 0) / 130))} min
+                  </p>
+                  <p className="font-extrabold leading-snug">{s.title}</p>
+                  <p
+                    className={clsx(
+                      "text-xs font-bold",
+                      isNext ? "text-accent" : best === undefined ? "text-dim" : best === 3 ? "text-good" : "text-warn",
+                    )}
+                  >
+                    {isNext ? "Next" : best === undefined ? "New" : `Best ${best}/3`}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
 
         <section className="tile grid grid-cols-2 gap-3 p-4">
           <div>

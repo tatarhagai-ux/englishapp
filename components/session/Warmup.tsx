@@ -8,6 +8,7 @@ import { SpeechSetupError } from "@/lib/client/speech";
 import { useMicAttempt } from "@/lib/client/use-mic-attempt";
 import { MicBusyLabel, MicHeard } from "@/components/MicLive";
 import { learner } from "@/lib/client/learner";
+import { useWakeLock } from "@/lib/client/wake-lock";
 import { saidCorrectly, usedPhrase } from "@/lib/text/compare";
 
 interface Props {
@@ -16,9 +17,14 @@ interface Props {
   /** The conversation it warms up for; null for a standalone quick review. */
   sessionId: string | null;
   hebrewHelp: boolean;
-  onDone: () => void;
+  /** Called with how many items he actually answered (Skip counts only those). */
+  onDone: (reviewed: number) => void;
   /** Inside a page with the bottom bar: leave room for it so the buttons stay visible. */
   embedded?: boolean;
+  /** False for extra drills: answers don't move the review schedule. */
+  schedule?: boolean;
+  /** The small label above the card. */
+  label?: string;
 }
 
 type Attempt = { status: "idle" | "checked" | "error"; said?: string; ok?: boolean; error?: string };
@@ -28,8 +34,18 @@ type Attempt = { status: "idle" | "checked" | "error"; said?: string; ok?: boole
  * said wrong last time and produce the right version yourself before seeing it. Phrases
  * are said out loud from their meaning. Every answer schedules the next review (FSRS).
  */
-export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = false }: Props) {
+export function Warmup({
+  items,
+  mode,
+  sessionId,
+  hebrewHelp,
+  onDone,
+  embedded = false,
+  schedule = true,
+  label = "Warm-up",
+}: Props) {
   const [index, setIndex] = useState(0);
+  useWakeLock(true);
   const [revealed, setRevealed] = useState(false);
   const [attempt, setAttempt] = useState<Attempt>({ status: "idle" });
   const mic = useMicAttempt();
@@ -43,6 +59,10 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
   function record(ok: boolean) {
     if (recorded) return;
     setRecorded(true);
+    if (!schedule) {
+      setReviewed((n) => n + 1);
+      return;
+    }
     if (item.kind === "phrase") learner.reviewPhrase(item.id, ok);
     else learner.reviewMistake(item.id, ok);
     setReviewed((n) => n + 1);
@@ -52,17 +72,18 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
     item.kind === "phrase" ? usedPhrase(answer, item.target) : saidCorrectly(answer, item.target);
 
   function next() {
-    if (index + 1 >= items.length) {
-      if (sessionId) learner.addReviews(sessionId, reviewed);
-      onDone();
-      return;
-    }
+    if (index + 1 >= items.length) return finish();
     setIndex(index + 1);
     setRevealed(false);
     setRecorded(false);
     setAttempt({ status: "idle" });
     setTyped("");
     setShowHe(hebrewHelp);
+  }
+
+  function finish() {
+    if (sessionId && reviewed) learner.addReviews(sessionId, reviewed);
+    onDone(reviewed);
   }
 
   async function speak() {
@@ -116,9 +137,9 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
       <header className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-faint">
-            <Sparkles className="size-4 text-xp" aria-hidden /> Warm-up
+            <Sparkles className="size-4 text-xp" aria-hidden /> {label}
           </p>
-          <button type="button" onClick={onDone} className="text-sm font-extrabold text-dim hover:text-text">
+          <button type="button" onClick={finish} className="text-sm font-extrabold text-dim hover:text-text">
             Skip
           </button>
         </div>
@@ -132,7 +153,7 @@ export function Warmup({ items, mode, sessionId, hebrewHelp, onDone, embedded = 
       <section className="tile space-y-3 p-5">
         {item.kind === "mistake" ? (
           <>
-            <p className="font-extrabold">Earlier you said:</p>
+            <p className="font-extrabold">{item.practice ? "Same mistake, new sentence:" : "Earlier you said:"}</p>
             <p className="text-lg text-bad line-through decoration-bad/60">{item.wrong}</p>
             <p className="font-extrabold">How do you say it correctly?</p>
           </>

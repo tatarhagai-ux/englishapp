@@ -8,6 +8,7 @@ import {
   levelHistory,
   duePhrases,
   initialState,
+  unfinishedSession,
   rankedErrors,
   recommendScenario,
   reviewMistake,
@@ -171,7 +172,7 @@ describe("learner model", () => {
     let s = applyAnalysis(withSession(), "s1", analysis({ phrases: [{ text: "touch base" }] }), NOW);
     expect(duePhrases(s, NOW)).toHaveLength(1);
     s = JSON.parse(JSON.stringify(s));
-    s = reviewPhrase(s, "touch base", true, NOW);
+    s = reviewPhrase(s, "Touch base", true, NOW);
     expect(duePhrases(s, NOW)).toHaveLength(0);
     expect(new Date(s.phrases[0].card.due).getTime()).toBeGreaterThan(NOW.getTime());
   });
@@ -204,6 +205,28 @@ describe("warm-up", () => {
     expect(items.some((i) => i.kind === "phrase" && i.target === "a smart move")).toBe(true);
     const later = new Date(NOW.getTime() + 30 * 86_400_000);
     expect(warmupItems(s, later).map((i) => i.id)).toContain("present_perfect_duration");
+  });
+
+  it("spaces reviews in days: a right answer skips the next day's warm-up, a wrong one returns tomorrow", () => {
+    const base = withSession();
+    const hour = 3_600_000;
+    const right = reviewMistake(base, "present_perfect_duration", true, NOW);
+    expect(warmupItems(right, new Date(NOW.getTime() + 2 * hour)).map((i) => i.id)).not.toContain(
+      "present_perfect_duration",
+    );
+    expect(warmupItems(right, new Date(NOW.getTime() + 24 * hour)).map((i) => i.id)).not.toContain(
+      "present_perfect_duration",
+    );
+    expect(warmupItems(right, new Date(NOW.getTime() + 73 * hour)).map((i) => i.id)).toContain(
+      "present_perfect_duration",
+    );
+    const wrong = reviewMistake(base, "present_perfect_duration", false, NOW);
+    expect(warmupItems(wrong, new Date(NOW.getTime() + 2 * hour)).map((i) => i.id)).not.toContain(
+      "present_perfect_duration",
+    );
+    expect(warmupItems(wrong, new Date(NOW.getTime() + 25 * hour)).map((i) => i.id)).toContain(
+      "present_perfect_duration",
+    );
   });
 
   it("counts warm-up reviews in session XP", () => {
@@ -279,5 +302,163 @@ describe("quick review size", () => {
     expect(short.filter((i) => i.kind === "mistake")).toHaveLength(2);
     expect(long.filter((i) => i.kind === "mistake").length).toBeGreaterThan(2);
     expect(long.find((i) => i.kind === "phrase")).toMatchObject({ interview: true });
+  });
+});
+
+describe("unfinishedSession", () => {
+  const start = new Date("2026-10-26T10:00:00Z");
+  function withTurns(n: number, extra: Partial<SessionRecord> = {}) {
+    const s = initialState(start);
+    const turns = Array.from({ length: n }, (_, i) => ({ role: "learner" as const, text: `answer ${i}` }));
+    return {
+      ...s,
+      sessions: [
+        {
+          id: "s1",
+          scenarioId: "free-your-week",
+          mode: "voice" as const,
+          startedAt: start.toISOString(),
+          day: "2026-10-26",
+          turns,
+          speakingSeconds: 30,
+          stuckCount: 0,
+          fixedAloud: [],
+          xp: 0,
+          costUsd: 0,
+          ...extra,
+        },
+      ],
+    };
+  }
+
+  it("finds a cut-off conversation with something to learn from", () => {
+    expect(unfinishedSession(withTurns(2), new Date("2026-10-26T10:30:00Z"))).toMatchObject({ resumable: true });
+    expect(unfinishedSession(withTurns(2), new Date("2026-10-26T15:00:00Z"))).toMatchObject({ resumable: false });
+  });
+
+  it("ignores ended, demo, too short and old ones", () => {
+    const soon = new Date("2026-10-26T10:30:00Z");
+    expect(unfinishedSession(withTurns(1), soon)).toBeNull();
+    expect(unfinishedSession(withTurns(3, { endedAt: soon.toISOString() }), soon)).toBeNull();
+    expect(unfinishedSession(withTurns(3, { demo: true }), soon)).toBeNull();
+    expect(unfinishedSession(withTurns(3), new Date("2026-11-05T10:00:00Z"))).toBeNull();
+  });
+
+  it("stops offering it once a later conversation was finished", () => {
+    const soon = new Date("2026-10-26T12:00:00Z");
+    const s = withTurns(3);
+    const finished = { ...s.sessions[0], id: "s2", startedAt: "2026-10-26T11:00:00Z", report: analysis({}) };
+    expect(unfinishedSession({ ...s, sessions: [...s.sessions, finished] }, soon)).toBeNull();
+  });
+});
+
+describe("varied warm-up sentences", () => {
+  it("practices a mistake with a different sentence each review", () => {
+    let s = withSession();
+    const seen: string[] = [];
+    let when = NOW;
+    for (let i = 0; i < 4; i++) {
+      const item = warmupItems(s, when).find((i) => i.id === "present_perfect_duration")!;
+      seen.push(item.target);
+      s = reviewMistake(s, "present_perfect_duration", true, when);
+      when = new Date(new Date(s.errors.present_perfect_duration.card!.due).getTime() + 3_600_000);
+    }
+    expect(new Set(seen).size).toBe(4);
+    expect(seen[0]).toBe("I've been living in Shoham for ten years.");
+  });
+
+  it("uses his own later sentences, without duplicates", () => {
+    const fix = {
+      original: "I work here since March",
+      better: "I've worked here since March",
+      why_en: "x",
+      error_key: "present_perfect_duration",
+    };
+    let s = applyAnalysis(withSession(), "s1", analysis({ corrections: [fix] }), NOW);
+    s = applyAnalysis(s, "s1", analysis({ corrections: [fix] }), NOW);
+    expect(s.errors.present_perfect_duration.examples).toEqual([
+      { wrong: "I work here since March", better: "I've worked here since March" },
+    ]);
+    s = reviewMistake(s, "present_perfect_duration", true, NOW);
+    const next = warmupItems(s, new Date(NOW.getTime() + 30 * 86_400_000)).find(
+      (i) => i.id === "present_perfect_duration",
+    );
+    expect(next).toMatchObject({ wrong: "I work here since March", target: "I've worked here since March" });
+  });
+
+  it("keeps examples from both devices when syncing", async () => {
+    const { mergeStates } = await import("@/lib/learner/merge");
+    const a = withSession();
+    const b = withSession();
+    a.errors.missing_be = { ...a.errors.missing_be, examples: [{ wrong: "It called X", better: "It's called X" }] };
+    b.errors.missing_be = { ...b.errors.missing_be, examples: [{ wrong: "It used for Y", better: "It's used for Y" }] };
+    expect(mergeStates(a, b).errors.missing_be.examples).toHaveLength(2);
+  });
+});
+
+describe("differentScenario", () => {
+  it("offers another kind of conversation that wasn't done recently", async () => {
+    const { differentScenario } = await import("@/lib/learner/model");
+    const { scenarioById } = await import("@/content/scenarios");
+    const s = withSession(session({ scenarioId: "free-your-week" }));
+    const other = differentScenario(s, ["free-your-week", "free-book"])!;
+    expect(other.id).not.toBe("free-your-week");
+    expect(scenarioById(other.id)!.category).not.toBe("free");
+    expect(other.hidden).toBeFalsy();
+  });
+});
+
+describe("word cards", () => {
+  it("adds a pack without flooding reviews, then introduces 10 new words a day", async () => {
+    const { cardQueue, ratePhrase, phrasesToPractice } = await import("@/lib/learner/model");
+    const { DECKS } = await import("@/content/decks");
+    let s = withSession();
+    const office = DECKS.find((d) => d.id === "office")!;
+    s = addPhrases(
+      s,
+      office.words.map((w) => ({ ...w, deck: "office" })),
+      office.title,
+      NOW,
+    ).state;
+    // Not studied yet: not in the warm-up, not pushed by the tutor.
+    expect(warmupItems(s, NOW).filter((i) => i.kind === "phrase")).toHaveLength(0);
+    expect(phrasesToPractice(s, NOW)).toEqual([]);
+    const q = cardQueue(s, NOW, { today: "2026-10-25" });
+    expect(q.fresh).toHaveLength(10);
+    for (const p of q.fresh) s = ratePhrase(s, p.text, 3, NOW);
+    expect(cardQueue(s, NOW, { today: "2026-10-25" }).fresh).toHaveLength(0);
+    expect(cardQueue(s, NOW, { today: "2026-10-26" }).fresh).toHaveLength(2);
+    // Studied words now take part in reviews and conversations.
+    expect(phrasesToPractice(s, NOW).length).toBeGreaterThan(0);
+  });
+
+  it("Again comes back tomorrow, Easy waits much longer", async () => {
+    const { ratePhrase } = await import("@/lib/learner/model");
+    let s = addPhrases(
+      withSession(),
+      [{ text: "heads-up", meaningEn: "a warning", meaningHe: "", deck: "office" }],
+      "Office",
+      NOW,
+    ).state;
+    const again = ratePhrase(s, "heads-up", 1, NOW).phrases[0].card.due;
+    s = ratePhrase(s, "heads-up", 4, NOW);
+    const easy = s.phrases[0].card.due;
+    expect(new Date(easy).getTime()).toBeGreaterThan(new Date(again).getTime() + 3 * 86_400_000);
+  });
+});
+
+describe("unfinishedSession keeps the cut-off conversation", () => {
+  it("isn't hidden by a newer one-line session", () => {
+    const base = withSession();
+    const t = (n: number) => Array.from({ length: n }, (_, i) => ({ role: "learner" as const, text: `a${i}` }));
+    const cut = session({ id: "cut", turns: t(5), startedAt: NOW.toISOString(), endedAt: undefined });
+    const short = session({
+      id: "short",
+      turns: t(1),
+      startedAt: new Date(NOW.getTime() + 600_000).toISOString(),
+      endedAt: undefined,
+    });
+    const s = { ...base, sessions: [cut, short] };
+    expect(unfinishedSession(s, new Date(NOW.getTime() + 900_000))?.session.id).toBe("cut");
   });
 });

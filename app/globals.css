@@ -11,8 +11,13 @@
   --line: #262c44;
   --text: #eef0f8;
   --text-dim: #a3a9c2;
-  --text-faint: #6b7291;
-  --accent: #7c5cff;
+  --text-faint: #8b92b0;
+  /* Slightly deeper than the brand violet so white text on it reads well (4.9:1). */
+  --accent: #7254f5;
+  /* Accent as text on dark surfaces: lighter, so small links stay readable (6.5:1). */
+  --accent-ink: #a08bff;
+  --xp-ink: #ffd34d;
+  --accent-2-ink: #3ee6c1;
   --accent-2: #3ee6c1;
   --accent-soft: rgba(124, 92, 255, 0.16);
   --good: #3ee6a0;
@@ -37,13 +42,16 @@
   --line: #dfe2ee;
   --text: #12152a;
   --text-dim: #4a5070;
-  --text-faint: #8a90ab;
+  --text-faint: #5e6482;
   --accent: #5b3df5;
+  --accent-ink: #5b3df5;
+  --xp-ink: #7d5b00;
+  --accent-2-ink: #08775f;
   --accent-2: #0fb894;
   --accent-soft: rgba(91, 61, 245, 0.1);
-  --good: #12a46c;
-  --warn: #c78a00;
-  --bad: #e0334f;
+  --good: #087a50;
+  --warn: #7d5b00;
+  --bad: #d42a46;
   --ring: rgba(91, 61, 245, 0.45);
   --accent-deep: #3a22b8;
   --go: #2fbf71;
@@ -62,13 +70,16 @@
     --line: #dfe2ee;
     --text: #12152a;
     --text-dim: #4a5070;
-    --text-faint: #8a90ab;
+    --text-faint: #5e6482;
     --accent: #5b3df5;
+    --accent-ink: #5b3df5;
+    --xp-ink: #7d5b00;
+    --accent-2-ink: #08775f;
     --accent-2: #0fb894;
     --accent-soft: rgba(91, 61, 245, 0.1);
-    --good: #12a46c;
-    --warn: #c78a00;
-    --bad: #e0334f;
+    --good: #087a50;
+    --warn: #7d5b00;
+    --bad: #d42a46;
     --ring: rgba(91, 61, 245, 0.45);
     --accent-deep: #3a22b8;
     --go: #2fbf71;
@@ -200,4 +211,19 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+ * Text colors with their own readable shade (WCAG AA): accent links, XP and the second
+ * accent as text use an "ink" token, while buttons and badges keep the base color.
+ * Unlayered, so these win over the generated utilities.
+ */
+.text-accent {
+  color: var(--accent-ink);
+}
+.text-xp {
+  color: var(--xp-ink);
+}
+.text-accent-2 {
+  color: var(--accent-2-ink);
 }

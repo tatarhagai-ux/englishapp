@@ -5,19 +5,10 @@
 import { PLAN_DAYS } from "@/content/plan";
 import { PLACEMENT_ID } from "@/content/scenarios";
 import { wordCount } from "@/lib/text/compare";
+import { toDayNumber as dayNumber, weekStart } from "@/lib/game/streak";
 import { isRealSession, type LearnerState, type SessionRecord } from "./model";
 
-function dayNumber(day: string): number {
-  const [y, m, d] = day.split("-").map(Number);
-  return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
-}
-
-/** The Sunday that starts the week containing this day, as YYYY-MM-DD. */
-export function weekStart(day: string): string {
-  const n = dayNumber(day);
-  const weekday = new Date(n * 86_400_000).getUTCDay(); // 0 = Sunday
-  return new Date((n - weekday) * 86_400_000).toISOString().slice(0, 10);
-}
+export { weekStart };
 
 export interface WeekSummary {
   start: string;

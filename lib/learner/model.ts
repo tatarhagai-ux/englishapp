@@ -4,12 +4,13 @@
  * same shape moves to Supabase later, so nothing here touches storage.
  */
 import { createEmptyCard, fsrs, Rating, type Card } from "ts-fsrs";
-import { SEED_ERRORS } from "@/content/learner-seed";
+import { SEED_ERRORS, seedVariants } from "@/content/learner-seed";
 import { SCENARIOS, scenarioById, type Scenario } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
+import { SAY_SETS } from "@/content/say";
 import type { Turn } from "@/lib/conversation/types";
 import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
-import { bestStreak, computeStreak } from "@/lib/game/streak";
+import { bestStreak, computeStreak, dayKey, weekStart } from "@/lib/game/streak";
 import { EMPTY_STATS, type LearnerStats } from "@/lib/game/achievements";
 import { xpForSession } from "@/lib/game/xp";
 
@@ -32,6 +33,24 @@ export interface ErrorRecord {
   lastSeen: string;
   /** Review schedule for the warm-up ("say the correct version"). Created on first review. */
   card?: Card;
+  /** Later times he made it, newest last, so the warm-up can use his own sentences. */
+  examples?: { wrong: string; better: string }[];
+}
+
+/** How many of his own sentences are kept per mistake. */
+export const EXAMPLES_MAX = 6;
+
+/** Add an example unless it's already there; the oldest falls off past the cap. */
+export function addExample(
+  list: { wrong: string; better: string }[] | undefined,
+  ex: { wrong: string; better: string },
+  primary?: string,
+): { wrong: string; better: string }[] {
+  const key = (s: string) => s.trim().toLowerCase();
+  const all = list ?? [];
+  if (!ex.wrong.trim() || !ex.better.trim()) return all;
+  if ((primary && key(primary) === key(ex.better)) || all.some((e) => key(e.better) === key(ex.better))) return all;
+  return [...all, ex].slice(-EXAMPLES_MAX);
 }
 
 export interface PhraseRecord {
@@ -45,6 +64,10 @@ export interface PhraseRecord {
   example?: string;
   /** Times he used it in a conversation. */
   usedCount?: number;
+  /** Added from a word pack (content/decks.ts): it waits for the word cards before reviews. */
+  deck?: string;
+  /** When he first studied it on a word card (for the daily new-card limit). */
+  studiedAt?: string;
 }
 
 export interface SessionRecord {
@@ -87,6 +110,19 @@ export interface LearnerState {
   /** Azure usage per month, to know when the free tier runs out. */
   speechUsage?: Record<string, { ttsChars: number; sttSeconds: number }>;
   listening?: ListeningState;
+  /** Listening stories: best number of questions right, by story id. */
+  stories?: Record<string, { best: number; at: string }>;
+  /** Short reads, the same way. */
+  readings?: Record<string, { best: number; at: string }>;
+  /** "Say it in English" sets: best number right on the first try, by set id. */
+  sayDrills?: Record<string, { best: number; at: string }>;
+  /**
+   * "Say it in English" sentences he missed on the first try, by their Hebrew text. open
+   * turns false once he gets it right in a later round; the newer at wins across devices.
+   */
+  sayMisses?: Record<string, { at: string; open: boolean }>;
+  /** Days when all three daily quests were done ("YYYY-MM-DD"). */
+  perfectDays?: string[];
   /** Best pronunciation score per course unit. */
   pronunciation?: Record<string, { best: number; attempts: number; lastAt: string }>;
   /** Facts he shared in conversations, so the tutor can pick up where they left off. */
@@ -95,6 +131,8 @@ export interface LearnerState {
   feelings?: Record<string, WeekFeeling>;
   /** Set by "Delete all". Sync drops anything older from other devices. */
   resetAt?: string;
+  /** Set when a backup is restored: a "Delete all" from before it no longer applies. */
+  restoredAt?: string;
   /** Deletions, kept so sync doesn't bring them back: phrase (lowercased) → when, and session ids. */
   removed?: { phrases?: Record<string, string>; sessions?: string[] };
 }
@@ -157,6 +195,34 @@ export function isRealSession(s: SessionRecord): boolean {
   return !s.demo && s.turns.some((t) => t.role === "learner");
 }
 
+/** An interrupted conversation can be picked up where it stopped for this long. */
+export const RESUME_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * The latest conversation that was cut off (a call, a locked phone, the app closed) after
+ * he said enough to learn from. Without this it would never get a report, its plan day
+ * would not count, and its mistakes would not reach the warm-up.
+ */
+export function unfinishedSession(
+  state: LearnerState,
+  now = new Date(),
+): { session: SessionRecord; resumable: boolean } | null {
+  // The newest one that qualifies: a short session opened later doesn't hide it, but a
+  // finished one does (he's moved on; an old cut-off talk shouldn't keep coming back).
+  const ageOf = (s: SessionRecord) => now.getTime() - new Date(s.startedAt).getTime();
+  let last: SessionRecord | undefined;
+  for (const s of [...state.sessions].reverse()) {
+    if (s.demo) continue;
+    if (s.report) break;
+    if (!s.endedAt && s.turns.filter((t) => t.role === "learner").length >= 2 && ageOf(s) <= 7 * 24 * 60 * 60 * 1000) {
+      last = s;
+      break;
+    }
+  }
+  if (!last) return null;
+  return { session: last, resumable: ageOf(last) < RESUME_WINDOW_MS };
+}
+
 /**
  * Fold a finished conversation's analysis into the learner model. Pure: returns a new
  * state. Mistake status moves new → practicing (used correctly once) → mastered (two clean
@@ -176,7 +242,13 @@ export function applyAnalysis(
     madeKeys.add(c.error_key);
     const prev = errors[c.error_key];
     errors[c.error_key] = prev
-      ? { ...prev, occurrences: prev.occurrences + 1, lastSeen: iso, whyHe: prev.whyHe || c.why_he }
+      ? {
+          ...prev,
+          occurrences: prev.occurrences + 1,
+          lastSeen: iso,
+          whyHe: prev.whyHe || c.why_he,
+          examples: addExample(prev.examples, { wrong: c.original, better: c.better }, prev.better),
+        }
       : {
           key: c.error_key,
           title: humanize(c.error_key),
@@ -290,6 +362,27 @@ export function recommendScenario(state: LearnerState): Scenario {
   return pool.find((s) => !recent.includes(s.id)) ?? pool[0];
 }
 
+/**
+ * "Something different" after a conversation: a scenario from another category than the
+ * ones just named, not done recently, so wanting more never means the same thing again.
+ */
+export function differentScenario(state: LearnerState, avoid: string[]): Scenario | null {
+  const recent = new Set(
+    state.sessions
+      .filter((s) => !s.demo)
+      .slice(-8)
+      .map((s) => s.scenarioId),
+  );
+  const avoidCats = new Set(avoid.map((id) => scenarioById(id)?.category).filter(Boolean));
+  const listed = SCENARIOS.filter((s) => !s.hidden && !avoid.includes(s.id));
+  const fresh = listed.filter((s) => !recent.has(s.id));
+  const pool = fresh.filter((s) => !avoidCats.has(s.category));
+  const list = pool.length ? pool : fresh.length ? fresh : listed;
+  if (!list.length) return null;
+  // Rotates with the number of conversations, so it isn't always the first one in the list.
+  return list[state.sessions.filter((s) => !s.demo).length % list.length];
+}
+
 export function minutesOnDay(state: LearnerState, day: string): number {
   const seconds = state.sessions.filter((s) => s.day === day && !s.demo).reduce((sum, s) => sum + s.speakingSeconds, 0);
   return Math.floor(seconds / 60);
@@ -297,7 +390,8 @@ export function minutesOnDay(state: LearnerState, day: string): number {
 
 export function statsFrom(state: LearnerState, today: string): LearnerStats {
   const real = state.sessions.filter(isRealSession);
-  if (real.length === 0 && state.sessions.length === 0 && !state.listening?.xp) return { ...EMPTY_STATS };
+  if (real.length === 0 && state.sessions.length === 0 && !state.listening?.xp && !state.perfectDays?.length)
+    return { ...EMPTY_STATS };
   const days = real.map((s) => s.day);
   const interviewDone = new Set(
     real
@@ -321,7 +415,32 @@ export function statsFrom(state: LearnerState, today: string): LearnerStats {
     interviewScenariosDone: interviewDone.size,
     accentsHeard: accents.size,
     xp: real.reduce((sum, s) => sum + s.xp, 0) + (state.listening?.xp ?? 0),
+    bestPerfectWeek: bestPerfectWeek(state.perfectDays ?? []),
+    saySetsPerfect: SAY_SETS.filter((set) => (state.sayDrills?.[set.id]?.best ?? 0) >= set.items.length).length,
   };
+}
+
+/** The most perfect days in any one week. */
+export function bestPerfectWeek(days: string[]): number {
+  const perWeek = new Map<string, number>();
+  for (const d of new Set(days)) perWeek.set(weekStart(d), (perWeek.get(weekStart(d)) ?? 0) + 1);
+  return Math.max(0, ...perWeek.values());
+}
+
+/** This week's days (Sunday first) and which of them were perfect. */
+export function perfectWeekStrip(state: LearnerState, today: string): { day: string; perfect: boolean }[] {
+  const start = weekStart(today);
+  const [y, m, d] = start.split("-").map(Number);
+  const set = new Set(state.perfectDays ?? []);
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(Date.UTC(y, m - 1, d) + i * 86_400_000).toISOString().slice(0, 10);
+    return { day, perfect: set.has(day) };
+  });
+}
+
+export function markPerfectDay(state: LearnerState, day: string): LearnerState {
+  if (state.perfectDays?.includes(day)) return state;
+  return { ...state, perfectDays: [...(state.perfectDays ?? []), day].sort() };
 }
 
 /** XP for a finished session, given the day's minutes before it (for the goal bonus). */
@@ -338,7 +457,10 @@ export function sessionXp(session: SessionRecord, minutesBefore: number, dailyGo
 
 // Spaced repetition ------------------------------------------------------------------------
 
-const scheduler = fsrs({ enable_fuzz: false });
+// Long-term mode: he practices once a day, so a right answer comes back in days, not in the
+// ten-minute learning steps meant for flashcard apps used several times an hour (with those,
+// every warm-up repeated the previous one).
+const scheduler = fsrs({ enable_fuzz: false, enable_short_term: false });
 
 /** Cards come back from JSON with dates as strings; FSRS needs Date objects. */
 function reviveCard(card: Card): Card {
@@ -349,9 +471,14 @@ function reviveCard(card: Card): Card {
   };
 }
 
+/** A pack word he hasn't met on a card yet: not something to recall in a review. */
+export function isUnstudied(p: PhraseRecord): boolean {
+  return Boolean(p.deck) && p.card.reps === 0;
+}
+
 export function duePhrases(state: LearnerState, now = new Date(), max = 3): PhraseRecord[] {
   return state.phrases
-    .filter((p) => new Date(p.card.due) <= now)
+    .filter((p) => new Date(p.card.due) <= now && !isUnstudied(p))
     .sort((a, b) => new Date(a.card.due).getTime() - new Date(b.card.due).getTime())
     .slice(0, max);
 }
@@ -361,11 +488,60 @@ export function reviewPhrase(state: LearnerState, text: string, good: boolean, n
   return {
     ...state,
     phrases: state.phrases.map((p) =>
-      p.text === text
+      p.text.toLowerCase() === text.toLowerCase()
         ? { ...p, card: scheduler.next(reviveCard(p.card), now, good ? Rating.Good : Rating.Again).card }
         : p,
     ),
   };
+}
+
+/** Word-card answer, Anki style: 1 again, 2 hard, 3 good, 4 easy. */
+export type CardRating = 1 | 2 | 3 | 4;
+const RATING: Record<CardRating, Rating.Again | Rating.Hard | Rating.Good | Rating.Easy> = {
+  1: Rating.Again,
+  2: Rating.Hard,
+  3: Rating.Good,
+  4: Rating.Easy,
+};
+
+export function ratePhrase(state: LearnerState, text: string, rating: CardRating, now = new Date()): LearnerState {
+  return {
+    ...state,
+    phrases: state.phrases.map((p) =>
+      p.text.toLowerCase() === text.toLowerCase()
+        ? {
+            ...p,
+            card: scheduler.next(reviveCard(p.card), now, RATING[rating]).card,
+            studiedAt: p.studiedAt ?? now.toISOString(),
+          }
+        : p,
+    ),
+  };
+}
+
+/** New pack words per day on the word cards; reviews are never capped. */
+export const NEW_CARDS_PER_DAY = 10;
+
+/**
+ * Today's word cards: everything due (soonest first), then new pack words up to the daily
+ * limit, in the order the packs list them. `deck` narrows it to one pack.
+ */
+export function cardQueue(
+  state: LearnerState,
+  now = new Date(),
+  opts: { deck?: string; today?: string } = {},
+): { due: PhraseRecord[]; fresh: PhraseRecord[] } {
+  const inDeck = (p: PhraseRecord) => !opts.deck || p.deck === opts.deck;
+  const due = state.phrases
+    .filter((p) => inDeck(p) && !isUnstudied(p) && new Date(p.card.due) <= now)
+    .sort((a, b) => new Date(a.card.due).getTime() - new Date(b.card.due).getTime());
+  const today = opts.today ?? dayKey(now);
+  const startedToday = state.phrases.filter(
+    (p) => p.deck && p.studiedAt && dayKey(new Date(p.studiedAt)) === today,
+  ).length;
+  const room = Math.max(0, NEW_CARDS_PER_DAY - startedToday);
+  const fresh = state.phrases.filter((p) => inDeck(p) && isUnstudied(p)).slice(0, room);
+  return { due, fresh };
 }
 
 export function reviewMistake(state: LearnerState, key: string, good: boolean, now = new Date()): LearnerState {
@@ -375,9 +551,41 @@ export function reviewMistake(state: LearnerState, key: string, good: boolean, n
   return { ...state, errors: { ...state.errors, [key]: { ...e, card } } };
 }
 
+/**
+ * Which sentence to practice a mistake with this time. Each review moves to the next one:
+ * the first sentence, then his own later sentences, then prepared ones with the same
+ * pattern. Saying a different sentence each time trains the rule, not one memorized line.
+ */
+/** Every sentence for practicing a mistake: his first, his later ones, then prepared ones. */
+export function mistakeSentences(e: ErrorRecord): { wrong: string; better: string; own: boolean }[] {
+  const pool = [
+    { wrong: e.example, better: e.better, own: true },
+    ...(e.examples ?? []).map((x) => ({ ...x, own: true })),
+  ];
+  for (const [wrong, better] of seedVariants(e.key)) {
+    if (!pool.some((p) => p.better.toLowerCase() === better.toLowerCase())) pool.push({ wrong, better, own: false });
+  }
+  const sayable = pool.filter((p) => p.better && !/[=…]/.test(p.better));
+  return sayable.length ? sayable : pool;
+}
+
+export function practiceSentence(e: ErrorRecord): { wrong: string; better: string; own: boolean } {
+  const list = mistakeSentences(e);
+  return list[(e.card?.reps ?? 0) % list.length];
+}
+
 export type WarmupItem =
   | { kind: "phrase"; id: string; target: string; meaning: string; hebrew: string; interview?: boolean }
-  | { kind: "mistake"; id: string; target: string; wrong: string; why: string; whyHe: string };
+  | {
+      kind: "mistake";
+      id: string;
+      target: string;
+      wrong: string;
+      why: string;
+      whyHe: string;
+      /** A prepared sentence with the same pattern, not one he said himself. */
+      practice?: boolean;
+    };
 
 /**
  * The warm-up: up to `max` items, mistakes first (active recall: see the wrong sentence,
@@ -393,7 +601,18 @@ export function warmupItems(state: LearnerState, now = new Date(), max = 3): War
     .filter((e) => e.better && !/[=…]/.test(e.better))
     // Two before a conversation (it's a warm-up); about half of a longer quick review.
     .slice(0, max <= 3 ? 2 : Math.ceil(max / 2))
-    .map((e) => ({ kind: "mistake", id: e.key, target: e.better, wrong: e.example, why: e.why, whyHe: e.whyHe }));
+    .map((e) => {
+      const ex = practiceSentence(e);
+      return {
+        kind: "mistake",
+        id: e.key,
+        target: ex.better,
+        wrong: ex.wrong,
+        why: e.why,
+        whyHe: e.whyHe,
+        ...(ex.own ? {} : { practice: true }),
+      };
+    });
   const phrases: WarmupItem[] = duePhrases(state, now, max).map((p) => ({
     kind: "phrase",
     id: p.text,
@@ -454,7 +673,7 @@ export function averageWpm(state: LearnerState, wordsOf: (text: string) => numbe
 
 export function addPhrases(
   state: LearnerState,
-  items: { text: string; meaningEn: string; meaningHe: string; example?: string }[],
+  items: { text: string; meaningEn: string; meaningHe: string; example?: string; deck?: string }[],
   tag: string | undefined,
   now = new Date(),
 ): { state: LearnerState; added: number } {
@@ -496,7 +715,8 @@ export function removeSession(state: LearnerState, id: string): LearnerState {
 export function phrasesToPractice(state: LearnerState, now = new Date(), max = 3): string[] {
   const due = duePhrases(state, now, max).map((p) => p.text);
   const rest = state.phrases
-    .filter((p) => !due.includes(p.text))
+    // Pack words he hasn't met on a card yet would crowd out the ones he's learning.
+    .filter((p) => !due.includes(p.text) && !isUnstudied(p))
     .sort((a, b) => (a.usedCount ?? 0) - (b.usedCount ?? 0) || b.addedAt.localeCompare(a.addedAt))
     .map((p) => p.text);
   return [...due, ...rest].slice(0, max);
@@ -539,6 +759,72 @@ export function markPhrasesUsed(state: LearnerState, learnerText: string): Learn
  * Adaptive speed: three right in a row at the current speed moves it up 0.05; a miss moves
  * it down 0.05. That keeps listening a little above comfortable, which is where it improves.
  */
+/**
+ * A finished story, radio talk, short read or "Say it in English" set: the best score is kept, and XP comes only for
+ * answers better than that best, so replaying one to learn it is fine but doesn't farm points.
+ * Skill XP lives with listening's (it's what statsFrom adds up).
+ */
+function recordBest(
+  state: LearnerState,
+  field: "stories" | "readings" | "sayDrills",
+  id: string,
+  correct: number,
+  now: Date,
+): LearnerState {
+  const prev = state[field]?.[id]?.best ?? 0;
+  const l = state.listening ?? LISTENING_START;
+  return {
+    ...state,
+    [field]: { ...state[field], [id]: { best: Math.max(prev, correct), at: now.toISOString() } },
+    listening: { ...l, xp: l.xp + 5 * Math.max(0, correct - prev) },
+  };
+}
+
+export function recordStory(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
+  return recordBest(state, "stories", id, correct, now);
+}
+
+export function recordReading(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
+  return recordBest(state, "readings", id, correct, now);
+}
+
+export function recordSayDrill(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
+  return recordBest(state, "sayDrills", id, correct, now);
+}
+
+/**
+ * After a round: sentences missed on the first try open (or stay open) as misses, and ones
+ * he got right close any miss they had, so a sentence leaves the redo list by being said
+ * right, not by being skipped.
+ */
+export function recordSayMisses(
+  state: LearnerState,
+  missed: string[],
+  right: string[],
+  now = new Date(),
+): LearnerState {
+  const at = now.toISOString();
+  const misses = { ...state.sayMisses };
+  for (const he of missed) misses[he] = { at, open: true };
+  // Written even when no miss is known here: another device may hold one this must close.
+  // The list stays small, at most one entry per sentence in the app.
+  for (const he of right) misses[he] = { at, open: false };
+  return { ...state, sayMisses: misses };
+}
+
+const SAY_SENTENCES = new Set(SAY_SETS.flatMap((s) => s.items.map((i) => i.he)));
+
+/** The sentences still waiting for a redo, oldest miss first. */
+export function openSayMisses(state: LearnerState): string[] {
+  return (
+    Object.entries(state.sayMisses ?? {})
+      // A sentence later reworded or removed from the content can't be redone, so it doesn't count.
+      .filter(([he, m]) => m.open && SAY_SENTENCES.has(he))
+      .sort((a, b) => a[1].at.localeCompare(b[1].at))
+      .map(([he]) => he)
+  );
+}
+
 export function recordListening(state: LearnerState, itemId: string, correct: boolean): LearnerState {
   const l = state.listening ?? LISTENING_START;
   let rate = l.rate;

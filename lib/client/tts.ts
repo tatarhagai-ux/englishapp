@@ -103,3 +103,62 @@ export function useClipPlayer() {
 
   return { play, stop, state, error };
 }
+
+/**
+ * Play lines one after another, each in its own voice (listening stories). Resolves when the
+ * last line ends or the signal aborts. Without Azure it uses the browser's voices.
+ */
+export async function speakSequence(
+  lines: { text: string; voiceId: string }[],
+  rate: number,
+  opts: { signal?: AbortSignal; onLine?: (index: number) => void } = {},
+): Promise<void> {
+  const { signal } = opts;
+  let audio: HTMLAudioElement | null = null;
+  // Stopping must silence whatever is speaking right now, the device voice included.
+  const onAbort = () => {
+    audio?.pause();
+    stopSpeaking();
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    for (let i = 0; i < lines.length; i++) {
+      if (signal?.aborted) return;
+      opts.onLine?.(i);
+      const { text, voiceId } = lines[i];
+      if (!browserSpeechActive()) {
+        let blob: Blob | null = null;
+        try {
+          blob = await fetchSpeech(text, voiceId, rate, signal);
+        } catch (err) {
+          if (signal?.aborted) return;
+          // Anything unexpected surfaces, so a caller never counts a line that never played.
+          if (!(err instanceof TtsRequestError)) throw err;
+          // Any Azure problem (not set up, offline, over budget): the device voice still works.
+        }
+        if (signal?.aborted) return;
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          await new Promise<void>((resolve) => {
+            const el = new Audio(url);
+            audio = el;
+            const done = () => {
+              URL.revokeObjectURL(url);
+              signal?.removeEventListener("abort", done);
+              resolve();
+            };
+            el.onended = done;
+            el.onerror = done;
+            signal?.addEventListener("abort", done, { once: true });
+            el.play().catch(done);
+          });
+          audio = null;
+          continue;
+        }
+      }
+      await speakInBrowser(text, voiceId, rate, signal);
+    }
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+  }
+}

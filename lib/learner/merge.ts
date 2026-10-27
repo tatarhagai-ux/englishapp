@@ -11,10 +11,20 @@
  * close enough for a budget warning.
  */
 import type { Card } from "ts-fsrs";
-import type { ErrorRecord, LearnerState, ListeningState, PhraseRecord, SessionRecord } from "./model";
+import {
+  addExample,
+  type ErrorRecord,
+  type LearnerState,
+  type ListeningState,
+  type PhraseRecord,
+  type SessionRecord,
+} from "./model";
 
 export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
-  const resetAt = later(a.resetAt, b.resetAt);
+  const restoredAt = later(a.restoredAt, b.restoredAt);
+  const lastReset = later(a.resetAt, b.resetAt);
+  // Restoring a backup after "Delete all" brings the old history back on every device.
+  const resetAt = lastReset && (!restoredAt || lastReset > restoredAt) ? lastReset : undefined;
   const after = (iso: string | undefined) => !resetAt || (iso ?? "") >= resetAt;
 
   const removedPhrases = mergeRecords(a.removed?.phrases, b.removed?.phrases, (x, y) => (x >= y ? x : y));
@@ -60,6 +70,26 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     })),
   );
   if (pronunciation) out.pronunciation = pronunciation;
+  const stories = mergeOptional(a.stories, b.stories, (x, y) =>
+    mergeRecords(x, y, (u, v) => ({ best: Math.max(u.best, v.best), at: later(u.at, v.at)! })),
+  );
+  if (stories) out.stories = stories;
+  const readings = mergeOptional(a.readings, b.readings, (x, y) =>
+    mergeRecords(x, y, (u, v) => ({ best: Math.max(u.best, v.best), at: later(u.at, v.at)! })),
+  );
+  if (readings) out.readings = readings;
+  const sayDrills = mergeOptional(a.sayDrills, b.sayDrills, (x, y) =>
+    mergeRecords(x, y, (u, v) => ({ best: Math.max(u.best, v.best), at: later(u.at, v.at)! })),
+  );
+  if (sayDrills) out.sayDrills = sayDrills;
+  const sayMisses = mergeOptional(a.sayMisses, b.sayMisses, (x, y) =>
+    mergeRecords(x, y, (u, v) => (u.at >= v.at ? u : v)),
+  );
+  if (sayMisses) out.sayMisses = sayMisses;
+  const perfectDays = [...new Set([...(a.perfectDays ?? []), ...(b.perfectDays ?? [])])]
+    .filter((d) => after(`${d}T23:59:59`))
+    .sort();
+  if (perfectDays.length) out.perfectDays = perfectDays;
   const feelings = mergeOptional(a.feelings, b.feelings, (x, y) => mergeRecords(x, y, (u) => u));
   if (feelings) out.feelings = feelings;
   const memory = mergeBy(
@@ -72,6 +102,7 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     .slice(-12);
   if (memory.length) out.memory = memory;
   if (resetAt) out.resetAt = resetAt;
+  if (restoredAt) out.restoredAt = restoredAt;
   if (Object.keys(removedPhrases).length || removedSessions.length) {
     out.removed = {};
     if (Object.keys(removedPhrases).length) out.removed.phrases = removedPhrases;
@@ -108,6 +139,8 @@ function mergePhrase(x: PhraseRecord, y: PhraseRecord): PhraseRecord {
     example: base.example ?? other.example,
     tag: base.tag ?? other.tag,
     usedCount: Math.max(x.usedCount ?? 0, y.usedCount ?? 0) || undefined,
+    deck: base.deck ?? other.deck,
+    studiedAt: earlier(base.studiedAt, other.studiedAt),
   };
 }
 
@@ -127,6 +160,8 @@ function mergeError(x: ErrorRecord, y: ErrorRecord): ErrorRecord {
   const other = base === x ? y : x;
   const card = !base.card ? other.card : !other.card ? base.card : moreReviewed(base.card, other.card);
   const merged: ErrorRecord = { ...base, whyHe: base.whyHe || other.whyHe };
+  const examples = (other.examples ?? []).reduce((list, ex) => addExample(list, ex, base.better), base.examples ?? []);
+  if (examples.length) merged.examples = examples;
   if (card) merged.card = card;
   else delete merged.card;
   return merged;
@@ -172,6 +207,12 @@ function mergeOptional<T>(x: T | undefined, y: T | undefined, both: (x: T, y: T)
   if (x === undefined) return y;
   if (y === undefined) return x;
   return both(x, y);
+}
+
+function earlier(x: string | undefined, y: string | undefined): string | undefined {
+  if (!x) return y;
+  if (!y) return x;
+  return x <= y ? x : y;
 }
 
 function later(x: string | undefined, y: string | undefined): string | undefined {

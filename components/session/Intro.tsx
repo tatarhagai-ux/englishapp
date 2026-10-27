@@ -6,6 +6,7 @@ import clsx from "clsx";
 import type { Scenario } from "@/content/scenarios";
 import { CATEGORY_INFO, characterName, scenarioLevel } from "@/content/scenarios";
 import type { Voice } from "@/content/voices";
+import type { TalkTopic } from "@/content/topics";
 import { Avatar } from "../Avatar";
 
 interface Props {
@@ -20,6 +21,8 @@ interface Props {
   starting: boolean;
   /** Warm-up items due before this conversation (0 = straight into the conversation). */
   warmupCount: number;
+  /** The one-minute talk's topic card. */
+  topic?: TalkTopic;
 }
 
 /** Before the conversation: who you'll talk to, your task, and phrases worth trying. */
@@ -34,6 +37,7 @@ export function Intro({
   blockedReason,
   starting,
   warmupCount,
+  topic,
 }: Props) {
   const speaker = characterName(scenario) ?? voice.displayName;
   return (
@@ -66,12 +70,29 @@ export function Intro({
         </p>
       )}
 
+      {topic && (
+        <section aria-label="Your topic" className="tile space-y-2 border-accent/60 p-5">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-faint">Your topic</p>
+          <p className="text-xl font-black leading-snug">{topic.title}</p>
+          <ol className="space-y-1 text-sm font-bold text-dim">
+            {topic.points.map((pt, i) => (
+              <li key={pt}>
+                {i + 1}. {pt}
+              </li>
+            ))}
+          </ol>
+          <p className="text-xs font-bold text-faint">
+            Tap the mic once, talk, tap again when you&apos;re done. Pauses are fine.
+          </p>
+        </section>
+      )}
+
       <section className="rounded-3xl bg-accent p-5 text-white" style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}>
-        <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider opacity-90">
+        <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider">
           <Target className="size-4" aria-hidden /> Your mission
         </p>
         <p className="mt-1.5 text-lg font-extrabold leading-snug">{scenario.task}</p>
-        <ul className="mt-3 space-y-1 text-sm font-bold opacity-95">
+        <ul className="mt-3 space-y-1 text-sm font-bold">
           {scenario.successCriteria.map((c) => (
             <li key={c} className="flex gap-2">
               <span aria-hidden>○</span>

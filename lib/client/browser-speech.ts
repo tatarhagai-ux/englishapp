@@ -110,18 +110,23 @@ const CHARACTER_TONE: Record<string, { pitch: number; rate: number }> = {
 
 /**
  * Pitch for a character. A male character on a voice that isn't known to be male (on
- * Android the voices have no names to tell) gets a clearly deeper pitch; a female
- * character on a male voice a higher one.
+ * Android the voices have no names to tell) gets a deeper pitch; a female character on a
+ * male voice a higher one. Kept close to 1: device voices start to sound robotic once the
+ * pitch moves much more than a fifth either way.
  */
 export function pitchFor(voice: SpeechSynthesisVoice | undefined, voiceId: string): number {
   const wanted = voiceById(voiceId);
   const actual = voice ? guessGender(voice.name) : null;
   let shift = 0;
-  if (wanted?.gender === "male" && actual !== "male") shift = -0.35;
-  else if (wanted?.gender === "female" && actual === "male") shift = 0.3;
-  const tone = CHARACTER_TONE[voiceId]?.pitch ?? ((hash(voiceId) % 7) - 3) * 0.03;
-  return Math.min(2, Math.max(0.5, 1 + shift + tone));
+  if (wanted?.gender === "male" && actual !== "male") shift = -0.2;
+  else if (wanted?.gender === "female" && actual === "male") shift = 0.18;
+  const tone = (CHARACTER_TONE[voiceId]?.pitch ?? ((hash(voiceId) % 7) - 3) * 0.03) * 0.6;
+  return Math.min(PITCH_MAX, Math.max(PITCH_MIN, 1 + shift + tone));
 }
+
+/** Beyond these the device voice sounds processed rather than like a person. */
+export const PITCH_MIN = 0.75;
+export const PITCH_MAX = 1.2;
 
 /** The character's speaking pace relative to the chosen speed. */
 export function rateFor(voiceId: string): number {
@@ -136,9 +141,11 @@ export async function deviceVoiceNames(voiceIds: string[]): Promise<Record<strin
 }
 
 /** Speak one sentence; resolves when it ends (or fails). Cancel with stopSpeaking(). */
-export async function speakInBrowser(text: string, voiceId: string, rate: number): Promise<void> {
+export async function speakInBrowser(text: string, voiceId: string, rate: number, signal?: AbortSignal): Promise<void> {
   if (!canSpeak()) throw new Error("no_speech_synthesis");
   const voice = pickVoice(await loadVoices(), voiceId);
+  // Stopped while the voices were still loading: there's nothing to cancel yet, so don't start.
+  if (signal?.aborted) return;
   await new Promise<void>((resolve) => {
     const u = new SpeechSynthesisUtterance(text);
     try {

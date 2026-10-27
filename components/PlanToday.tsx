@@ -6,7 +6,9 @@ import { ArrowRight, Check, ChevronDown, Info } from "lucide-react";
 import clsx from "clsx";
 import { scenarioById } from "@/content/scenarios";
 import { useLearner } from "@/lib/client/learner";
-import { planPosition, wordUses, WORD_OWNED_USES } from "@/lib/learner/plan";
+import { ownedStretchWords, planPosition, weekToReplay, wordUses, WORD_OWNED_USES } from "@/lib/learner/plan";
+import { speakingChecks } from "@/lib/learner/weekly";
+import { PLAN } from "@/content/plan";
 import { dayKey } from "@/lib/game/streak";
 
 /**
@@ -25,13 +27,13 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
   return (
     <section aria-labelledby="today-title" className="space-y-3">
       <div className="rounded-3xl bg-accent p-5 text-white" style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}>
-        <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">
+        <p className="text-xs font-extrabold uppercase tracking-wider">
           {next ? `Week ${pos.week.week} of 12 · ${pos.week.title}` : "12-week plan complete"}
         </p>
         <h2 id="today-title" className="mt-1 text-2xl font-black leading-tight">
           {doneToday && next ? "Today's done. Keep going?" : (scenario?.title ?? "You finished the plan")}
         </h2>
-        <p className="mt-1 font-bold opacity-95">
+        <p className="mt-1 font-bold">
           {next
             ? `${doneToday ? "Next: " : ""}Day ${next.day} of 5${next.check ? " · speaking check" : ""} · ${
                 scenario?.minutes ?? 10
@@ -48,7 +50,7 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
                 aria-label={`Day ${i + 1}${d ? ", done" : current ? ", next" : ""}`}
                 className={clsx(
                   "grid size-8 place-items-center rounded-full text-sm font-black",
-                  d ? "bg-xp text-[#3a2a00]" : current ? "bg-white text-accent" : "bg-white/20",
+                  d ? "bg-xp text-[#3a2a00]" : current ? "bg-white text-accent-deep" : "bg-white/20",
                 )}
               >
                 {d ? <Check className="size-4" strokeWidth={3} aria-hidden /> : i + 1}
@@ -57,8 +59,8 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
           })}
         </ol>
 
-        <p className="mt-3 rounded-xl bg-white/15 px-3 py-2 text-sm font-bold">
-          <span className="opacity-85">This week&apos;s focus: </span>
+        <p className="mt-3 rounded-xl bg-black/20 px-3 py-2 text-sm font-bold">
+          <span>This week&apos;s focus: </span>
           {pos.week.focus}
         </p>
 
@@ -87,6 +89,8 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
         {!ready ? "Finish setup" : !next ? "Practice" : doneToday ? "Keep going" : "Start today"}
         <ArrowRight className="size-5" aria-hidden />
       </Link>
+
+      {!next && ready && <PlanComplete />}
 
       <WeekWords />
 
@@ -168,6 +172,48 @@ function WeekWords() {
           <p className="mt-1 italic">“{shown.example}”</p>
         </div>
       )}
+    </section>
+  );
+}
+
+/** The plan is done: what changed, and a clear way to keep going. */
+function PlanComplete() {
+  const state = useLearner();
+  const checks = speakingChecks(state).filter((c) => c.cefr);
+  const first = checks[0];
+  const last = checks.at(-1);
+  const owned = ownedStretchWords(state);
+  const total = PLAN.reduce((n, w) => n + w.words.length, 0);
+  const replay = weekToReplay(state);
+  const day1 = replay.days[0];
+  return (
+    <section aria-labelledby="done-title" className="tile space-y-3 p-4">
+      <h2 id="done-title" className="font-black">
+        What changed in 12 weeks
+      </h2>
+      <dl className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-elev-2 p-3">
+          <dt className="text-xs font-bold text-dim">Speaking level</dt>
+          <dd className="text-xl font-black">
+            {first && last && first.cefr !== last.cefr ? `${first.cefr} → ${last.cefr}` : (last?.cefr ?? "—")}
+          </dd>
+        </div>
+        <div className="rounded-xl bg-elev-2 p-3">
+          <dt className="text-xs font-bold text-dim">Words you own</dt>
+          <dd className="text-xl font-black">
+            {owned}/{total}
+          </dd>
+        </div>
+      </dl>
+      <Link
+        href={`/session/${day1.scenarioId}?plan=${day1.key}`}
+        className="btn-3d btn-accent flex w-full items-center justify-center gap-2 py-3"
+      >
+        Replay week {replay.week}: {replay.title} <ArrowRight className="size-4" aria-hidden />
+      </Link>
+      <p className="text-xs font-bold text-dim">
+        The week whose words you use least. Then keep a daily habit with word cards, a story and a one-minute talk.
+      </p>
     </section>
   );
 }

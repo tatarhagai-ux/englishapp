@@ -8,10 +8,13 @@ import { hasPlacement, levelHistory, minutesOnDay, rankedErrors, statsFrom, warm
 import { PLACEMENT_ID } from "@/content/scenarios";
 import { dayKey } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/xp";
-import { ChooseVoicePrompt, Greeting, TutorBadge } from "./HomeClient";
+import { ChooseVoicePrompt, Greeting, TutorBadge, VoiceTipCard } from "./HomeClient";
+import { UnfinishedCard } from "./UnfinishedCard";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { PlanToday } from "./PlanToday";
 import { CoachCard } from "./CoachCard";
+import { KeepGoing } from "./KeepGoing";
+import { DailyQuests } from "./DailyQuests";
 
 const SESSION_STEPS = [
   { icon: Sparkles, title: "Warm-up", detail: "Say phrases from past sessions out loud" },
@@ -102,6 +105,8 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
         </Link>
       )}
 
+      {hydrated && <UnfinishedCard />}
+
       {firstTime ? (
         <>
           <section
@@ -109,11 +114,11 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
             className="rounded-3xl bg-accent p-5 text-white"
             style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}
           >
-            <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">Start here</p>
+            <p className="text-xs font-extrabold uppercase tracking-wider">Start here</p>
             <h2 id="mission-title" className="mt-1 text-2xl font-black leading-tight">
               Find your speaking level
             </h2>
-            <p className="mt-1.5 font-bold opacity-95">
+            <p className="mt-1.5 font-bold">
               A relaxed 4-minute chat, 5 questions. No corrections during it. Your 12-week plan starts right after.
             </p>
           </section>
@@ -127,6 +132,9 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
       ) : (
         <>
           <PlanToday ready={ready} minutesToday={minutesToday} goal={goal} />
+          {hydrated && <DailyQuests today={today} goal={goal} />}
+          {/* Today's minutes are in: more to do, without hunting through Practice. */}
+          {hydrated && ready && goalMet && <KeepGoing next={null} avoid={lastReport ? [lastReport.scenarioId] : []} />}
           <CoachCard />
         </>
       )}
@@ -192,7 +200,8 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
         </section>
       )}
 
-      {boss && (
+      {/* The first screen stays on its one step; the seeded mistakes come from his written test. */}
+      {boss && !firstTime && (
         <section className="tile p-4" aria-labelledby="boss-title">
           <div className="flex items-center gap-2">
             <Zap className="size-5 fill-current text-xp" aria-hidden />
@@ -200,13 +209,21 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
               Boss mistake: {boss.title}
             </h2>
           </div>
+          {stats.sessions === 0 && <p className="mt-1 text-xs font-bold text-faint">From your English test</p>}
           <p className="mt-3 font-bold text-bad line-through decoration-bad/60">{boss.example}</p>
           <p className="font-extrabold text-good">{boss.better}</p>
           <p className="mt-2 text-sm text-dim">{boss.why}</p>
+          <Link
+            href={`/mistakes/${encodeURIComponent(boss.key)}`}
+            className="mt-2 inline-block text-sm font-extrabold text-accent"
+          >
+            Practice it: rule and drill →
+          </Link>
         </section>
       )}
 
       <ChooseVoicePrompt />
+      {!firstTime && <VoiceTipCard />}
     </div>
   );
 }

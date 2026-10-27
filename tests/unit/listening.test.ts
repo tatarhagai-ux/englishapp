@@ -1,3 +1,4 @@
+import { blankOut } from "@/lib/text/cloze";
 import { describe, expect, it } from "vitest";
 import { LISTENING } from "@/content/listening";
 import { diffWords } from "@/lib/text/diff";
@@ -8,6 +9,16 @@ describe("listening content", () => {
     expect(new Set(LISTENING.map((l) => l.id)).size).toBe(LISTENING.length);
     expect(new Set(LISTENING.map((l) => l.level))).toEqual(new Set(["B1", "B2", "C1"]));
     expect(new Set(LISTENING.map((l) => l.topic)).size).toBe(5);
+  });
+
+  it("has enough sentences for months of rounds, each one scorable", () => {
+    expect(LISTENING.length).toBeGreaterThanOrEqual(100);
+    for (const l of LISTENING) expect(diffWords(l.text, l.text).accuracy, l.id).toBe(1);
+  });
+
+  it("accepts the full form of spoken shortcuts", () => {
+    expect(diffWords("I do not know, I am kind of tired", "I dunno, I'm kinda tired").accuracy).toBe(1);
+    expect(diffWords("let me know", "Lemme know").accuracy).toBe(1);
   });
 });
 
@@ -55,5 +66,63 @@ describe("adaptive listening speed", () => {
         .map((i) => i.id)
         .sort(),
     ).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("listening stories", () => {
+  it("are complete: two speakers with real voices, three answerable questions, phrases", async () => {
+    const { STORIES } = await import("@/content/stories");
+    const { voiceById } = await import("@/content/voices");
+    expect(STORIES.length).toBeGreaterThanOrEqual(10);
+    expect(new Set(STORIES.map((s) => s.id)).size).toBe(STORIES.length);
+    for (const s of STORIES) {
+      expect(new Set(s.lines.map((l) => l.voice)).size, s.id).toBeGreaterThanOrEqual(2);
+      for (const l of s.lines) expect(voiceById(l.voice), `${s.id} ${l.voice}`).toBeDefined();
+      expect(s.questions).toHaveLength(3);
+      for (const q of s.questions) expect(q.options[q.answer], q.q).toBeTruthy();
+      expect(s.phrases.length).toBeGreaterThanOrEqual(2);
+      // Each saved phrase gets the line it was said in as its word-card example.
+      for (const p of s.phrases)
+        expect(
+          s.lines.some((l) => blankOut(l.text, p.text.replace(/[.?]$/, "")) !== null),
+          `${s.id}: ${p.text}`,
+        ).toBe(true);
+    }
+  });
+
+  it("gives XP only for beating his best on a story", async () => {
+    const { recordStory } = await import("@/lib/learner/model");
+    let s = recordStory(initialState(), "s-gym", 2);
+    expect(s.listening!.xp).toBe(10);
+    s = recordStory(s, "s-gym", 1);
+    expect(s.listening!.xp).toBe(10);
+    s = recordStory(s, "s-gym", 3);
+    expect(s.listening!.xp).toBe(15);
+    expect(s.stories!["s-gym"].best).toBe(3);
+  });
+});
+
+describe("radio", () => {
+  it("has one-host talks with real voices and three answerable questions, reachable by id", async () => {
+    const { RADIO } = await import("@/content/radio");
+    const { storyById, STORIES } = await import("@/content/stories");
+    const { voiceById } = await import("@/content/voices");
+    expect(RADIO.length).toBeGreaterThanOrEqual(5);
+    const ids = [...STORIES, ...RADIO].map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const r of RADIO) {
+      expect(new Set(r.lines.map((l) => l.voice)).size, r.id).toBe(1);
+      expect(voiceById(r.lines[0].voice)).toBeDefined();
+      expect(r.questions).toHaveLength(3);
+      expect(storyById(r.id)).toBe(r);
+      // Every phrase worth keeping is actually said in the talk (a verb may be inflected:
+      // "do the heavy lifting" is said as "does the heavy lifting").
+      const said = r.lines.map((l) => l.text.toLowerCase()).join(" ");
+      for (const p of r.phrases) {
+        const words = p.text.toLowerCase().split(" ");
+        const core = words.length >= 3 ? words.slice(1).join(" ") : words.join(" ");
+        expect(said, `${r.id}: ${p.text}`).toContain(core);
+      }
+    }
   });
 });
