@@ -112,11 +112,11 @@ export const TALK_TOPICS: readonly TalkTopic[] = [
   t("t-decision", "A hard decision you made", "what the options were", "how you decided", "how it turned out"),
   t("t-family", "A family tradition", "what it is", "when it happens", "why it matters to you"),
   t(
-    "t-health",
-    "Getting back to full strength",
-    "where you started",
-    "what helped most",
-    "what you'd tell someone in the same place",
+    "t-comeback",
+    "Coming back after a break from training",
+    "why you stopped",
+    "how you got going again",
+    "what you'd tell someone starting over",
   ),
   t(
     "t-remote",
