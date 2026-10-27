@@ -87,6 +87,23 @@ export function wordsToLearn(state: LearnerState, week: PlanWeek, max = 3): Stre
     .slice(0, max);
 }
 
+/**
+ * After the plan: the week whose words he owns least (ties go to the earlier week), to
+ * replay first. Its first day reopens as a normal plan session.
+ */
+export function weekToReplay(state: LearnerState): PlanWeek {
+  let best = PLAN[0];
+  let bestOwned = Infinity;
+  for (const week of PLAN) {
+    const owned = week.words.filter((w) => wordUses(state, w) >= WORD_OWNED_USES).length;
+    if (owned < bestOwned) {
+      best = week;
+      bestOwned = owned;
+    }
+  }
+  return best;
+}
+
 /** Stretch words he owns across the whole plan, for progress. */
 export function ownedStretchWords(state: LearnerState): number {
   return PLAN.flatMap((w) => w.words).filter((w) => wordUses(state, w) >= WORD_OWNED_USES).length;

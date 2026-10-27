@@ -158,3 +158,16 @@ describe("wordsToLearn", () => {
     expect(wordsToLearn(s, week)[0].text).toBe(week.words[3].text);
   });
 });
+
+describe("weekToReplay", () => {
+  it("picks the week whose words he owns least", async () => {
+    const { weekToReplay } = await import("@/lib/learner/plan");
+    const { PLAN } = await import("@/content/plan");
+    const { initialState, addPhrases } = await import("@/lib/learner/model");
+    // Every word owned except in week 3.
+    const words = PLAN.filter((w) => w.week !== 3).flatMap((w) => w.words);
+    let s = addPhrases(initialState(), words, "Plan").state;
+    s = { ...s, phrases: s.phrases.map((p) => ({ ...p, usedCount: 2 })) };
+    expect(weekToReplay(s).week).toBe(3);
+  });
+});

@@ -6,7 +6,9 @@ import { ArrowRight, Check, ChevronDown, Info } from "lucide-react";
 import clsx from "clsx";
 import { scenarioById } from "@/content/scenarios";
 import { useLearner } from "@/lib/client/learner";
-import { planPosition, wordUses, WORD_OWNED_USES } from "@/lib/learner/plan";
+import { ownedStretchWords, planPosition, weekToReplay, wordUses, WORD_OWNED_USES } from "@/lib/learner/plan";
+import { speakingChecks } from "@/lib/learner/weekly";
+import { PLAN } from "@/content/plan";
 import { dayKey } from "@/lib/game/streak";
 
 /**
@@ -88,6 +90,8 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
         <ArrowRight className="size-5" aria-hidden />
       </Link>
 
+      {!next && ready && <PlanComplete />}
+
       <WeekWords />
 
       <div>
@@ -168,6 +172,48 @@ function WeekWords() {
           <p className="mt-1 italic">“{shown.example}”</p>
         </div>
       )}
+    </section>
+  );
+}
+
+/** The plan is done: what changed, and a clear way to keep going. */
+function PlanComplete() {
+  const state = useLearner();
+  const checks = speakingChecks(state).filter((c) => c.cefr);
+  const first = checks[0];
+  const last = checks.at(-1);
+  const owned = ownedStretchWords(state);
+  const total = PLAN.reduce((n, w) => n + w.words.length, 0);
+  const replay = weekToReplay(state);
+  const day1 = replay.days[0];
+  return (
+    <section aria-labelledby="done-title" className="tile space-y-3 p-4">
+      <h2 id="done-title" className="font-black">
+        What changed in 12 weeks
+      </h2>
+      <dl className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-elev-2 p-3">
+          <dt className="text-xs font-bold text-dim">Speaking level</dt>
+          <dd className="text-xl font-black">
+            {first && last && first !== last ? `${first.cefr} → ${last.cefr}` : (last?.cefr ?? "—")}
+          </dd>
+        </div>
+        <div className="rounded-xl bg-elev-2 p-3">
+          <dt className="text-xs font-bold text-dim">Words you own</dt>
+          <dd className="text-xl font-black">
+            {owned}/{total}
+          </dd>
+        </div>
+      </dl>
+      <Link
+        href={`/session/${day1.scenarioId}?plan=${day1.key}`}
+        className="btn-3d btn-accent flex w-full items-center justify-center gap-2 py-3"
+      >
+        Replay week {replay.week}: {replay.title} <ArrowRight className="size-4" aria-hidden />
+      </Link>
+      <p className="text-xs font-bold text-dim">
+        The week whose words you use least. Then keep a daily habit with word cards, a story and a one-minute talk.
+      </p>
     </section>
   );
 }

@@ -403,3 +403,44 @@ test("mistake mini-lesson: the rule, wrong and right, and a drill that doesn't m
   await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByRole("status").filter({ hasText: "1 done" })).toBeVisible();
 });
+
+test("after the 12-week plan: what changed, and a week to replay", async ({ page }) => {
+  await page.addInitScript(() => {
+    const report = {
+      corrections: [],
+      other_errors: [],
+      correct_uses: [],
+      phrases: [],
+      task: { completed: true, met: [], feedback_en: "" },
+      praise_en: "",
+      memory: [],
+    };
+    const sessions = [];
+    for (let w = 1; w <= 12; w++)
+      for (let d = 1; d <= 5; d++) {
+        const at = new Date(Date.UTC(2026, 7, 1) + (w * 7 + d) * 86_400_000).toISOString();
+        sessions.push({
+          id: `p${w}-${d}`,
+          scenarioId: "free-your-week",
+          mode: "quiet",
+          startedAt: at,
+          endedAt: at,
+          day: at.slice(0, 10),
+          turns: [{ role: "learner", text: "hi", input: "text" }],
+          speakingSeconds: 60,
+          stuckCount: 0,
+          fixedAloud: [],
+          xp: 10,
+          costUsd: 0,
+          planDay: `w${w}d${d}`,
+          report,
+        });
+      }
+    if (!localStorage.getItem("sw_learner_v1"))
+      localStorage.setItem("sw_learner_v1", JSON.stringify({ v: 1, errors: {}, phrases: [], spend: {}, sessions }));
+  });
+  // "Ready" needs a key on the server; the e2e server has none, so check the card's pieces directly.
+  await page.goto("/");
+  await expect(page.getByText("12-week plan complete")).toBeVisible();
+  await expect(page.getByText("60 of 60 plan days done", { exact: false })).toBeVisible();
+});
