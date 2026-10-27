@@ -35,6 +35,10 @@ describe("blankOut with objects and dictionary forms", () => {
     expect(blankOut("Let me get that sorted for you.", "get it sorted")).toBe("Let me _____ for you.");
   });
 
+  it("keeps a whole phrase that starts with it's", () => {
+    expect(blankOut("It's a long hike, but it's worth it.", "it's worth it")).toBe("It's a long hike, but _____.");
+  });
+
   it("drops be and it's from the dictionary form", () => {
     expect(blankOut("Are you still up for the hike?", "be up for")).toBe("Are you still _____ the hike?");
     expect(blankOut("And the drinks are on us.", "it's on us")).toBe("And the drinks are _____.");
