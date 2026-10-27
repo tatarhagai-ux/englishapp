@@ -13,6 +13,7 @@ import { useWakeLock } from "@/lib/client/wake-lock";
 import { Avatar } from "@/components/Avatar";
 import { KeepGoing } from "@/components/KeepGoing";
 import { QuizQuestion } from "@/components/QuizQuestion";
+import { ShadowDrill } from "./ShadowDrill";
 
 type Phase = "listen" | "questions" | "review";
 
@@ -204,6 +205,7 @@ export function StoryPlayer({ story }: { story: Story }) {
 
       {phase === "review" && (
         <>
+          <ShadowDrill lines={story.lines} rate={0.95 * prefs.speechRate} />
           <section className="tile space-y-2.5 p-4" aria-labelledby="phr-title">
             <h2 id="phr-title" className="font-black">
               Phrases worth keeping

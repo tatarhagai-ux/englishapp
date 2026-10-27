@@ -96,3 +96,56 @@ test("radio: a one-host talk opens in the story player", async ({ page }) => {
   await page.getByRole("button", { name: "Answer the questions" }).click();
   await expect(page.getByRole("group", { name: "What is the two-minute rule?" })).toBeVisible();
 });
+
+test("shadow a story line: hear it, say it, the mic checks the words", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      value: { getUserMedia: async () => ({ getTracks: () => [] }) },
+    });
+    class FakeRecognition {
+      lang = "";
+      continuous = false;
+      interimResults = false;
+      onresult: ((e: unknown) => void) | null = null;
+      onerror: ((e: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      onaudiostart: (() => void) | null = null;
+      start() {
+        (window as unknown as { __rec: FakeRecognition }).__rec = this;
+      }
+      stop() {
+        setTimeout(() => this.onend?.(), 10);
+      }
+      abort() {}
+    }
+    Object.assign(window, { SpeechRecognition: FakeRecognition });
+  });
+  await page.route("**/api/tts", (route) =>
+    route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
+  );
+  await page.goto("/listen/story/s-monday");
+  await page.getByRole("button", { name: "Play" }).click();
+  await expect(page.getByRole("button", { name: "Play again" })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Answer the questions" }).click();
+  for (const a of ["A party next door kept him awake", "At two", "Relieved"])
+    await page.getByRole("button", { name: a }).click();
+  await page.getByRole("button", { name: /Read the dialogue/ }).click();
+
+  const shadow = page.getByRole("region", { name: /Shadow it/ });
+  await shadow.getByRole("button", { name: "Start shadowing" }).click();
+  await expect(shadow).toContainText("Line 1 of 6");
+  await shadow.getByRole("button", { name: "Say it" }).click();
+  await page.waitForFunction(() => "__rec" in window);
+  await page.evaluate(() => {
+    const rec = (window as unknown as { __rec: { onaudiostart: () => void; onresult: (e: unknown) => void } }).__rec;
+    rec.onaudiostart();
+    rec.onresult({
+      resultIndex: 0,
+      results: [Object.assign([{ transcript: "Morning you look exhausted rough weekend" }], { isFinal: true })],
+    });
+  });
+  await shadow.getByRole("button", { name: /Listening · tap when done/ }).click();
+  await expect(shadow.getByRole("status")).toContainText("That's it.");
+  await shadow.getByRole("button", { name: "Next" }).click();
+  await expect(shadow).toContainText("Line 2 of 6");
+});
