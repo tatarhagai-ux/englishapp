@@ -307,4 +307,196 @@ export const RADIO: readonly Story[] = [
       { text: "anyway", meaningEn: "even so, in any case", meaningHe: "בכל מקרה" },
     ],
   },
+  {
+    id: "r6-rest",
+    title: "Why rest days make you stronger",
+    level: "B1+",
+    topic: "daily",
+    setting: "A fitness podcast segment",
+    lines: [
+      {
+        voice: "ryan",
+        name: "Host",
+        text: "Here's something that surprises a lot of people. You don't get stronger while you train. You get stronger while you recover.",
+      },
+      {
+        voice: "ryan",
+        name: "Host",
+        text: "Training is the signal. It tells your body it needs to adapt. The actual building happens later, when you sleep, when you eat properly, and when you give a muscle a day or two before you hit it again.",
+      },
+      {
+        voice: "ryan",
+        name: "Host",
+        text: "So if you train hard every single day and you feel weaker, not stronger, that's not a lack of discipline. It's a lack of recovery. Your body never gets the chance to catch up.",
+      },
+      {
+        voice: "ryan",
+        name: "Host",
+        text: "A rest day doesn't have to mean the sofa, by the way. A walk, some stretching, an easy bike ride. Moving gently helps you recover faster than doing nothing at all.",
+      },
+      {
+        voice: "ryan",
+        name: "Host",
+        text: "My rule of thumb: if you wake up tired three days in a row, take the hint. One easy day now beats two weeks off later. Train smart, rest on purpose, and you'll keep showing up for years.",
+      },
+    ],
+    questions: [
+      {
+        q: "When do you actually get stronger, according to the host?",
+        options: ["While you train", "While you recover", "Only when you lift heavy"],
+        answer: 1,
+        why: "“You don't get stronger while you train. You get stronger while you recover.”",
+      },
+      {
+        q: "What does he suggest on a rest day?",
+        options: ["Staying on the sofa all day", "Gentle movement like a walk or stretching", "A short, hard workout"],
+        answer: 1,
+        why: "“A walk, some stretching, an easy bike ride.”",
+      },
+      {
+        q: "What's his rule of thumb?",
+        options: [
+          "Never take a day off",
+          "Tired three mornings in a row means take an easy day",
+          "Rest one week every month",
+        ],
+        answer: 1,
+        why: "“If you wake up tired three days in a row, take the hint.”",
+      },
+    ],
+    phrases: [
+      { text: "catch up", meaningEn: "get back to where you should be", meaningHe: "להשלים פער" },
+      { text: "rule of thumb", meaningEn: "a simple practical rule", meaningHe: "כלל אצבע" },
+      { text: "take the hint", meaningEn: "understand a signal and act on it", meaningHe: "להבין את הרמז" },
+      { text: "on purpose", meaningEn: "deliberately, not by accident", meaningHe: "בכוונה" },
+    ],
+  },
+  {
+    id: "r7-empathy",
+    title: "Tactical empathy in two sentences",
+    level: "B2",
+    topic: "work",
+    setting: "A podcast about negotiation",
+    lines: [
+      {
+        voice: "guy",
+        name: "Host",
+        text: "Today, one tool from the world of hostage negotiation that works just as well with your boss, your landlord, or your kids. It's called labeling.",
+      },
+      {
+        voice: "guy",
+        name: "Host",
+        text: 'Labeling means you put a name on what the other person is feeling. You start with "It seems like", "It sounds like", or "It looks like". For example: "It sounds like this deadline is putting you under a lot of pressure."',
+      },
+      {
+        voice: "guy",
+        name: "Host",
+        text: 'Notice what\'s missing. You don\'t say "I understand", because people hear that as a way to end the conversation. And you don\'t say "I" at all. You keep the focus on them.',
+      },
+      {
+        voice: "guy",
+        name: "Host",
+        text: "Then comes the hard part: you stop talking. Let the silence do its job. Most people will fill it by telling you what's really going on, and that's exactly the information you need.",
+      },
+      {
+        voice: "guy",
+        name: "Host",
+        text: "Labeling doesn't mean you agree with them. It means you've heard them. And people who feel heard are far more willing to find a solution with you. Try it once this week and see what happens.",
+      },
+    ],
+    questions: [
+      {
+        q: "How does a label usually start?",
+        options: ['"I understand that…"', '"It sounds like…"', '"You should…"'],
+        answer: 1,
+        why: "“You start with “It seems like”, “It sounds like”, or “It looks like”.”",
+      },
+      {
+        q: 'Why does the host avoid "I understand"?',
+        options: [
+          "It's too formal",
+          "People hear it as a way to end the conversation",
+          "It sounds like you agree with them",
+        ],
+        answer: 1,
+        why: "“People hear that as a way to end the conversation.”",
+      },
+      {
+        q: "What should you do right after a label?",
+        options: ["Explain your side", "Stay quiet and let them talk", "Ask a yes-or-no question"],
+        answer: 1,
+        why: "“You stop talking. Let the silence do its job.”",
+      },
+    ],
+    phrases: [
+      { text: "under a lot of pressure", meaningEn: "very stressed by demands", meaningHe: "תחת הרבה לחץ" },
+      { text: "do its job", meaningEn: "work as it should", meaningHe: "לעשות את שלו" },
+      { text: "what's really going on", meaningEn: "the true situation", meaningHe: "מה באמת קורה" },
+      { text: "feel heard", meaningEn: "feel that someone listened", meaningHe: "להרגיש שמקשיבים לך" },
+    ],
+  },
+  {
+    id: "r8-cloud",
+    title: "What the cloud actually is",
+    level: "B1+",
+    topic: "tech",
+    setting: "A tech explainer for beginners",
+    lines: [
+      {
+        voice: "ava",
+        name: "Host",
+        text: "People talk about the cloud as if it's something in the sky. It isn't. The cloud is simply someone else's computers, in a huge building called a data center, that you rent over the internet.",
+      },
+      {
+        voice: "ava",
+        name: "Host",
+        text: "Why rent instead of buy? Imagine a small online shop. Most days it gets a few hundred visitors, but on Black Friday it gets fifty thousand. Buying enough servers for that one day would be a waste of money for the rest of the year.",
+      },
+      {
+        voice: "ava",
+        name: "Host",
+        text: "In the cloud, the shop can scale up for the busy day and scale back down the next morning. And it only pays for what it actually used. That's the big idea: pay as you go.",
+      },
+      {
+        voice: "ava",
+        name: "Host",
+        text: "You'll also hear about three service models. With infrastructure as a service, you rent the machines and manage almost everything yourself. With platform as a service, the provider handles more of it. And with software as a service, like email in your browser, you just use the finished product.",
+      },
+      {
+        voice: "ava",
+        name: "Host",
+        text: "One more term worth knowing is high availability. Your app runs in more than one place, so if one data center has a problem, the others keep it running. Users never notice, and that's the point.",
+      },
+    ],
+    questions: [
+      {
+        q: "What is the cloud, in the host's words?",
+        options: [
+          "A new kind of internet",
+          "Someone else's computers that you rent",
+          "Free storage from your phone company",
+        ],
+        answer: 1,
+        why: "“The cloud is simply someone else's computers… that you rent over the internet.”",
+      },
+      {
+        q: "Why is the online shop a good example?",
+        options: ["Its traffic jumps on one busy day", "It sells cloud services", "It never has many visitors"],
+        answer: 0,
+        why: "“Most days it gets a few hundred visitors, but on Black Friday it gets fifty thousand.”",
+      },
+      {
+        q: "Which model is email in your browser?",
+        options: ["Infrastructure as a service", "Platform as a service", "Software as a service"],
+        answer: 2,
+        why: "“With software as a service, like email in your browser, you just use the finished product.”",
+      },
+    ],
+    phrases: [
+      { text: "scale up", meaningEn: "add more capacity", meaningHe: "להגדיל משאבים" },
+      { text: "pay as you go", meaningEn: "pay only for what you use", meaningHe: "לשלם לפי שימוש" },
+      { text: "high availability", meaningEn: "keeps running even when one part fails", meaningHe: "זמינות גבוהה" },
+      { text: "a waste of money", meaningEn: "money spent for nothing useful", meaningHe: "בזבוז כסף" },
+    ],
+  },
 ];

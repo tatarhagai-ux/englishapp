@@ -108,6 +108,14 @@ describe("radio", () => {
       expect(voiceById(r.lines[0].voice)).toBeDefined();
       expect(r.questions).toHaveLength(3);
       expect(storyById(r.id)).toBe(r);
+      // Every phrase worth keeping is actually said in the talk (a verb may be inflected:
+      // "do the heavy lifting" is said as "does the heavy lifting").
+      const said = r.lines.map((l) => l.text.toLowerCase()).join(" ");
+      for (const p of r.phrases) {
+        const words = p.text.toLowerCase().split(" ");
+        const core = words.length >= 3 ? words.slice(1).join(" ") : words.join(" ");
+        expect(said, `${r.id}: ${p.text}`).toContain(core);
+      }
     }
   });
 });
