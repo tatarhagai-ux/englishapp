@@ -62,3 +62,20 @@ test("say it in English: a missing word is named, a missed sentence comes back, 
   await expect(page.getByRole("link").filter({ has: page.getByText("A and the", { exact: true }) })).toBeVisible();
   await expect(page.getByRole("link", { name: /Your misses/ })).toHaveCount(0);
 });
+
+test("say it in English: a hint shows the words mixed up, and the sentence still has to be said", async ({ page }) => {
+  await page.route("**/api/tts", (route) =>
+    route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' }),
+  );
+  await page.goto("/say/no-to");
+  await page.getByRole("button", { name: "Hint" }).click();
+  const words = page.getByRole("list", { name: "Hint: the words, mixed up" });
+  await expect(words.getByRole("listitem")).toHaveCount(3);
+  await expect(words).toContainText("must");
+  await expect(page.getByRole("button", { name: "Hint" })).toBeDisabled();
+  await page.getByRole("button", { name: "Type" }).click();
+  await page.getByLabel("Your English sentence").fill("I must go");
+  await page.getByRole("button", { name: "Check" }).click();
+  await expect(page.getByRole("status")).toContainText("That's it.");
+  await expect(words).toHaveCount(0);
+});

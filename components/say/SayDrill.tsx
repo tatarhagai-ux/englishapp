@@ -2,7 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, ChevronLeft, Eye, Keyboard, Languages, Mic, RotateCcw, Volume2 } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  Eye,
+  Keyboard,
+  Languages,
+  Lightbulb,
+  Mic,
+  RotateCcw,
+  Volume2,
+} from "lucide-react";
 import clsx from "clsx";
 import { SAY_MISSES_ID, SAY_SETS, sayMissSet, type SaySet } from "@/content/say";
 import { HEBREW_PATTERNS } from "@/content/l1/he";
@@ -131,6 +142,8 @@ export function SayDrill({ set }: { set: SaySet }) {
   const firstTry = useRef(new Set<number>());
   const tried = useRef(new Set<number>());
   const listenFor = useRef<number | null>(null);
+  const hinted = useRef(new Set<number>());
+  const [hint, setHint] = useState<string[] | null>(null);
   const [score, setScore] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [ruleOpen, setRuleOpen] = useState(true);
@@ -165,7 +178,8 @@ export function SayDrill({ set }: { set: SaySet }) {
     setAttempt({ heard, check });
     setNotice(null);
     setRuleOpen(false);
-    firstAnswer(itemIndex, check.status === "right");
+    // Right with the words in view still helps, but it isn't "on the first try".
+    firstAnswer(itemIndex, check.status === "right" && !hinted.current.has(itemIndex));
     if (check.status === "right") hear(check.closest);
   }
 
@@ -202,8 +216,20 @@ export function SayDrill({ set }: { set: SaySet }) {
     firstAnswer(itemIndex, false);
   }
 
+  /** The answer's words, mixed up: he still has to put them in order and say them. */
+  function showHint() {
+    const words = item.answers[0].replace(/[.?!]$/, "").split(/\s+/);
+    let mixed = [...words];
+    for (let tries = 0; tries < 5 && mixed.join(" ") === words.join(" ") && words.length > 1; tries++) {
+      mixed = [...words].sort(() => Math.random() - 0.5);
+    }
+    hinted.current.add(itemIndex);
+    setHint(mixed);
+  }
+
   function next() {
     player.stop();
+    setHint(null);
     setAttempt(null);
     setRevealed(false);
     setNotice(null);
@@ -227,6 +253,8 @@ export function SayDrill({ set }: { set: SaySet }) {
     setPos(0);
     firstTry.current = new Set();
     tried.current = new Set();
+    hinted.current = new Set();
+    setHint(null);
     setAttempt(null);
     setRevealed(false);
     setFinished(false);
@@ -336,6 +364,15 @@ export function SayDrill({ set }: { set: SaySet }) {
         <p dir="rtl" lang="he" className="text-2xl font-black leading-snug">
           {item.he}
         </p>
+        {hint && !done && (
+          <ul aria-label="Hint: the words, mixed up" className="flex flex-wrap gap-1.5">
+            {hint.map((w, i) => (
+              <li key={i} className="rounded-lg border-2 border-line bg-elev-2 px-2 py-1 text-sm font-bold">
+                {w}
+              </li>
+            ))}
+          </ul>
+        )}
         {mic.busy && <MicHeard phase={mic.phase} heard={mic.heard} />}
         {notice && !mic.busy && (
           <p role="status" className="text-sm font-bold text-warn">
@@ -457,16 +494,25 @@ export function SayDrill({ set }: { set: SaySet }) {
               setTyping((v) => !v);
             }}
             aria-pressed={typing}
-            className="btn-3d btn-ghost col-span-1 flex items-center justify-center gap-1.5 py-3 text-sm"
+            className="btn-3d btn-ghost flex items-center justify-center gap-1.5 py-3 text-sm"
           >
             <Keyboard className="size-4" aria-hidden /> Type
           </button>
           <button
             type="button"
-            onClick={show}
-            className="btn-3d btn-ghost col-span-2 flex items-center justify-center gap-1.5 py-3 text-sm"
+            onClick={showHint}
+            disabled={!!hint}
+            className="btn-3d btn-ghost flex items-center justify-center gap-1.5 py-3 text-sm disabled:opacity-60"
           >
-            <Eye className="size-4" aria-hidden /> Show the answer
+            <Lightbulb className="size-4" aria-hidden /> Hint
+          </button>
+          <button
+            type="button"
+            onClick={show}
+            aria-label="Show the answer"
+            className="btn-3d btn-ghost flex items-center justify-center gap-1.5 py-3 text-sm"
+          >
+            <Eye className="size-4" aria-hidden /> Answer
           </button>
         </div>
       )}
