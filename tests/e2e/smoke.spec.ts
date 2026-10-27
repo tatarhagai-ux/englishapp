@@ -402,6 +402,10 @@ test("mistake mini-lesson: the rule, wrong and right, and a drill that doesn't m
   await page.getByRole("button", { name: "Check" }).click();
   await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByRole("status").filter({ hasText: "1 done" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /From Hebrew, out loud: For and since/ })).toHaveAttribute(
+    "href",
+    "/say/for-and-since",
+  );
 });
 
 test("after the 12-week plan: what changed, and a week to replay", async ({ page }) => {

@@ -508,3 +508,17 @@ export const SAY_SETS: readonly SaySet[] = [...SAY_SETS_CORE, ...SAY_SETS_MORE];
 export function saySetById(id: string): SaySet | undefined {
   return SAY_SETS.find((s) => s.id === id);
 }
+
+/** His recurring mistakes (content/learner-seed.ts) that a set trains, by key. */
+const MISTAKE_SETS: Record<string, string> = {
+  present_perfect_duration: "for-and-since",
+  missing_be: "is-and-do",
+  study_for: "small-words",
+  online_not_at_internet: "small-words",
+  noun_modifier_order: "owner-first",
+};
+
+/** The set that trains a mistake: by its own key, or by the pattern the analyzer filed it under. */
+export function saySetForMistake(key: string): SaySet | undefined {
+  return saySetById(MISTAKE_SETS[key] ?? "") ?? SAY_SETS.find((s) => s.pattern === key);
+}

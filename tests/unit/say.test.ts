@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SAY_SETS } from "@/content/say";
+import { SAY_SETS, saySetForMistake } from "@/content/say";
+import { SEED_ERRORS } from "@/content/learner-seed";
 import { HEBREW_PATTERNS } from "@/content/l1/he";
 import { checkSay, sayWords } from "@/lib/text/say-check";
 import { initialState, recordSayDrill } from "@/lib/learner/model";
@@ -24,6 +25,18 @@ describe("say-it content", () => {
         if (item.trap) expect(checkSay(item.trap, item.answers).status, item.trap).not.toBe("right");
         expect(item.he).toMatch(/[֐-׿]/);
       }
+    }
+  });
+});
+
+describe("mistake to set", () => {
+  it("links his recurring mistakes and analyzer pattern keys to a set", () => {
+    expect(saySetForMistake("present_perfect_duration")?.id).toBe("for-and-since");
+    expect(saySetForMistake("articles")?.id).toBe("a-and-the");
+    expect(saySetForMistake("office_idioms")).toBeUndefined();
+    for (const e of SEED_ERRORS) {
+      const set = saySetForMistake(e.key);
+      if (set) expect(SAY_SETS).toContain(set);
     }
   });
 });

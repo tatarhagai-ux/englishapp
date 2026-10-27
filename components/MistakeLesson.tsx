@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Check, ChevronLeft, Dumbbell, Keyboard, Languages, Mic, Target, Volume2 } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, Dumbbell, Keyboard, Languages, Mic, Target, Volume2 } from "lucide-react";
 import clsx from "clsx";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
 import { useClipPlayer } from "@/lib/client/tts";
 import { mistakeSentences, type WarmupItem } from "@/lib/learner/model";
 import { Warmup } from "@/components/session/Warmup";
+import { saySetForMistake } from "@/content/say";
 
 const DRILL_SIZE = 4;
 
@@ -40,6 +41,7 @@ export function MistakeLesson({ mistakeKey }: { mistakeKey: string }) {
     );
   }
   const sentences = mistakeSentences(e);
+  const saySet = saySetForMistake(e.key);
   const sayable = sentences.filter((s) => s.better && !/[=…]/.test(s.better));
 
   function startDrill() {
@@ -183,6 +185,24 @@ export function MistakeLesson({ mistakeKey }: { mistakeKey: string }) {
             <Dumbbell className="size-5" aria-hidden /> Drill {Math.min(DRILL_SIZE, sayable.length)} sentences
           </button>
         </section>
+      )}
+
+      {saySet && (
+        <Link
+          href={`/say/${saySet.id}`}
+          className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+            <Languages className="size-5" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-extrabold">From Hebrew, out loud: {saySet.title}</span>
+            <span className="block text-xs font-bold text-dim">
+              Say it in English · {saySet.items.length} new sentences on the same trap
+            </span>
+          </span>
+          <ArrowRight className="size-5 text-accent" aria-hidden />
+        </Link>
       )}
     </div>
   );
