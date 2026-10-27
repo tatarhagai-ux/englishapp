@@ -97,7 +97,7 @@ Next.js 15 (App Router), TypeScript strict, Tailwind v4, PWA (service worker `sw
   - Shadow it אחרי סיפור (`components/listen/ShadowDrill.tsx`).
   - שלושה דפוסים חדשים ב-`content/l1/he.ts` (`question_order`, `ever_perfect`, `calques`). הם נכנסים גם לפרומפט של הדוח.
 - **תוכן חדש:**
-  - כרטיסיות `/words` (14 חבילות ב-`content/decks.ts`, FSRS עם 4 דירוגים, 10 חדשות ביום).
+  - כרטיסיות `/words` (16 חבילות ב-`content/decks.ts`, FSRS עם 4 דירוגים, 10 חדשות ביום).
   - 19 סיפורים (`content/stories.ts`) ו-8 פרקי Radio (`content/radio.ts`). ביטוי שנשמר מסיפור מקבל את השורה שבה נאמר כדוגמה, גם בנטייה (`blankOut` ב-`lib/text/cloze.ts`).
   - 14 קריאות `/read` (`content/readings.ts`).
   - One-minute talk `/talk` (36 נושאים, `content/topics.ts`, תרחיש נסתר `minute-talk`).
