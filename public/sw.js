@@ -6,6 +6,9 @@ const STATIC = "sw-static-v1";
 const OFFLINE_URL = "/offline.html";
 // Pages kept for offline use: the last copy that loaded fine is served when the network fails.
 const OFFLINE_PAGES = ["/", "/review", "/words", "/read", "/phrases", "/progress", "/practice", "/guide", "/pronounce", "/say"];
+// Detail pages (one drill set, one short read) are kept once he has opened them, so the
+// lists above don't link to pages that can't load offline.
+const VISITED_PREFIXES = ["/say/", "/read/"];
 const STATIC_MAX = 150;
 
 self.addEventListener("install", (event) => {
@@ -36,8 +39,8 @@ function filesInUse() {
 async function readFilesInUse() {
   const shell = await caches.open(SHELL);
   const used = new Set();
-  for (const path of OFFLINE_PAGES) {
-    const res = await shell.match(path);
+  for (const key of await shell.keys()) {
+    const res = await shell.match(key);
     if (!res) continue;
     // Paths can sit inside escaped JSON (a trailing backslash) or carry a query string.
     for (const m of (await res.text()).matchAll(/\/_next\/static\/[^"'\s)\\?#]+/g)) used.add(m[0]);
@@ -71,7 +74,7 @@ async function staticFirst(request) {
 
 async function page(request) {
   const url = new URL(request.url);
-  const keep = OFFLINE_PAGES.includes(url.pathname);
+  const keep = OFFLINE_PAGES.includes(url.pathname) || VISITED_PREFIXES.some((p) => url.pathname.startsWith(p));
   try {
     const res = await fetch(request);
     // A redirect (to unlock or setup) or an error page is not worth keeping.

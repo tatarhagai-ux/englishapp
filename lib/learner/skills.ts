@@ -37,7 +37,7 @@ export function skillProgress(state: LearnerState): SkillProgress {
     stories: { done: heard.filter((id) => storyIds.has(id)).length, total: STORIES.length },
     radio: { done: heard.filter((id) => radioIds.has(id)).length, total: RADIO.length },
     reads: { done: Object.keys(state.readings ?? {}).length, total: READINGS.length },
-    say: { done: Object.keys(state.sayDrills ?? {}).length, total: SAY_SETS.length },
+    say: { done: SAY_SETS.filter((s) => state.sayDrills?.[s.id]).length, total: SAY_SETS.length },
     minuteTalks: state.sessions.filter((s) => !s.demo && s.scenarioId === MINUTE_TALK_ID && s.report).length,
   };
 }

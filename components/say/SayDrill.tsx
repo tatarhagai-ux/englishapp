@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowRight, Check, ChevronLeft, Eye, Keyboard, Languages, Mic, RotateCcw, Volume2 } from "lucide-react";
 import clsx from "clsx";
 import { SAY_SETS, type SaySet } from "@/content/say";
@@ -108,8 +108,12 @@ export function SayDrill({ set }: { set: SaySet }) {
   const [revealed, setRevealed] = useState(false);
   const [typing, setTyping] = useState(false);
   const [typed, setTyped] = useState("");
-  const [firstTry, setFirstTry] = useState<Set<number>>(new Set());
-  const [tried, setTried] = useState<Set<number>>(new Set());
+  // Refs, not state: a mic result lands after an await and must see the latest values.
+  const firstTry = useRef(new Set<number>());
+  const tried = useRef(new Set<number>());
+  const listenFor = useRef<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
   const [ruleOpen, setRuleOpen] = useState(true);
   const [finished, setFinished] = useState(false);
   useWakeLock(!finished);
@@ -117,6 +121,8 @@ export function SayDrill({ set }: { set: SaySet }) {
   const itemIndex = queue[pos];
   const item = set.items[itemIndex];
   const right = attempt?.check.status === "right";
+  const total = set.items.length;
+  const firstPass = pos < total;
   const answer = attempt?.check.closest ?? item?.answers[0];
   // He fell into exactly the trap: no need to show it back to him.
   const saidTrap = !!attempt && !!item?.trap && checkSay(attempt.heard, [item.trap]).status === "right";
@@ -125,49 +131,65 @@ export function SayDrill({ set }: { set: SaySet }) {
     void player.play(`say:${text}`, text, prefs.tutorVoiceId, 0.95);
   }
 
+  /** The first answer to a sentence decides the score; a miss comes back once at the end. */
+  function firstAnswer(index: number, ok: boolean) {
+    if (tried.current.has(index)) return;
+    tried.current.add(index);
+    if (ok) firstTry.current.add(index);
+    else setQueue((q) => [...q, index]);
+  }
+
   function judge(heard: string) {
     const check = checkSay(heard, item.answers);
     setAttempt({ heard, check });
+    setNotice(null);
     setRuleOpen(false);
-    if (!tried.has(itemIndex)) {
-      setTried(new Set(tried).add(itemIndex));
-      if (check.status === "right") setFirstTry(new Set(firstTry).add(itemIndex));
-      // A miss comes back once, at the end of the set.
-      else setQueue([...queue, itemIndex]);
-    }
+    firstAnswer(itemIndex, check.status === "right");
     if (check.status === "right") hear(check.closest);
+  }
+
+  /** Switching to typing or to the answer drops a recording in progress, unjudged. */
+  function cancelMic() {
+    listenFor.current = null;
+    mic.stop();
   }
 
   async function say() {
     if (mic.busy) return mic.stop();
     setRuleOpen(false);
+    setNotice(null);
+    listenFor.current = itemIndex;
     try {
       const r = await mic.run(item.answers[0]);
+      if (listenFor.current !== itemIndex) return;
+      // Silence isn't an answer: nothing is scored, he just goes again.
       if (r.text.trim()) judge(r.text);
-      else setAttempt({ heard: "", check: { status: "wrong", closest: item.answers[0], missing: [], extra: [] } });
+      else setNotice("Didn't catch that. Try again, or type it.");
     } catch {
       // No mic or no recognition here: typing works everywhere.
-      setTyping(true);
+      if (listenFor.current === itemIndex) setTyping(true);
+    } finally {
+      listenFor.current = null;
     }
   }
 
   function show() {
-    mic.stop();
+    cancelMic();
     setRevealed(true);
+    setNotice(null);
     setRuleOpen(false);
-    if (!tried.has(itemIndex)) {
-      setTried(new Set(tried).add(itemIndex));
-      setQueue([...queue, itemIndex]);
-    }
+    firstAnswer(itemIndex, false);
   }
 
   function next() {
     player.stop();
     setAttempt(null);
     setRevealed(false);
+    setNotice(null);
     setTyped("");
     if (pos + 1 >= queue.length) {
-      learner.recordSayDrill(set.id, firstTry.size);
+      learner.recordSayDrill(set.id, firstTry.current.size);
+      setScore(firstTry.current.size);
       setFinished(true);
       return;
     }
@@ -177,8 +199,8 @@ export function SayDrill({ set }: { set: SaySet }) {
   function restart() {
     setQueue(set.items.map((_, i) => i));
     setPos(0);
-    setFirstTry(new Set());
-    setTried(new Set());
+    firstTry.current = new Set();
+    tried.current = new Set();
     setAttempt(null);
     setRevealed(false);
     setFinished(false);
@@ -201,7 +223,6 @@ export function SayDrill({ set }: { set: SaySet }) {
   );
 
   if (finished) {
-    const score = firstTry.size;
     return (
       <div className="space-y-5">
         {header}
@@ -264,22 +285,28 @@ export function SayDrill({ set }: { set: SaySet }) {
       <div
         className="h-2.5 overflow-hidden rounded-full bg-elev-2"
         role="progressbar"
-        aria-label={`Sentence ${pos + 1} of ${queue.length}`}
+        aria-label={firstPass ? `Sentence ${pos + 1} of ${total}` : "Once more"}
         aria-valuemin={0}
-        aria-valuemax={queue.length}
-        aria-valuenow={pos}
+        aria-valuemax={total}
+        aria-valuenow={Math.min(pos, total)}
       >
-        <div className="h-full rounded-full bg-go" style={{ width: `${(pos / queue.length) * 100}%` }} />
+        {/* Out of the set's sentences, so a miss added at the end never moves it backward. */}
+        <div className="h-full rounded-full bg-go" style={{ width: `${(Math.min(pos, total) / total) * 100}%` }} />
       </div>
 
       <section className="tile space-y-4 p-5">
         <p className="text-xs font-extrabold uppercase tracking-wider text-faint">
-          {pos >= set.items.length ? "Once more" : "How do you say it in English?"}
+          {firstPass ? "How do you say it in English?" : "Once more"}
         </p>
         <p dir="rtl" lang="he" className="text-2xl font-black leading-snug">
           {item.he}
         </p>
         {mic.busy && <MicHeard phase={mic.phase} heard={mic.heard} />}
+        {notice && !mic.busy && (
+          <p role="status" className="text-sm font-bold text-warn">
+            {notice}
+          </p>
+        )}
 
         {attempt && (
           <div role="status" className="space-y-1.5">
@@ -391,7 +418,7 @@ export function SayDrill({ set }: { set: SaySet }) {
           <button
             type="button"
             onClick={() => {
-              mic.stop();
+              cancelMic();
               setTyping((v) => !v);
             }}
             aria-pressed={typing}

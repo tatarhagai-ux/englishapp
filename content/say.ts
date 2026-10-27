@@ -27,9 +27,9 @@ const SAY_SETS_CORE: readonly SaySet[] = [
     title: "For and since",
     items: [
       {
-        he: "אני גר בשוהם כבר עשר שנים.",
-        answers: ["I've been living in Shoham for ten years.", "I've lived in Shoham for ten years."],
-        trap: "I live in Shoham ten years.",
+        he: "אני גר פה כבר עשר שנים.",
+        answers: ["I've been living here for ten years.", "I've lived here for ten years."],
+        trap: "I live here ten years.",
       },
       {
         he: "אני מכיר אותו כבר חמש שנים.",

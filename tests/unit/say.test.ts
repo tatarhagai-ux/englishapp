@@ -57,6 +57,16 @@ describe("checkSay", () => {
     expect(checkSay("so could you send me the file please", ["Could you send me the file?"]).status).toBe("right");
   });
 
+  it("never lets a full is stand in for has", () => {
+    expect(checkSay("He isn't finished yet", ["He hasn't finished yet."]).status).not.toBe("right");
+    expect(checkSay("He has not finished yet", ["He hasn't finished yet."]).status).toBe("right");
+  });
+
+  it("matches digits to their words", () => {
+    expect(checkSay("I've lived here for 10 years", ["I've lived here for ten years."]).status).toBe("right");
+    expect(checkSay("I'm 20", ["I'm twenty."]).status).toBe("right");
+  });
+
   it("treats she's as either she is or she has", () => {
     expect(checkSay("She has been working there since March", ["She's been working there since March."]).status).toBe(
       "right",
