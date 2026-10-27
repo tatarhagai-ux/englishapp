@@ -44,6 +44,7 @@ const ANALYSIS = {
   phrases: [{ text: "Lately I've been…", meaning_en: "Talking about recent activity", meaning_he: "לאחרונה אני…" }],
   task: { completed: true, met: ["Talks about at least one future plan"], feedback_en: "Good plan for next week." },
   praise_en: "You kept the conversation going.",
+  best_sentence: "Next week I'm planning to take the practice test.",
   memory: ["He has an AZ-900 exam next month."],
 };
 
@@ -130,6 +131,9 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await expect(page.getByText("משתמשים ב-present perfect")).toBeVisible();
   await expect(page.getByText("Saved to your phrase bank")).toBeVisible();
   await expect(page.getByText("Your tutor will remember:")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Your best sentence" })).toContainText(
+    "Next week I'm planning to take the practice test.",
+  );
   await expect(page.getByRole("link", { name: /Up next/ })).toBeVisible();
   // Wanting more: something different (another kind of conversation) and short skill rounds.
   const more = page.getByRole("region", { name: "Want more?" });

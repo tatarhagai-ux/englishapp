@@ -76,6 +76,7 @@ export function demoAnalysis(scenario: Scenario, turns: Turn[]): Analysis {
       feedback_en: "This is a sample. With the AI connected, this line reacts to what you actually said.",
     },
     praise_en: said ? `You answered in full sentences: “${said.slice(0, 80)}”` : "You kept the conversation going.",
+    best_sentence: said ? said.split(/(?<=[.!?])\s+/)[0].slice(0, 160) : "",
     level: { cefr: "B1+", confidence: "medium", note_en: "Sample estimate. The real one comes from your own words." },
     ...(scenario.category === "interview"
       ? {

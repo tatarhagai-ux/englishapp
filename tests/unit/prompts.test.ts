@@ -138,3 +138,16 @@ describe("assist", () => {
     expect(msgs[1].content).toContain("OTHER PERSON: What have you been up to?");
   });
 });
+
+describe("best sentence in the analysis", () => {
+  it("is optional, and asked for in the prompt", async () => {
+    const { analysisSchema, buildAnalyzerMessages } = await import("@/lib/prompts/analyzer");
+    const { scenarioById } = await import("@/content/scenarios");
+    expect(analysisSchema.parse({}).best_sentence).toBe("");
+    expect(analysisSchema.parse({ best_sentence: "I've been there twice." }).best_sentence).toBe(
+      "I've been there twice.",
+    );
+    const system = buildAnalyzerMessages(scenarioById("free-your-week")!, [{ role: "learner", text: "Hi" }])[0].content;
+    expect(system).toContain("best_sentence");
+  });
+});

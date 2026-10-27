@@ -14,6 +14,8 @@ import {
   MessageCircle,
   RotateCcw,
   Sparkles,
+  Star,
+  Volume2,
   Trophy,
 } from "lucide-react";
 import clsx from "clsx";
@@ -30,6 +32,7 @@ import { CorrectionCard } from "./CorrectionCard";
 import { InterviewCard } from "./InterviewCard";
 import { demoAnalysis } from "@/lib/client/demo";
 import { KeepGoing } from "@/components/KeepGoing";
+import { useClipPlayer } from "@/lib/client/tts";
 
 export function ReportScreen({ sessionId }: { sessionId: string }) {
   const hydrated = useHydrated();
@@ -178,6 +181,8 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
               </span>
             )}
           </div>
+
+          {report.best_sentence && <BestSentence text={report.best_sentence} voiceId={prefs.tutorVoiceId} />}
 
           {!session.demo && (report.memory?.length ?? 0) > 0 && (
             <p className="flex gap-2 rounded-xl bg-elev-2 p-3 text-sm">
@@ -385,5 +390,30 @@ function PhraseRow({
           </button>
         ))}
     </li>
+  );
+}
+
+/** His best line of the conversation, played back in a native voice: what "good" sounds like in his own words. */
+function BestSentence({ text, voiceId }: { text: string; voiceId: string }) {
+  const player = useClipPlayer();
+  const playing = player.state?.key === "best";
+  return (
+    <section aria-labelledby="best-title" className="tile flex items-center gap-3 border-go/50 p-4">
+      <Star className="size-6 shrink-0 fill-current text-xp" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <h2 id="best-title" className="text-xs font-extrabold uppercase tracking-wider text-faint">
+          Your best sentence
+        </h2>
+        <p className="font-bold">“{text}”</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => (playing ? player.stop() : void player.play("best", text, voiceId, 0.95))}
+        aria-label={playing ? "Stop" : "Hear it in a native voice"}
+        className="grid size-10 shrink-0 place-items-center rounded-full bg-elev-2 hover:bg-accent hover:text-white"
+      >
+        <Volume2 className="size-4" aria-hidden />
+      </button>
+    </section>
   );
 }
