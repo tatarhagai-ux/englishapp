@@ -66,6 +66,8 @@ test("listening story: hear it with the words hidden, answer, then read it and s
   await expect(page.getByRole("button", { name: "Listen first" })).toBeDisabled();
   // The words are hidden while listening.
   await expect(page.getByText("Rough weekend?")).toHaveCount(0);
+  // A click that lands before the page has hydrated does nothing (CI is slower than a laptop).
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Play" }).click();
   await expect(page.getByRole("button", { name: "Play again" })).toBeVisible({ timeout: 15_000 });
   expect(spoken).toHaveLength(6);
@@ -93,6 +95,8 @@ test("radio: a one-host talk opens in the story player", async ({ page }) => {
   await page.goto("/listen");
   await page.getByRole("link", { name: /The two-minute rule for new habits/ }).click();
   await expect(page.getByText(/Radio · B1/)).toBeVisible();
+  // A click that lands before the page has hydrated does nothing (CI is slower than a laptop).
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Play" }).click();
   await expect(page.getByRole("button", { name: "Play again" })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Answer the questions" }).click();
@@ -126,6 +130,8 @@ test("shadow a story line: hear it, say it, the mic checks the words", async ({ 
     route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
   );
   await page.goto("/listen/story/s-monday");
+  // A click that lands before the page has hydrated does nothing (CI is slower than a laptop).
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Play" }).click();
   await expect(page.getByRole("button", { name: "Play again" })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Answer the questions" }).click();
