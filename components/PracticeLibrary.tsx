@@ -37,6 +37,7 @@ import { usePrefs } from "@/lib/client/prefs";
 import { cardQueue, openSayMisses, rankedErrors, warmupItems } from "@/lib/learner/model";
 import { STORIES } from "@/content/stories";
 import { DECKS } from "@/content/decks";
+import { PRONUNCIATION } from "@/content/pronunciation";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { HowItWorks } from "./HowItWorks";
 import { Avatar } from "./Avatar";
@@ -159,7 +160,12 @@ export function PracticeLibrary() {
 
       <SkillGroup title="Speaking">
         <SkillTile href="/talk" icon={Timer} title="One-minute talk" detail="A topic card, a long answer" />
-        <SkillTile href="/pronounce" icon={AudioLines} title="Pronunciation" detail="10 sounds · record yourself" />
+        <SkillTile
+          href="/pronounce"
+          icon={AudioLines}
+          title="Pronunciation"
+          detail={`${PRONUNCIATION.length} sounds · record yourself`}
+        />
         <SkillTile
           href="/say"
           icon={Languages}

@@ -258,8 +258,8 @@ test("pronunciation course: open a unit, hear a minimal pair, read the Hebrew ti
     await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' });
   });
   await page.goto("/practice");
-  await page.getByRole("link", { name: /^Pronunciation 10 sounds/ }).click();
-  await expect(page.getByText("0 / 10")).toBeVisible();
+  await page.getByRole("link", { name: /^Pronunciation \d+ sounds/ }).click();
+  await expect(page.getByText("0 / 11")).toBeVisible();
   await page.getByRole("link", { name: /W is not V/ }).click();
   await expect(page.getByRole("heading", { name: "W is not V" })).toBeVisible();
   await page.getByRole("button", { name: "west" }).click();
@@ -297,7 +297,7 @@ test("say it: the mic shows when it is really open, the words as they come, and 
     route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"not_configured"}' }),
   );
   await page.goto("/practice");
-  await page.getByRole("link", { name: /^Pronunciation 10 sounds/ }).click();
+  await page.getByRole("link", { name: /^Pronunciation \d+ sounds/ }).click();
   await page.getByRole("link", { name: /W is not V/ }).click();
   const first = page.getByRole("article").first();
   const sentence = (await first.locator("p").first().innerText()).trim();

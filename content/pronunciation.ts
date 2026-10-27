@@ -194,6 +194,27 @@ export const PRONUNCIATION: readonly PronunciationUnit[] = [
     ],
   },
   {
+    id: "r-l",
+    title: "The English R (and the dark L)",
+    focus: "/r/ /ɫ/",
+    whyEn:
+      "The Hebrew R is made in the throat. In English that sounds heavy and foreign, and next to an L it can blur words like “right” and “light”.",
+    whyHe: "ה-ר׳ העברית יוצאת מהגרון. באנגלית זה נשמע כבד וזר, וליד L זה יכול לטשטש מילים כמו right ו-light.",
+    how: "For R, keep your throat relaxed: pull the tip of your tongue slightly back without touching anything, and round your lips a little. For the L at the end of “feel”, touch the tip behind your top teeth and lift the back of your tongue.",
+    pairs: [
+      ["right", "light"],
+      ["road", "load"],
+      ["pray", "play"],
+      ["fry", "fly"],
+      ["correct", "collect"],
+    ],
+    sentences: [
+      "Read the report really carefully.",
+      "The road on the right is very crowded.",
+      "I feel like I'll fall asleep at school.",
+    ],
+  },
+  {
     id: "ed-endings",
     title: "Past tense -ed endings",
     focus: "/t/ /d/ /ɪd/",

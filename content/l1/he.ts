@@ -188,6 +188,7 @@ export const HEBREW_PATTERNS: readonly L1Pattern[] = [
     pattern: "Hebrew uvular r and clear l used for English r and dark l",
     tip: "English R doesn't touch the throat: curl the tongue back slightly. The L at the end of “feel” is darker, with the back of the tongue raised.",
     whyHe: "ה-ר׳ העברית יוצאת מהגרון, וה-R האנגלית מתגלגלת בלשון בלי לגעת בשום מקום.",
+    unit: "r-l",
   },
   {
     key: "flat_stress",
