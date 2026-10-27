@@ -49,4 +49,16 @@ test("say it in English: a missing word is named, a missed sentence comes back, 
   await expect(page.getByRole("link").filter({ has: page.getByText("A and the", { exact: true }) })).toContainText(
     "5/6",
   );
+
+  // The missed one waits in "Your misses" until it's said right.
+  await page.getByRole("link", { name: /Your misses/ }).click();
+  await expect(page.getByText("קניתי טלפון חדש.")).toBeVisible();
+  await page.getByRole("button", { name: "Type" }).click();
+  await page.getByLabel("Your English sentence").fill("I bought a new phone");
+  await page.getByRole("button", { name: "Check" }).click();
+  await page.getByRole("button", { name: "Finish" }).click();
+  await expect(page.getByText("All cleared from your misses.")).toBeVisible();
+  await page.goto("/say");
+  await expect(page.getByRole("link").filter({ has: page.getByText("A and the", { exact: true }) })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Your misses/ })).toHaveCount(0);
 });

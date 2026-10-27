@@ -10,6 +10,8 @@ export interface SayItem {
   he: string;
   answers: string[];
   trap?: string;
+  /** Only in the mixed "redo your misses" round: the pattern of the set it came from. */
+  pattern?: string;
 }
 
 export interface SaySet {
@@ -656,4 +658,22 @@ const MISTAKE_SETS: Record<string, string> = {
 /** The set that trains a mistake: by its own key, or by the pattern the analyzer filed it under. */
 export function saySetForMistake(key: string): SaySet | undefined {
   return saySetById(MISTAKE_SETS[key] ?? "") ?? SAY_SETS.find((s) => s.pattern === key);
+}
+
+/** The id of the mixed round of sentences he missed, at /say/misses. */
+export const SAY_MISSES_ID = "misses";
+
+/** A round of the given missed sentences (by Hebrew text), each keeping its own rule. */
+export function sayMissSet(missed: string[]): SaySet {
+  const items: SayItem[] = [];
+  for (const he of missed) {
+    for (const set of SAY_SETS) {
+      const item = set.items.find((i) => i.he === he);
+      if (item) {
+        items.push({ ...item, pattern: set.pattern });
+        break;
+      }
+    }
+  }
+  return { id: SAY_MISSES_ID, pattern: items[0]?.pattern ?? "", title: "Your misses", items };
 }

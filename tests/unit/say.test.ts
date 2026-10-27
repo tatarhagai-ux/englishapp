@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { SAY_SETS, saySetForMistake } from "@/content/say";
+import { SAY_SETS, sayMissSet, saySetForMistake } from "@/content/say";
 import { SEED_ERRORS } from "@/content/learner-seed";
 import { HEBREW_PATTERNS } from "@/content/l1/he";
 import { checkSay, sayWords } from "@/lib/text/say-check";
-import { initialState, recordSayDrill } from "@/lib/learner/model";
+import { initialState, openSayMisses, recordSayDrill, recordSayMisses } from "@/lib/learner/model";
 import { mergeStates } from "@/lib/learner/merge";
 
 describe("say-it content", () => {
@@ -89,5 +89,35 @@ describe("say-it progress", () => {
     expect(s.sayDrills?.["a-and-the"].best).toBe(4);
     const other = recordSayDrill(initialState(now), "a-and-the", 6, now);
     expect(mergeStates(s, other).sayDrills?.["a-and-the"].best).toBe(6);
+  });
+});
+
+describe("say-it misses", () => {
+  const t1 = new Date("2026-10-27T08:00:00Z");
+  const t2 = new Date("2026-10-28T08:00:00Z");
+
+  it("every Hebrew sentence is unique, so it can name a miss", () => {
+    const all = SAY_SETS.flatMap((s) => s.items.map((i) => i.he));
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it("opens misses and closes them only when said right later", () => {
+    let s = recordSayMisses(initialState(t1), ["קניתי טלפון חדש.", "הוא מהנדס."], ["זמן זה כסף."], t1);
+    expect(openSayMisses(s)).toEqual(["קניתי טלפון חדש.", "הוא מהנדס."]);
+    expect(s.sayMisses?.["זמן זה כסף."]).toBeUndefined();
+    s = recordSayMisses(s, ["הוא מהנדס."], ["קניתי טלפון חדש."], t2);
+    expect(openSayMisses(s)).toEqual(["הוא מהנדס."]);
+  });
+
+  it("builds a mixed round that keeps each sentence's own rule", () => {
+    const set = sayMissSet(["קניתי טלפון חדש.", "אני חייב ללכת.", "not a sentence"]);
+    expect(set.items.map((i) => i.pattern)).toEqual(["articles", "modal_to"]);
+  });
+
+  it("the newer answer wins across devices", () => {
+    const phone = recordSayMisses(initialState(t1), ["הוא מהנדס."], [], t1);
+    const laptop = recordSayMisses(phone, [], ["הוא מהנדס."], t2);
+    expect(openSayMisses(mergeStates(phone, laptop))).toEqual([]);
+    expect(openSayMisses(mergeStates(laptop, phone))).toEqual([]);
   });
 });

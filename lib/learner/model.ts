@@ -115,6 +115,11 @@ export interface LearnerState {
   readings?: Record<string, { best: number; at: string }>;
   /** "Say it in English" sets: best number right on the first try, by set id. */
   sayDrills?: Record<string, { best: number; at: string }>;
+  /**
+   * "Say it in English" sentences he missed on the first try, by their Hebrew text. open
+   * turns false once he gets it right in a later round; the newer at wins across devices.
+   */
+  sayMisses?: Record<string, { at: string; open: boolean }>;
   /** Days when all three daily quests were done ("YYYY-MM-DD"). */
   perfectDays?: string[];
   /** Best pronunciation score per course unit. */
@@ -783,6 +788,32 @@ export function recordReading(state: LearnerState, id: string, correct: number, 
 
 export function recordSayDrill(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
   return recordBest(state, "sayDrills", id, correct, now);
+}
+
+/**
+ * After a round: sentences missed on the first try open (or stay open) as misses, and ones
+ * he got right close any miss they had, so a sentence leaves the redo list by being said
+ * right, not by being skipped.
+ */
+export function recordSayMisses(
+  state: LearnerState,
+  missed: string[],
+  right: string[],
+  now = new Date(),
+): LearnerState {
+  const at = now.toISOString();
+  const misses = { ...state.sayMisses };
+  for (const he of missed) misses[he] = { at, open: true };
+  for (const he of right) if (misses[he]?.open) misses[he] = { at, open: false };
+  return { ...state, sayMisses: misses };
+}
+
+/** The sentences still waiting for a redo, oldest miss first. */
+export function openSayMisses(state: LearnerState): string[] {
+  return Object.entries(state.sayMisses ?? {})
+    .filter(([, m]) => m.open)
+    .sort((a, b) => a[1].at.localeCompare(b[1].at))
+    .map(([he]) => he);
 }
 
 export function recordListening(state: LearnerState, itemId: string, correct: boolean): LearnerState {

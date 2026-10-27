@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { ArrowRight, Headphones, Languages, MessageCircle, Repeat2, Shuffle, Volume2 } from "lucide-react";
 import { useLearner } from "@/lib/client/learner";
-import { differentScenario, warmupItems } from "@/lib/learner/model";
-import { SAY_SETS } from "@/content/say";
+import { differentScenario, openSayMisses, warmupItems } from "@/lib/learner/model";
+import { SAY_MISSES_ID, SAY_SETS } from "@/content/say";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 
 export interface NextStep {
@@ -22,7 +22,8 @@ export function KeepGoing({ next, avoid }: { next: NextStep | null; avoid: strin
   const state = useLearner();
   const other = differentScenario(state, [...avoid, ...(next ? [idFromHref(next.href)] : [])]);
   const due = warmupItems(state, new Date(), QUICK_REVIEW_MAX).length;
-  // The first "Say it in English" set he hasn't done yet, in order.
+  // Sentences he missed come first; otherwise the first "Say it in English" set not done yet.
+  const misses = openSayMisses(state).length;
   const saySet = SAY_SETS.find((s) => !state.sayDrills?.[s.id]);
 
   return (
@@ -62,13 +63,22 @@ export function KeepGoing({ next, avoid }: { next: NextStep | null; avoid: strin
         )}
         <Option href="/listen" icon={Headphones} title="Listening round" detail="Real speech · 3 min" compact />
       </div>
-      {saySet && (
+      {misses > 0 ? (
         <Option
-          href={`/say/${saySet.id}`}
+          href={`/say/${SAY_MISSES_ID}`}
           icon={Languages}
-          title={`Say it in English: ${saySet.title}`}
-          detail={`${saySet.items.length} sentences from Hebrew · 3 min`}
+          title="Say it in English: your misses"
+          detail={`${misses} ${misses === 1 ? "sentence" : "sentences"} to say again · 2 min`}
         />
+      ) : (
+        saySet && (
+          <Option
+            href={`/say/${saySet.id}`}
+            icon={Languages}
+            title={`Say it in English: ${saySet.title}`}
+            detail={`${saySet.items.length} sentences from Hebrew · 3 min`}
+          />
+        )
       )}
     </section>
   );

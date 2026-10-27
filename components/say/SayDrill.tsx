@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronLeft, Eye, Keyboard, Languages, Mic, RotateCcw, Volume2 } from "lucide-react";
 import clsx from "clsx";
-import { SAY_SETS, type SaySet } from "@/content/say";
+import { SAY_MISSES_ID, SAY_SETS, sayMissSet, type SaySet } from "@/content/say";
 import { HEBREW_PATTERNS } from "@/content/l1/he";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
+import { openSayMisses } from "@/lib/learner/model";
 import { usePrefs } from "@/lib/client/prefs";
 import { useClipPlayer } from "@/lib/client/tts";
 import { useMicAttempt } from "@/lib/client/use-mic-attempt";
@@ -20,14 +21,15 @@ function quoted(words: string[]) {
   return words.map((w) => `“${w}”`).join(", ");
 }
 
-function patternOf(set: SaySet) {
-  return HEBREW_PATTERNS.find((p) => p.key === set.pattern);
+function patternOf(key: string) {
+  return HEBREW_PATTERNS.find((p) => p.key === key);
 }
 
 /** The sets, one per Hebrew-speaker pattern, with his best score on each. */
 export function SayList() {
   const hydrated = useHydrated();
   const state = useLearner();
+  const misses = hydrated ? openSayMisses(state).length : 0;
   return (
     <div className="space-y-5">
       <header className="flex items-start gap-2">
@@ -53,6 +55,23 @@ export function SayList() {
           />
         </div>
       </header>
+      {misses > 0 && (
+        <Link
+          href={`/say/${SAY_MISSES_ID}`}
+          className="tile flex items-center gap-3 border-accent/50 p-4 transition-colors hover:border-accent"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-white">
+            <RotateCcw className="size-5" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-extrabold">Your misses</span>
+            <span className="block text-xs font-bold text-dim">
+              {misses} {misses === 1 ? "sentence" : "sentences"} to say again, from any set
+            </span>
+          </span>
+          <ArrowRight className="size-5 text-accent" aria-hidden />
+        </Link>
+      )}
       <ul className="space-y-2.5">
         {SAY_SETS.map((s) => {
           const best = hydrated ? state.sayDrills?.[s.id]?.best : undefined;
@@ -68,7 +87,7 @@ export function SayList() {
                 <span className="min-w-0 flex-1">
                   <span className="block font-extrabold">{s.title}</span>
                   <span className="block truncate text-xs font-bold text-dim">
-                    {patternOf(s)?.title} · {s.items.length} sentences
+                    {patternOf(s.pattern)?.title} · {s.items.length} sentences
                   </span>
                 </span>
                 <span
@@ -101,7 +120,7 @@ export function SayDrill({ set }: { set: SaySet }) {
   const [prefs] = usePrefs();
   const player = useClipPlayer();
   const mic = useMicAttempt();
-  const pattern = patternOf(set);
+  const mixed = set.id === SAY_MISSES_ID;
   const [queue, setQueue] = useState(() => set.items.map((_, i) => i));
   const [pos, setPos] = useState(0);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
@@ -124,6 +143,8 @@ export function SayDrill({ set }: { set: SaySet }) {
   const total = set.items.length;
   const firstPass = pos < total;
   const answer = attempt?.check.closest ?? item?.answers[0];
+  // In the mixed round each sentence brings the rule of the set it came from.
+  const pattern = patternOf(item?.pattern ?? set.pattern);
   // He fell into exactly the trap: no need to show it back to him.
   const saidTrap = !!attempt && !!item?.trap && checkSay(attempt.heard, [item.trap]).status === "right";
 
@@ -188,7 +209,12 @@ export function SayDrill({ set }: { set: SaySet }) {
     setNotice(null);
     setTyped("");
     if (pos + 1 >= queue.length) {
-      learner.recordSayDrill(set.id, firstTry.current.size);
+      if (!mixed) learner.recordSayDrill(set.id, firstTry.current.size);
+      // Missed on the first try: into the redo round. Right: out of it, if it was there.
+      learner.recordSayMisses(
+        set.items.filter((_, i) => !firstTry.current.has(i)).map((i) => i.he),
+        set.items.filter((_, i) => firstTry.current.has(i)).map((i) => i.he),
+      );
       setScore(firstTry.current.size);
       setFinished(true);
       return;
@@ -231,13 +257,20 @@ export function SayDrill({ set }: { set: SaySet }) {
             {score}/{set.items.length}
           </p>
           <p className="font-bold text-dim">
-            {score === set.items.length
-              ? "All of them on the first try."
-              : score === 0
-                ? "None on the first try yet. That's normal for a trap like this: go again tomorrow."
-                : "Right on the first try. The missed ones got a second go."}
+            {mixed
+              ? score === set.items.length
+                ? "All cleared from your misses."
+                : `${score} cleared. The rest stay in your misses for next time.`
+              : score === set.items.length
+                ? "All of them on the first try."
+                : score === 0
+                  ? "None on the first try yet. That's normal for a trap like this: go again tomorrow."
+                  : "Right on the first try. The missed ones got a second go."}
           </p>
-          {pattern && <p className="rounded-xl bg-elev-2 p-3 text-sm font-bold">{pattern.tip}</p>}
+          {!mixed && score < set.items.length && (
+            <p className="text-sm text-dim">The ones you missed wait in “Your misses” on the list, for another go.</p>
+          )}
+          {pattern && !mixed && <p className="rounded-xl bg-elev-2 p-3 text-sm font-bold">{pattern.tip}</p>}
           <button
             type="button"
             onClick={restart}
@@ -439,4 +472,27 @@ export function SayDrill({ set }: { set: SaySet }) {
       )}
     </div>
   );
+}
+
+/** The mixed round of every sentence still in his misses, taken once when the page opens. */
+export function SayMisses() {
+  const hydrated = useHydrated();
+  const state = useLearner();
+  const [set, setSet] = useState<SaySet | null>(null);
+  useEffect(() => {
+    if (hydrated && !set) setSet(sayMissSet(openSayMisses(state)));
+  }, [hydrated, set, state]);
+  if (!set) return <p className="text-dim">Loading…</p>;
+  if (!set.items.length) {
+    return (
+      <div className="tile space-y-3 p-5 text-center">
+        <p className="text-lg font-black">Nothing to redo</p>
+        <p className="text-sm text-dim">Sentences you miss in a set land here, so you can say them again later.</p>
+        <Link href="/say" className="btn-3d btn-go inline-block px-5 py-3">
+          Pick a set
+        </Link>
+      </div>
+    );
+  }
+  return <SayDrill set={set} />;
 }
