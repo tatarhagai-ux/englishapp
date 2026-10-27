@@ -94,3 +94,20 @@ describe("listening stories", () => {
     expect(s.stories!["s-gym"].best).toBe(3);
   });
 });
+
+describe("radio", () => {
+  it("has one-host talks with real voices and three answerable questions, reachable by id", async () => {
+    const { RADIO } = await import("@/content/radio");
+    const { storyById, STORIES } = await import("@/content/stories");
+    const { voiceById } = await import("@/content/voices");
+    expect(RADIO.length).toBeGreaterThanOrEqual(5);
+    const ids = [...STORIES, ...RADIO].map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const r of RADIO) {
+      expect(new Set(r.lines.map((l) => l.voice)).size, r.id).toBe(1);
+      expect(voiceById(r.lines[0].voice)).toBeDefined();
+      expect(r.questions).toHaveLength(3);
+      expect(storyById(r.id)).toBe(r);
+    }
+  });
+});

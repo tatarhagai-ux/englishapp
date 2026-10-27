@@ -36,6 +36,7 @@ export function StoryPlayer({ story }: { story: Story }) {
   const best = hydrated ? state.stories?.[story.id]?.best : undefined;
   // Each speaker gets their own color (seeds that differ in the last letter never collide).
   const speakers = [...new Set(story.lines.map((l) => l.name))];
+  const isRadio = speakers.length === 1;
   const correct = answers.filter((a, i) => a === story.questions[i].answer).length;
   const allAnswered = answers.every((a) => a !== null);
 
@@ -93,7 +94,7 @@ export function StoryPlayer({ story }: { story: Story }) {
         </Link>
         <div className="flex-1">
           <p className="text-xs font-extrabold uppercase tracking-wider text-faint">
-            Listening story · {story.level}
+            {isRadio ? "Radio" : "Listening story"} · {story.level}
             {best !== undefined && ` · best ${best}/${story.questions.length}`}
           </p>
           <h1 className="text-2xl font-black leading-tight">{story.title}</h1>

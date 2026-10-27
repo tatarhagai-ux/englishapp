@@ -5,6 +5,8 @@
  * a few useful phrases can go to the word cards afterwards.
  */
 
+import { RADIO } from "./radio";
+
 export interface StoryLine {
   /** Voice id from content/voices.ts. */
   voice: string;
@@ -876,5 +878,5 @@ export const STORIES: readonly Story[] = [
 ];
 
 export function storyById(id: string): Story | undefined {
-  return STORIES.find((s) => s.id === id);
+  return STORIES.find((s) => s.id === id) ?? RADIO.find((s) => s.id === id);
 }

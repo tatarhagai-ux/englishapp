@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronLeft, Headphones, Keyboard, Loader2, Mic, Play, Snail, Trophy } from "lucide-react";
 import clsx from "clsx";
 import { STORIES } from "@/content/stories";
+import { RADIO } from "@/content/radio";
 import { LISTENING, type ListeningItem } from "@/content/listening";
 import { VOICES, type Accent, type Voice } from "@/content/voices";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
@@ -199,6 +200,43 @@ export function ListeningGym() {
                 >
                   <p className="text-xs font-extrabold text-faint">
                     {s.level} · {s.lines.length} lines
+                  </p>
+                  <p className="font-extrabold leading-snug">{s.title}</p>
+                  <p
+                    className={clsx(
+                      "text-xs font-bold",
+                      best === undefined ? "text-dim" : best === 3 ? "text-good" : "text-warn",
+                    )}
+                  >
+                    {best === undefined ? "New" : `Best ${best}/3`}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section id="radio" aria-labelledby="radio-title" className="scroll-mt-4 space-y-2.5">
+          <div>
+            <h2 id="radio-title" className="font-black">
+              Radio
+            </h2>
+            <p className="text-sm text-dim">
+              Two to three minutes of one person talking, like a podcast. Three questions at the end.
+            </p>
+          </div>
+          <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
+            {RADIO.map((s) => {
+              const best = hydrated ? state.stories?.[s.id]?.best : undefined;
+              return (
+                <Link
+                  key={s.id}
+                  href={`/listen/story/${s.id}`}
+                  className="tile w-44 shrink-0 snap-start space-y-1 p-3.5 transition-colors hover:border-accent/60"
+                >
+                  <p className="text-xs font-extrabold text-faint">
+                    {s.level} ·{" "}
+                    {Math.max(1, Math.round(s.lines.reduce((n, l) => n + l.text.split(" ").length, 0) / 130))} min
                   </p>
                   <p className="font-extrabold leading-snug">{s.title}</p>
                   <p

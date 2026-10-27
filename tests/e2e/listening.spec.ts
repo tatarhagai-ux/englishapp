@@ -83,3 +83,16 @@ test("listening story: hear it with the words hidden, answer, then read it and s
   await page.goto("/listen");
   await expect(page.getByRole("link", { name: /Monday morning/ })).toContainText("Best 2/3");
 });
+
+test("radio: a one-host talk opens in the story player", async ({ page }) => {
+  await page.route("**/api/tts", (route) =>
+    route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
+  );
+  await page.goto("/listen");
+  await page.getByRole("link", { name: /The two-minute rule for new habits/ }).click();
+  await expect(page.getByText(/Radio · B1/)).toBeVisible();
+  await page.getByRole("button", { name: "Play" }).click();
+  await expect(page.getByRole("button", { name: "Play again" })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Answer the questions" }).click();
+  await expect(page.getByRole("group", { name: "What is the two-minute rule?" })).toBeVisible();
+});
