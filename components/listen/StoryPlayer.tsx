@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronLeft, Headphones, Loader2, Play, Plus, Snail, Square, X } from "lucide-react";
+import { Check, ChevronLeft, Headphones, Loader2, Play, Plus, Snail, Square } from "lucide-react";
 import clsx from "clsx";
 import type { Story } from "@/content/stories";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
@@ -12,6 +12,7 @@ import { primeAudio } from "@/lib/client/speech";
 import { useWakeLock } from "@/lib/client/wake-lock";
 import { Avatar } from "@/components/Avatar";
 import { KeepGoing } from "@/components/KeepGoing";
+import { QuizQuestion } from "@/components/QuizQuestion";
 
 type Phase = "listen" | "questions" | "review";
 
@@ -180,42 +181,18 @@ export function StoryPlayer({ story }: { story: Story }) {
           <h2 id="q-title" className="font-black">
             Questions
           </h2>
-          {story.questions.map((q, qi) => {
-            const picked = answers[qi];
-            return (
-              <div key={q.q} className="tile space-y-2.5 p-4">
-                <p className="font-extrabold">
-                  {qi + 1}. {q.q}
-                </p>
-                <div role="group" aria-label={q.q} className="grid gap-2">
-                  {q.options.map((o, oi) => {
-                    const isRight = oi === q.answer;
-                    const show = picked !== null;
-                    return (
-                      <button
-                        key={o}
-                        type="button"
-                        onClick={() => answer(qi, oi)}
-                        disabled={show}
-                        className={clsx(
-                          "flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold",
-                          !show && "border-line hover:border-accent/60",
-                          show && isRight && "border-go bg-go/10 text-good",
-                          show && picked === oi && !isRight && "border-bad bg-bad/10 text-bad",
-                          show && picked !== oi && !isRight && "border-line opacity-60",
-                        )}
-                      >
-                        {show && isRight && <Check className="size-4 shrink-0" aria-hidden />}
-                        {show && picked === oi && !isRight && <X className="size-4 shrink-0" aria-hidden />}
-                        {o}
-                      </button>
-                    );
-                  })}
-                </div>
-                {picked !== null && <p className="text-sm text-dim">{q.why}</p>}
-              </div>
-            );
-          })}
+          {story.questions.map((q, qi) => (
+            <QuizQuestion
+              key={q.q}
+              number={qi + 1}
+              q={q.q}
+              options={q.options}
+              answer={q.answer}
+              picked={answers[qi]}
+              why={q.why}
+              onPick={(oi) => answer(qi, oi)}
+            />
+          ))}
         </section>
       )}
 

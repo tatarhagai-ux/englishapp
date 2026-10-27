@@ -9,7 +9,7 @@ import { SCENARIOS, scenarioById, type Scenario } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import type { Turn } from "@/lib/conversation/types";
 import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
-import { bestStreak, computeStreak, dayKey } from "@/lib/game/streak";
+import { bestStreak, computeStreak, dayKey, weekStart } from "@/lib/game/streak";
 import { EMPTY_STATS, type LearnerStats } from "@/lib/game/achievements";
 import { xpForSession } from "@/lib/game/xp";
 
@@ -411,23 +411,16 @@ export function statsFrom(state: LearnerState, today: string): LearnerStats {
   };
 }
 
-/** Sunday-to-Saturday week of a day, like the weekly summary. */
-function sundayOf(day: string): string {
-  const [y, m, d] = day.split("-").map(Number);
-  const t = Date.UTC(y, m - 1, d);
-  return new Date(t - new Date(t).getUTCDay() * 86_400_000).toISOString().slice(0, 10);
-}
-
 /** The most perfect days in any one week. */
 export function bestPerfectWeek(days: string[]): number {
   const perWeek = new Map<string, number>();
-  for (const d of new Set(days)) perWeek.set(sundayOf(d), (perWeek.get(sundayOf(d)) ?? 0) + 1);
+  for (const d of new Set(days)) perWeek.set(weekStart(d), (perWeek.get(weekStart(d)) ?? 0) + 1);
   return Math.max(0, ...perWeek.values());
 }
 
 /** This week's days (Sunday first) and which of them were perfect. */
 export function perfectWeekStrip(state: LearnerState, today: string): { day: string; perfect: boolean }[] {
-  const start = sundayOf(today);
+  const start = weekStart(today);
   const [y, m, d] = start.split("-").map(Number);
   const set = new Set(state.perfectDays ?? []);
   return Array.from({ length: 7 }, (_, i) => {
@@ -758,29 +751,32 @@ export function markPhrasesUsed(state: LearnerState, learnerText: string): Learn
  * it down 0.05. That keeps listening a little above comfortable, which is where it improves.
  */
 /**
- * A finished listening story. XP only for answers better than his best on that story, so
- * replaying one to learn it is fine but doesn't farm points.
+ * A finished story, radio talk or short read: the best score is kept, and XP comes only for
+ * answers better than that best, so replaying one to learn it is fine but doesn't farm points.
+ * Skill XP lives with listening's (it's what statsFrom adds up).
  */
-export function recordStory(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
-  const prev = state.stories?.[id]?.best ?? 0;
+function recordBest(
+  state: LearnerState,
+  field: "stories" | "readings",
+  id: string,
+  correct: number,
+  now: Date,
+): LearnerState {
+  const prev = state[field]?.[id]?.best ?? 0;
   const l = state.listening ?? LISTENING_START;
   return {
     ...state,
-    stories: { ...state.stories, [id]: { best: Math.max(prev, correct), at: now.toISOString() } },
+    [field]: { ...state[field], [id]: { best: Math.max(prev, correct), at: now.toISOString() } },
     listening: { ...l, xp: l.xp + 5 * Math.max(0, correct - prev) },
   };
 }
 
-/** A finished short read: best score kept, XP only for improving on it (like stories). */
+export function recordStory(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
+  return recordBest(state, "stories", id, correct, now);
+}
+
 export function recordReading(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
-  const prev = state.readings?.[id]?.best ?? 0;
-  const l = state.listening ?? LISTENING_START;
-  return {
-    ...state,
-    readings: { ...state.readings, [id]: { best: Math.max(prev, correct), at: now.toISOString() } },
-    // Skill XP lives with listening's (it's what statsFrom adds up).
-    listening: { ...l, xp: l.xp + 5 * Math.max(0, correct - prev) },
-  };
+  return recordBest(state, "readings", id, correct, now);
 }
 
 export function recordListening(state: LearnerState, itemId: string, correct: boolean): LearnerState {

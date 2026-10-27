@@ -11,6 +11,7 @@ import { speakSequence, useClipPlayer } from "@/lib/client/tts";
 import { primeAudio } from "@/lib/client/speech";
 import { HowItWorks } from "@/components/HowItWorks";
 import { KeepGoing } from "@/components/KeepGoing";
+import { QuizQuestion } from "@/components/QuizQuestion";
 
 /** The list of short reads, with his best score on each. */
 export function ReadingList() {
@@ -209,41 +210,17 @@ export function Reader({ reading }: { reading: Reading }) {
         <h2 id="rq-title" className="font-black">
           Did you get it?
         </h2>
-        {reading.questions.map((q, qi) => {
-          const picked = answers[qi];
-          return (
-            <div key={q.q} className="tile space-y-2.5 p-4">
-              <p className="font-extrabold">
-                {qi + 1}. {q.q}
-              </p>
-              <div role="group" aria-label={q.q} className="grid gap-2">
-                {q.options.map((o, oi) => {
-                  const show = picked !== null;
-                  const isRight = oi === q.answer;
-                  return (
-                    <button
-                      key={o}
-                      type="button"
-                      disabled={show}
-                      onClick={() => answer(qi, oi)}
-                      className={clsx(
-                        "flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold",
-                        !show && "border-line hover:border-accent/60",
-                        show && isRight && "border-go bg-go/10 text-good",
-                        show && picked === oi && !isRight && "border-bad bg-bad/10 text-bad",
-                        show && picked !== oi && !isRight && "border-line opacity-60",
-                      )}
-                    >
-                      {show && isRight && <Check className="size-4 shrink-0" aria-hidden />}
-                      {show && picked === oi && !isRight && <X className="size-4 shrink-0" aria-hidden />}
-                      {o}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        {reading.questions.map((q, qi) => (
+          <QuizQuestion
+            key={q.q}
+            number={qi + 1}
+            q={q.q}
+            options={q.options}
+            answer={q.answer}
+            picked={answers[qi]}
+            onPick={(oi) => answer(qi, oi)}
+          />
+        ))}
         {allAnswered && (
           <p role="status" className="font-extrabold text-good">
             {correct}/{reading.questions.length} right.

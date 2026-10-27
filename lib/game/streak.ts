@@ -74,3 +74,10 @@ export function friendlyDay(day: string, today: string): string {
     d,
   );
 }
+
+/** The Sunday that starts the week containing this day (weeks run Sunday to Saturday, as in Israel). */
+export function weekStart(day: string): string {
+  const n = toDayNumber(day);
+  const weekday = new Date(n * 86_400_000).getUTCDay(); // 0 = Sunday
+  return new Date((n - weekday) * 86_400_000).toISOString().slice(0, 10);
+}
