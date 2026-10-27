@@ -875,6 +875,170 @@ export const STORIES: readonly Story[] = [
       { text: "I'll take", meaningEn: "I'll choose / buy", meaningHe: "אני אקח" },
     ],
   },
+  {
+    id: "s-return",
+    title: "Taking it back",
+    level: "B1",
+    topic: "daily",
+    setting: "Returning headphones at an electronics store",
+    lines: [
+      {
+        voice: "brian",
+        name: "Customer",
+        text: "Hi, I bought these headphones last week, but the left side keeps cutting out.",
+      },
+      { voice: "jenny", name: "Assistant", text: "Sorry to hear that. Do you have the receipt with you?" },
+      { voice: "brian", name: "Customer", text: "I've got it on my phone. Here you go." },
+      {
+        voice: "jenny",
+        name: "Assistant",
+        text: "Thanks. Would you like a replacement, or would you rather have a refund?",
+      },
+      { voice: "brian", name: "Customer", text: "A replacement is fine, as long as it's not the same problem again." },
+      {
+        voice: "jenny",
+        name: "Assistant",
+        text: "It's a known issue with the first batch. The new ones have been fixed. If anything goes wrong, just bring them back.",
+      },
+    ],
+    questions: [
+      {
+        q: "What's wrong with the headphones?",
+        options: ["They're too big", "The left side keeps cutting out", "They don't charge"],
+        answer: 1,
+        why: "“The left side keeps cutting out.”",
+      },
+      {
+        q: "What does the customer choose?",
+        options: ["A refund", "A different brand", "A replacement"],
+        answer: 2,
+        why: "“A replacement is fine.”",
+      },
+      {
+        q: "Why is the assistant confident the new pair will work?",
+        options: [
+          "The first batch had a problem that's now fixed",
+          "They tested them in the store",
+          "They're a more expensive model",
+        ],
+        answer: 0,
+        why: "“It's a known issue with the first batch. The new ones have been fixed.”",
+      },
+    ],
+    phrases: [
+      { text: "keeps cutting out", meaningEn: "stops working again and again for a moment", meaningHe: "כל הזמן נקטע" },
+      { text: "would you rather", meaningEn: "do you prefer", meaningHe: "האם תעדיף" },
+      { text: "as long as", meaningEn: "on the condition that", meaningHe: "בתנאי ש, כל עוד" },
+      { text: "a known issue", meaningEn: "a problem the company already knows about", meaningHe: "תקלה מוכרת" },
+    ],
+  },
+  {
+    id: "s-first-day",
+    title: "First day at the office",
+    level: "B1",
+    topic: "work",
+    setting: "A team lead shows a new colleague around",
+    lines: [
+      { voice: "emma", name: "Noa", text: "Welcome aboard! Let me show you around before the morning meeting." },
+      { voice: "andrew", name: "Tom", text: "Thanks. I'm a bit nervous, to be honest. Everything's new." },
+      {
+        voice: "emma",
+        name: "Noa",
+        text: "That's normal. Nobody expects you to know everything in your first week. Just ask.",
+      },
+      { voice: "andrew", name: "Tom", text: "Good to know. Who should I go to if I get stuck with the systems?" },
+      {
+        voice: "emma",
+        name: "Noa",
+        text: "Dana sits right next to you. She's been here for years, and she's great at explaining things.",
+      },
+      { voice: "andrew", name: "Tom", text: "Great. And what's the plan for today?" },
+      {
+        voice: "emma",
+        name: "Noa",
+        text: "Take it easy. Read the guides, meet the team, and we'll catch up at four to see how it went.",
+      },
+    ],
+    questions: [
+      {
+        q: "How does Tom feel?",
+        options: ["Bored", "A bit nervous", "Angry about the meeting"],
+        answer: 1,
+        why: "“I'm a bit nervous, to be honest.”",
+      },
+      {
+        q: "Who should Tom ask about the systems?",
+        options: ["Noa", "His manager's boss", "Dana"],
+        answer: 2,
+        why: "“Dana sits right next to you… she's great at explaining things.”",
+      },
+      {
+        q: "What happens at four?",
+        options: ["They catch up to see how the day went", "The whole team goes home", "Tom has a test"],
+        answer: 0,
+        why: "“We'll catch up at four to see how it went.”",
+      },
+    ],
+    phrases: [
+      { text: "Welcome aboard", meaningEn: "welcome to the team", meaningHe: "ברוך הבא לצוות" },
+      { text: "show you around", meaningEn: "give you a tour of a place", meaningHe: "לעשות לך סיור" },
+      { text: "get stuck", meaningEn: "not know how to continue", meaningHe: "להיתקע" },
+      { text: "catch up", meaningEn: "talk to update each other", meaningHe: "להתעדכן" },
+    ],
+  },
+  {
+    id: "s-phone-plan",
+    title: "A better phone plan",
+    level: "B1+",
+    topic: "daily",
+    setting: "Calling a phone company to change plans",
+    lines: [
+      { voice: "jenny", name: "Agent", text: "Thanks for holding. How can I help you today?" },
+      {
+        voice: "guy",
+        name: "Customer",
+        text: "Hi. I'm paying for 100 gigabytes a month, but I hardly use twenty. I'd like to switch to something cheaper.",
+      },
+      {
+        voice: "jenny",
+        name: "Agent",
+        text: "Sure, let me pull up your account. You're still in a contract until March, so there might be a small fee.",
+      },
+      { voice: "guy", name: "Customer", text: "How much are we talking about?" },
+      {
+        voice: "jenny",
+        name: "Agent",
+        text: "Actually, I can waive the fee if you stay with us for another year. The 30-gigabyte plan would save you about forty shekels a month.",
+      },
+      { voice: "guy", name: "Customer", text: "That sounds fair. Let's go with that." },
+    ],
+    questions: [
+      {
+        q: "Why does the customer call?",
+        options: ["His phone is broken", "He pays for far more data than he uses", "He's moving abroad"],
+        answer: 1,
+        why: "“I'm paying for 100 gigabytes a month, but I hardly use twenty.”",
+      },
+      {
+        q: "What does the agent offer?",
+        options: ["To cancel the fee if he stays another year", "A free new phone", "Unlimited data at the same price"],
+        answer: 0,
+        why: "“I can waive the fee if you stay with us for another year.”",
+      },
+      {
+        q: "How much will the new plan save him?",
+        options: ["About twenty shekels a month", "About a hundred shekels a year", "About forty shekels a month"],
+        answer: 2,
+        why: "“The 30-gigabyte plan would save you about forty shekels a month.”",
+      },
+    ],
+    phrases: [
+      { text: "Thanks for holding", meaningEn: "thank you for waiting on the line", meaningHe: "תודה על ההמתנה" },
+      { text: "pull up your account", meaningEn: "open your details on the screen", meaningHe: "לפתוח את החשבון שלך" },
+      { text: "How much are we talking about?", meaningEn: "what's the amount, roughly?", meaningHe: "על כמה מדובר?" },
+      { text: "waive the fee", meaningEn: "not charge the fee", meaningHe: "לוותר על העמלה" },
+    ],
+  },
 ];
 
 export function storyById(id: string): Story | undefined {

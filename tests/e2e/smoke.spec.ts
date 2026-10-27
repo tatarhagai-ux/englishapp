@@ -29,7 +29,7 @@ test.describe("app shell", () => {
     await page.goto("/progress");
     await expect(page.getByRole("heading", { name: "Level 1" })).toBeVisible();
     const areas = page.getByRole("region", { name: "Practice areas" });
-    await expect(areas.getByRole("link", { name: /Stories 0\/16/ })).toHaveAttribute("href", "/listen#stories");
+    await expect(areas.getByRole("link", { name: /Stories 0\/19/ })).toHaveAttribute("href", "/listen#stories");
     await expect(page.getByText("new", { exact: true })).toHaveCount(8);
     // Earned plus the two closest; the rest behind "Show all".
     await expect(page.getByText("0 of 12")).toBeVisible();

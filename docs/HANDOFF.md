@@ -98,7 +98,7 @@ Next.js 15 (App Router), TypeScript strict, Tailwind v4, PWA (service worker `sw
   - שלושה דפוסים חדשים ב-`content/l1/he.ts` (`question_order`, `ever_perfect`, `calques`). הם נכנסים גם לפרומפט של הדוח.
 - **תוכן חדש:**
   - כרטיסיות `/words` (14 חבילות ב-`content/decks.ts`, FSRS עם 4 דירוגים, 10 חדשות ביום).
-  - 16 סיפורים (`content/stories.ts`) ו-8 פרקי Radio (`content/radio.ts`). ביטוי שנשמר מסיפור מקבל את השורה שבה נאמר כדוגמה, גם בנטייה (`blankOut` ב-`lib/text/cloze.ts`).
+  - 19 סיפורים (`content/stories.ts`) ו-8 פרקי Radio (`content/radio.ts`). ביטוי שנשמר מסיפור מקבל את השורה שבה נאמר כדוגמה, גם בנטייה (`blankOut` ב-`lib/text/cloze.ts`).
   - 14 קריאות `/read` (`content/readings.ts`).
   - One-minute talk `/talk` (36 נושאים, `content/topics.ts`, תרחיש נסתר `minute-talk`).
   - Say it in English `/say` (`content/say.ts`, `lib/text/say-check.ts`): 15 סטים של 6 משפטים בעברית, כל סט קשור לדפוס ב-`content/l1/he.ts`. הבדיקה מחמירה: התאמה מדויקת אחרי נרמול, "'s" נחשב is או has, ספרות כמו מילים. השיא נשמר ב-`sayDrills` ומסתנכרן. מיני-שיעור של טעות מקשר לסט המתאים (`saySetForMistake`).
