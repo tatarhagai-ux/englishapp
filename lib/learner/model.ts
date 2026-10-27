@@ -416,6 +416,7 @@ export function statsFrom(state: LearnerState, today: string): LearnerStats {
     accentsHeard: accents.size,
     xp: real.reduce((sum, s) => sum + s.xp, 0) + (state.listening?.xp ?? 0),
     bestPerfectWeek: bestPerfectWeek(state.perfectDays ?? []),
+    saySetsPerfect: SAY_SETS.filter((set) => (state.sayDrills?.[set.id]?.best ?? 0) >= set.items.length).length,
   };
 }
 

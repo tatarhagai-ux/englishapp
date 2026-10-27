@@ -143,3 +143,17 @@ describe("shuffle", () => {
     expect(items).toEqual([1, 2, 3, 4, 5]);
   });
 });
+
+describe("trap breaker", () => {
+  it("counts sets done perfectly toward the achievement", async () => {
+    const { statsFrom } = await import("@/lib/learner/model");
+    const { ACHIEVEMENTS } = await import("@/lib/game/achievements");
+    const now = new Date("2026-10-27T08:00:00Z");
+    let s = initialState(now);
+    for (const set of SAY_SETS.slice(0, 5)) s = recordSayDrill(s, set.id, set.items.length, now);
+    s = recordSayDrill(s, SAY_SETS[5].id, 4, now);
+    const stats = statsFrom(s, "2026-10-27");
+    expect(stats.saySetsPerfect).toBe(5);
+    expect(ACHIEVEMENTS.find((a) => a.key === "trap_breaker")!.progress(stats)).toBe(1);
+  });
+});

@@ -17,6 +17,8 @@ export interface LearnerStats {
   xp: number;
   /** The most days in one week with all three daily quests done. */
   bestPerfectWeek: number;
+  /** "Say it in English" sets done with every sentence right on the first try. */
+  saySetsPerfect: number;
 }
 
 export const EMPTY_STATS: LearnerStats = {
@@ -30,6 +32,7 @@ export const EMPTY_STATS: LearnerStats = {
   accentsHeard: 0,
   xp: 0,
   bestPerfectWeek: 0,
+  saySetsPerfect: 0,
 };
 
 export interface Achievement {
@@ -104,6 +107,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     title: "Interview ready",
     detail: "Complete all 6 job interview scenarios, including the full mock interview",
     progress: (s) => ratio(s.interviewScenariosDone, 6),
+  },
+  {
+    key: "trap_breaker",
+    title: "Trap breaker",
+    detail: "Get every sentence right on the first try in 5 Say it in English sets",
+    progress: (s) => ratio(s.saySetsPerfect, 5),
   },
   {
     key: "accents_4",
