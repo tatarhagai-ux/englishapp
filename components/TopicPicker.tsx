@@ -18,6 +18,7 @@ export function TopicPicker() {
       ? state.sessions
           .filter((s) => s.scenarioId === MINUTE_TALK_ID)
           .map((s) => TALK_TOPICS.find((t) => s.turns[0]?.text.includes(t.title))?.id)
+          .filter((id): id is string => Boolean(id))
       : [],
   );
   const fresh = TALK_TOPICS.filter((t) => !done.has(t.id));

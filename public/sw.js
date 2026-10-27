@@ -1,7 +1,7 @@
 // Speakwise service worker. It makes the app installable and lets the parts that need no
 // server (quick review, the phrase bank, progress, the guide) open without a connection:
 // the learner's data already lives on the device. It never caches API responses or audio.
-const SHELL = "sw-shell-v4";
+const SHELL = "sw-shell-v5";
 const STATIC = "sw-static-v1";
 const OFFLINE_URL = "/offline.html";
 // Pages kept for offline use: the last copy that loaded fine is served when the network fails.
@@ -22,10 +22,25 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Build files the kept offline pages load: never trimmed, or those pages couldn't start offline.
+async function filesInUse() {
+  const shell = await caches.open(SHELL);
+  const used = new Set();
+  for (const path of OFFLINE_PAGES) {
+    const res = await shell.match(path);
+    if (!res) continue;
+    for (const m of (await res.text()).matchAll(/\/_next\/static\/[^"'\s)]+/g)) used.add(m[0]);
+  }
+  return used;
+}
+
 async function trim(cacheName, max) {
   const cache = await caches.open(cacheName);
   const keys = await cache.keys();
-  await Promise.all(keys.slice(0, Math.max(0, keys.length - max)).map((k) => cache.delete(k)));
+  if (keys.length <= max) return;
+  const used = await filesInUse();
+  const spare = keys.filter((k) => !used.has(new URL(k.url).pathname));
+  await Promise.all(spare.slice(0, keys.length - max).map((k) => cache.delete(k)));
 }
 
 // Build files have a hash in their name, so a cached copy is always the right one.

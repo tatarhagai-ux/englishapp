@@ -55,13 +55,12 @@ export function StoryPlayer({ story }: { story: Story }) {
         (slow ? 0.8 : 1) * prefs.speechRate,
         { signal: ctrl.signal, onLine: (i) => setPlaying({ line: i, slow }) },
       );
+      // Counts only when it actually played (all of it, or until he stopped it).
+      if (abortRef.current === ctrl) setPlays((n) => n + 1);
     } catch {
-      // A voice that failed just ends the playback; the buttons stay usable.
+      // No voice at all on this device: the questions stay locked rather than scoring a story he never heard.
     } finally {
-      if (abortRef.current === ctrl) {
-        setPlaying(null);
-        setPlays((n) => n + 1);
-      }
+      if (abortRef.current === ctrl) setPlaying(null);
     }
   }
 

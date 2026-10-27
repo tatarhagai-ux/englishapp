@@ -199,12 +199,20 @@ export function unfinishedSession(
   state: LearnerState,
   now = new Date(),
 ): { session: SessionRecord; resumable: boolean } | null {
-  const last = [...state.sessions].reverse().find((s) => !s.demo);
-  if (!last || last.endedAt || last.report) return null;
-  if (last.turns.filter((t) => t.role === "learner").length < 2) return null;
-  const age = now.getTime() - new Date(last.startedAt).getTime();
-  if (age > 7 * 24 * 60 * 60 * 1000) return null;
-  return { session: last, resumable: age < RESUME_WINDOW_MS };
+  // The newest one that qualifies: a short session opened later doesn't hide it.
+  const ageOf = (s: SessionRecord) => now.getTime() - new Date(s.startedAt).getTime();
+  const last = [...state.sessions]
+    .reverse()
+    .find(
+      (s) =>
+        !s.demo &&
+        !s.endedAt &&
+        !s.report &&
+        s.turns.filter((t) => t.role === "learner").length >= 2 &&
+        ageOf(s) <= 7 * 24 * 60 * 60 * 1000,
+    );
+  if (!last) return null;
+  return { session: last, resumable: ageOf(last) < RESUME_WINDOW_MS };
 }
 
 /**
@@ -498,7 +506,7 @@ export function ratePhrase(state: LearnerState, text: string, rating: CardRating
   return {
     ...state,
     phrases: state.phrases.map((p) =>
-      p.text === text
+      p.text.toLowerCase() === text.toLowerCase()
         ? {
             ...p,
             card: scheduler.next(reviveCard(p.card), now, RATING[rating]).card,

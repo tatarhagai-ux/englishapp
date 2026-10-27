@@ -113,34 +113,50 @@ export async function speakSequence(
   rate: number,
   opts: { signal?: AbortSignal; onLine?: (index: number) => void } = {},
 ): Promise<void> {
-  for (let i = 0; i < lines.length; i++) {
-    if (opts.signal?.aborted) return;
-    opts.onLine?.(i);
-    const { text, voiceId } = lines[i];
-    if (!browserSpeechActive()) {
-      try {
-        const url = URL.createObjectURL(await fetchSpeech(text, voiceId, rate, opts.signal));
-        await new Promise<void>((resolve) => {
-          const audio = new Audio(url);
-          const done = () => {
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          audio.onended = done;
-          audio.onerror = done;
-          opts.signal?.addEventListener("abort", () => {
-            audio.pause();
-            done();
+  const { signal } = opts;
+  let audio: HTMLAudioElement | null = null;
+  // Stopping must silence whatever is speaking right now, the device voice included.
+  const onAbort = () => {
+    audio?.pause();
+    stopSpeaking();
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    for (let i = 0; i < lines.length; i++) {
+      if (signal?.aborted) return;
+      opts.onLine?.(i);
+      const { text, voiceId } = lines[i];
+      if (!browserSpeechActive()) {
+        let blob: Blob | null = null;
+        try {
+          blob = await fetchSpeech(text, voiceId, rate, signal);
+        } catch (err) {
+          if (signal?.aborted || !(err instanceof TtsRequestError)) return;
+          // Any Azure problem (not set up, offline, over budget): the device voice still works.
+        }
+        if (signal?.aborted) return;
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          await new Promise<void>((resolve) => {
+            const el = new Audio(url);
+            audio = el;
+            const done = () => {
+              URL.revokeObjectURL(url);
+              signal?.removeEventListener("abort", done);
+              resolve();
+            };
+            el.onended = done;
+            el.onerror = done;
+            signal?.addEventListener("abort", done, { once: true });
+            el.play().catch(done);
           });
-          audio.play().catch(done);
-        });
-        continue;
-      } catch (err) {
-        if (opts.signal?.aborted) return;
-        if (!(err instanceof TtsRequestError && err.kind === "not_configured")) throw err;
+          audio = null;
+          continue;
+        }
       }
+      await speakInBrowser(text, voiceId, rate);
     }
-    if (opts.signal?.aborted) return;
-    await speakInBrowser(text, voiceId, rate);
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
   }
 }

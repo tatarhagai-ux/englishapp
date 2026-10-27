@@ -23,17 +23,21 @@ export function useRecorder() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const clipsRef = useRef(clips);
+  const openingRef = useRef(false);
+  const unmountedRef = useRef(false);
   clipsRef.current = clips;
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // Set again on mount: React's development double-mount runs the cleanup once in between.
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
       if (timerRef.current) clearTimeout(timerRef.current);
       recorderRef.current?.stop();
       audioRef.current?.pause();
       Object.values(clipsRef.current).forEach((u) => URL.revokeObjectURL(u));
-    },
-    [],
-  );
+    };
+  }, []);
 
   const stop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -44,14 +48,23 @@ export function useRecorder() {
   const record = useCallback(
     async (key: string) => {
       if (recorderRef.current?.state === "recording") return stop();
+      // A second tap while the mic is still opening would open a second stream and leave it on.
+      if (openingRef.current) return;
       audioRef.current?.pause();
       setPlayingKey(null);
       setError(null);
       let stream: MediaStream;
+      openingRef.current = true;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch {
         setError("The microphone is blocked. Allow it in the browser settings.");
+        return;
+      } finally {
+        openingRef.current = false;
+      }
+      if (unmountedRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
         return;
       }
       const rec = new MediaRecorder(stream);
@@ -60,6 +73,7 @@ export function useRecorder() {
       rec.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
         recorderRef.current = null;
+        if (unmountedRef.current) return;
         setRecordingKey(null);
         if (!chunks.length) return;
         const url = URL.createObjectURL(new Blob(chunks, { type: rec.mimeType || "audio/webm" }));

@@ -498,6 +498,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   function afterLearn(items: WarmupItem[]) {
     if (items.length) {
+      setWarmup(items);
       setPhase("warmup");
       return;
     }

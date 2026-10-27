@@ -439,3 +439,19 @@ describe("word cards", () => {
     expect(new Date(easy).getTime()).toBeGreaterThan(new Date(again).getTime() + 3 * 86_400_000);
   });
 });
+
+describe("unfinishedSession keeps the cut-off conversation", () => {
+  it("isn't hidden by a newer one-line session", () => {
+    const base = withSession();
+    const t = (n: number) => Array.from({ length: n }, (_, i) => ({ role: "learner" as const, text: `a${i}` }));
+    const cut = session({ id: "cut", turns: t(5), startedAt: NOW.toISOString(), endedAt: undefined });
+    const short = session({
+      id: "short",
+      turns: t(1),
+      startedAt: new Date(NOW.getTime() + 600_000).toISOString(),
+      endedAt: undefined,
+    });
+    const s = { ...base, sessions: [cut, short] };
+    expect(unfinishedSession(s, new Date(NOW.getTime() + 900_000))?.session.id).toBe("cut");
+  });
+});
