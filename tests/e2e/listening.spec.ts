@@ -82,6 +82,8 @@ test("listening story: hear it with the words hidden, answer, then read it and s
 
   await page.goto("/listen");
   await expect(page.getByRole("link", { name: /Monday morning/ })).toContainText("Best 2/3");
+  // Heard ones move behind the new ones; the first new one is marked.
+  await expect(page.getByRole("link", { name: /Gate change/ })).toContainText("Next");
 });
 
 test("radio: a one-host talk opens in the story player", async ({ page }) => {

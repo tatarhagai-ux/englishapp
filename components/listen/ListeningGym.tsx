@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, Headphones, Keyboard, Loader2, Mic, Play, Snail, Trophy } from "lucide-react";
 import clsx from "clsx";
-import { STORIES } from "@/content/stories";
+import { STORIES, type Story } from "@/content/stories";
 import { RADIO } from "@/content/radio";
 import { LISTENING, type ListeningItem } from "@/content/listening";
 import { VOICES, type Accent, type Voice } from "@/content/voices";
@@ -34,6 +34,9 @@ interface Result {
 export function ListeningGym() {
   const hydrated = useHydrated();
   const state = useLearner();
+  // Ones he hasn't heard come first, in their order; the first of them is marked Next.
+  const unheardFirst = (list: readonly Story[]) =>
+    hydrated ? [...list].sort((a, b) => Number(!!state.stories?.[a.id]) - Number(!!state.stories?.[b.id])) : list;
   const listening = state.listening ?? LISTENING_START;
   const [mode, setMode] = useState<Mode>("dictation");
   const [accent, setAccent] = useState<AccentChoice>("Mixed");
@@ -190,8 +193,9 @@ export function ListeningGym() {
             </p>
           </div>
           <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
-            {STORIES.map((s) => {
+            {unheardFirst(STORIES).map((s, i) => {
               const best = hydrated ? state.stories?.[s.id]?.best : undefined;
+              const isNext = hydrated && i === 0 && best === undefined;
               return (
                 <Link
                   key={s.id}
@@ -205,10 +209,10 @@ export function ListeningGym() {
                   <p
                     className={clsx(
                       "text-xs font-bold",
-                      best === undefined ? "text-dim" : best === 3 ? "text-good" : "text-warn",
+                      isNext ? "text-accent" : best === undefined ? "text-dim" : best === 3 ? "text-good" : "text-warn",
                     )}
                   >
-                    {best === undefined ? "New" : `Best ${best}/3`}
+                    {isNext ? "Next" : best === undefined ? "New" : `Best ${best}/3`}
                   </p>
                 </Link>
               );
@@ -226,8 +230,9 @@ export function ListeningGym() {
             </p>
           </div>
           <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
-            {RADIO.map((s) => {
+            {unheardFirst(RADIO).map((s, i) => {
               const best = hydrated ? state.stories?.[s.id]?.best : undefined;
+              const isNext = hydrated && i === 0 && best === undefined;
               return (
                 <Link
                   key={s.id}
@@ -242,10 +247,10 @@ export function ListeningGym() {
                   <p
                     className={clsx(
                       "text-xs font-bold",
-                      best === undefined ? "text-dim" : best === 3 ? "text-good" : "text-warn",
+                      isNext ? "text-accent" : best === undefined ? "text-dim" : best === 3 ? "text-good" : "text-warn",
                     )}
                   >
-                    {best === undefined ? "New" : `Best ${best}/3`}
+                    {isNext ? "Next" : best === undefined ? "New" : `Best ${best}/3`}
                   </p>
                 </Link>
               );
