@@ -2,6 +2,7 @@
 
 import type * as SpeechSdk from "microsoft-cognitiveservices-speech-sdk";
 import { fetchSpeech, TtsRequestError } from "./tts";
+import { chooseAlternative } from "@/lib/text/compare";
 import { diffWords } from "@/lib/text/diff";
 import {
   browserSpeechActive,
@@ -253,10 +254,13 @@ function recognizeOnceInBrowser(
   const rec = createRecognition();
   if (!rec) return Promise.reject(new SpeechSetupError("unsupported"));
   rec.lang = language;
-  // Continuous, so a pause to think doesn't end the attempt. Android Chrome still ends the
-  // session after each pause; it is reopened until the learner is really done.
-  rec.continuous = true;
+  // A word or a short phrase is recognized best as one utterance (the engine is tuned for it),
+  // so only longer sentences run continuously. Either way, a pause to think doesn't end the
+  // attempt: when the browser stops on its own it is reopened until the learner is done.
+  rec.continuous = reference.trim().split(/\s+/).length > 4;
   rec.interimResults = true;
+  // Ask for a few guesses: the right words are often the second one for a short target.
+  rec.maxAlternatives = 5;
   const started = Date.now();
   return new Promise((resolve, reject) => {
     /** Words from earlier browser sessions of this same attempt. */
@@ -325,8 +329,14 @@ function recognizeOnceInBrowser(
       interim = "";
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) finals = mergeFinal(finals, r[0].transcript);
-        else interim += `${r[0].transcript} `;
+        if (r.isFinal) {
+          const guesses: string[] = [];
+          for (let k = 0; k < (Number.isFinite(r.length) ? Math.max(1, r.length) : 1); k++) {
+            const alt = r[k] as { transcript?: string } | undefined;
+            if (alt?.transcript) guesses.push(alt.transcript);
+          }
+          finals = mergeFinal(finals, chooseAlternative(guesses, reference));
+        } else interim += `${r[0].transcript} `;
       }
       current = finals;
       interim = interim.trim();

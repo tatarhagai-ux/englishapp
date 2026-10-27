@@ -145,3 +145,23 @@ export function criterionMet(met: string[], criterion: string): boolean {
     return target.filter((w) => said.has(w)).length / target.length >= 0.6;
   });
 }
+
+/**
+ * The recognizer's first guess is usually right, but for a short target it often puts the
+ * right words as its second or third guess ("touch bass", then "touch base"). Take a later
+ * guess only when it is close to the target (0.8 or better) and better than the first, so a
+ * sentence said wrongly isn't turned into the right one.
+ */
+export function chooseAlternative(alternatives: string[], reference: string): string {
+  const first = alternatives[0] ?? "";
+  let best = first;
+  let bestScore = similarity(first, reference);
+  for (const alt of alternatives.slice(1)) {
+    const score = similarity(alt, reference);
+    if (score >= 0.8 && score > bestScore) {
+      best = alt;
+      bestScore = score;
+    }
+  }
+  return best;
+}

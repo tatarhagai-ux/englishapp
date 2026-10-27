@@ -59,3 +59,16 @@ describe("usedPhrase", () => {
     expect(usedPhrase("database", "base")).toBe(false);
   });
 });
+
+describe("chooseAlternative", () => {
+  it("keeps the first guess unless a later one clearly matches the target", async () => {
+    const { chooseAlternative } = await import("@/lib/text/compare");
+    expect(chooseAlternative(["touch bass", "touch base"], "touch base")).toBe("touch base");
+    expect(chooseAlternative(["touch base", "touch bass"], "touch base")).toBe("touch base");
+    // A wrong sentence isn't rescued by an unrelated alternative.
+    expect(chooseAlternative(["I bought new phone", "a boat of you phone"], "I bought a new phone")).toBe(
+      "I bought new phone",
+    );
+    expect(chooseAlternative([], "anything")).toBe("");
+  });
+});
