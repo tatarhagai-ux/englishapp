@@ -44,7 +44,7 @@
 
 - **ריפו:** `tatarhagai-ux/englishapp`. ענף ה-production: `claude/loving-sagan-htpldu` (מיזוג אליו מעלה לאוויר תוך דקה-שתיים). ענף העבודה של PR #15: `claude/intelligent-fermat-go7dia` (לפני כן: `claude/beautiful-darwin-2illsn`).
 - **אחרי כל מיזוג:** `git fetch origin claude/loving-sagan-htpldu && git checkout -B claude/beautiful-darwin-2illsn origin/claude/loving-sagan-htpldu` (עם `git stash` אם יש שינויים מקומיים). הענף המרוחק של העבודה מחזיק commits שכבר מוזגו, ו-force push נחסם. לכן לפני דחיפה: `git fetch origin claude/beautiful-darwin-2illsn && git merge --no-edit -X ours origin/claude/beautiful-darwin-2illsn`, ולבדוק ש-`git diff HEAD^1 HEAD --stat` ריק (העץ זהה למה שנבדק), ואז push רגיל.
-- **זרימת PR:** ליצור PR כ-draft, `subscribe_pr_activity`, `send_later` ל-50 דקות כרשת ביטחון, למזג כשה-CI ירוק (ריצה אחת ירוקה על אותו SHA מספיקה, ריצה כפולה שבוטלה אינה כישלון), ואז `delete_trigger`.
+- **זרימת PR:** ליצור PR כ-draft, `subscribe_pr_activity`, `send_later` ל-50 דקות כרשת ביטחון, ולחכות ל-CI ירוק (ריצה אחת ירוקה על אותו SHA מספיקה, ריצה כפולה שבוטלה אינה כישלון). **לא ממזגים:** חגי עובר ומחליט (ראו למעלה).
 - **באוויר:** https://englishapp-sepia-three.vercel.app (פרויקט Vercel `englishapp`, `prj_xagocUe2R3u9Bu7kQlJgWfGavhG6`, צוות `team_8QzA1AyyDJCTVQ5SkkKiFPUb`). מותקן אצלו כאפליקציה בטלפון.
 - **משתנים ב-Vercel (שמות בלבד, חגי הגדיר):** `OPENROUTER_API_KEY`, `APP_ACCESS_CODE`, `APP_SESSION_SECRET`, `DIAG_TOKEN`, `MONTHLY_BUDGET_USD`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - **Supabase:** פרויקט dayframe (`khrsvgygnexlzdnfpndg`, אזור eu-central-1). סכמה `speakwise_private` עם `sync_owner` (שומר רק SHA-256 של הטוקן) ושתי פונקציות security definer: `speakwise_sync_pull`, `speakwise_sync_push`. מיגרציה: `supabase/migrations/20261026120000_speakwise_server_sync.sql` (כבר הוחלה). הטבלה הישנה `speakwise_learner_state` כבר לא בשימוש.
@@ -86,18 +86,22 @@ Next.js 15 (App Router), TypeScript strict, Tailwind v4, PWA (service worker `sw
   - קול רך יותר (pitch בין 0.75 ל-1.2) והסבר למנוע של Google.
   - תיקון Slower בלי Azure, אישור לפני סיום, ושיחה שנקטעה מופיעה בבית.
   - גיבוי ושחזור, אופליין (Service Worker `sw-shell-v6`).
-  - תיקונים מסקירת קוד.
+  - תיקונים משלוש סקירות קוד.
+  - דפי פרט שנפתחו (`/say/...`, `/read/...`) נשמרים לאופליין (`VISITED_PREFIXES` ב-`public/sw.js`).
 - **למידה:**
   - FSRS במצב long-term (`enable_short_term: false`). קודם תשובה נכונה חזרה אחרי 10 דקות, ולכן החימום חזר על עצמו.
   - משפט אחר בכל חזרה (`examples` לכל טעות ו-`variants` ב-`content/learner-seed.ts`).
   - שלב Learn לפני יום תוכנית (`wordsToLearn`).
   - מיני-שיעור לכל טעות (`/mistakes`).
   - "Your best sentence" בדוח (`best_sentence` בסכמה).
+  - Shadow it אחרי סיפור (`components/listen/ShadowDrill.tsx`).
+  - שלושה דפוסים חדשים ב-`content/l1/he.ts` (`question_order`, `ever_perfect`, `calques`). הם נכנסים גם לפרומפט של הדוח.
 - **תוכן חדש:**
   - כרטיסיות `/words` (14 חבילות ב-`content/decks.ts`, FSRS עם 4 דירוגים, 10 חדשות ביום).
   - 16 סיפורים (`content/stories.ts`) ו-5 פרקי Radio (`content/radio.ts`).
   - 12 קריאות `/read` (`content/readings.ts`).
-  - One-minute talk `/talk` (24 נושאים, `content/topics.ts`, תרחיש נסתר `minute-talk`).
+  - One-minute talk `/talk` (36 נושאים, `content/topics.ts`, תרחיש נסתר `minute-talk`).
+  - Say it in English `/say` (`content/say.ts`, `lib/text/say-check.ts`): 12 סטים של 6 משפטים בעברית, כל סט קשור לדפוס ב-`content/l1/he.ts`. הבדיקה מחמירה: התאמה מדויקת אחרי נרמול, "'s" נחשב is או has, ספרות כמו מילים. השיא נשמר ב-`sayDrills` ומסתנכרן. מיני-שיעור של טעות מקשר לסט המתאים (`saySetForMistake`).
   - 50 משפטי האזנה ו-8 תרחישים.
 - **סדר ומוטיבציה:**
   - "Want more?" (`KeepGoing`).
