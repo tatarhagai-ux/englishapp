@@ -11,6 +11,7 @@ import {
   Clock,
   Headphones,
   BookOpen,
+  Languages,
   Timer,
   BookOpenText,
   Wrench,
@@ -158,6 +159,12 @@ export function PracticeLibrary() {
       <SkillGroup title="Speaking">
         <SkillTile href="/talk" icon={Timer} title="One-minute talk" detail="A topic card, a long answer" />
         <SkillTile href="/pronounce" icon={AudioLines} title="Pronunciation" detail="10 sounds · record yourself" />
+        <SkillTile
+          href="/say"
+          icon={Languages}
+          title="Say it in English"
+          detail="From Hebrew, out loud · the classic traps"
+        />
       </SkillGroup>
 
       <SkillGroup title="Words">

@@ -85,7 +85,7 @@ Next.js 15 (App Router), TypeScript strict, Tailwind v4, PWA (service worker `sw
   - Wake Lock.
   - קול רך יותר (pitch בין 0.75 ל-1.2) והסבר למנוע של Google.
   - תיקון Slower בלי Azure, אישור לפני סיום, ושיחה שנקטעה מופיעה בבית.
-  - גיבוי ושחזור, אופליין (Service Worker `sw-shell-v5`).
+  - גיבוי ושחזור, אופליין (Service Worker `sw-shell-v6`).
   - תיקונים מסקירת קוד.
 - **למידה:**
   - FSRS במצב long-term (`enable_short_term: false`). קודם תשובה נכונה חזרה אחרי 10 דקות, ולכן החימום חזר על עצמו.

@@ -462,6 +462,7 @@ function SkillsCard({ state }: { state: Parameters<typeof skillProgress>[0] }) {
     { href: "/listen#radio", label: "Radio", value: `${p.radio.done}/${p.radio.total}`, detail: "talks heard" },
     { href: "/read", label: "Short reads", value: `${p.reads.done}/${p.reads.total}`, detail: "read and answered" },
     { href: "/talk", label: "One-minute talks", value: String(p.minuteTalks), detail: "with a report" },
+    { href: "/say", label: "Say it in English", value: `${p.say.done}/${p.say.total}`, detail: "sets done" },
   ];
   return (
     <section className="tile p-4" aria-labelledby="areas-title">

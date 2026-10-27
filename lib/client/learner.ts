@@ -26,6 +26,7 @@ import {
   ratePhrase,
   recordStory,
   recordReading,
+  recordSayDrill,
   markPerfectDay,
   type CardRating,
 } from "@/lib/learner/model";
@@ -254,6 +255,10 @@ export const learner = {
 
   recordReading(id: string, correct: number) {
     set(recordReading(get(), id, correct));
+  },
+
+  recordSayDrill(id: string, correct: number) {
+    set(recordSayDrill(get(), id, correct));
   },
 
   ratePhrase(text: string, rating: CardRating) {

@@ -6,6 +6,7 @@
 import { STORIES } from "@/content/stories";
 import { RADIO } from "@/content/radio";
 import { READINGS } from "@/content/readings";
+import { SAY_SETS } from "@/content/say";
 import { MINUTE_TALK_ID } from "@/content/scenarios";
 import { isUnstudied, type LearnerState } from "./model";
 
@@ -15,6 +16,7 @@ export interface SkillProgress {
   stories: { done: number; total: number };
   radio: { done: number; total: number };
   reads: { done: number; total: number };
+  say: { done: number; total: number };
   minuteTalks: number;
 }
 
@@ -35,6 +37,7 @@ export function skillProgress(state: LearnerState): SkillProgress {
     stories: { done: heard.filter((id) => storyIds.has(id)).length, total: STORIES.length },
     radio: { done: heard.filter((id) => radioIds.has(id)).length, total: RADIO.length },
     reads: { done: Object.keys(state.readings ?? {}).length, total: READINGS.length },
+    say: { done: Object.keys(state.sayDrills ?? {}).length, total: SAY_SETS.length },
     minuteTalks: state.sessions.filter((s) => !s.demo && s.scenarioId === MINUTE_TALK_ID && s.report).length,
   };
 }

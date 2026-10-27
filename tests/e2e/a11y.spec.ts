@@ -7,6 +7,7 @@ const PAGES = [
   "/words",
   "/listen",
   "/read/r-habits",
+  "/say/a-and-the",
   "/mistakes/present_perfect_duration",
   "/progress",
 ];

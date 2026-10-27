@@ -113,6 +113,8 @@ export interface LearnerState {
   stories?: Record<string, { best: number; at: string }>;
   /** Short reads, the same way. */
   readings?: Record<string, { best: number; at: string }>;
+  /** "Say it in English" sets: best number right on the first try, by set id. */
+  sayDrills?: Record<string, { best: number; at: string }>;
   /** Days when all three daily quests were done ("YYYY-MM-DD"). */
   perfectDays?: string[];
   /** Best pronunciation score per course unit. */
@@ -751,13 +753,13 @@ export function markPhrasesUsed(state: LearnerState, learnerText: string): Learn
  * it down 0.05. That keeps listening a little above comfortable, which is where it improves.
  */
 /**
- * A finished story, radio talk or short read: the best score is kept, and XP comes only for
+ * A finished story, radio talk, short read or "Say it in English" set: the best score is kept, and XP comes only for
  * answers better than that best, so replaying one to learn it is fine but doesn't farm points.
  * Skill XP lives with listening's (it's what statsFrom adds up).
  */
 function recordBest(
   state: LearnerState,
-  field: "stories" | "readings",
+  field: "stories" | "readings" | "sayDrills",
   id: string,
   correct: number,
   now: Date,
@@ -777,6 +779,10 @@ export function recordStory(state: LearnerState, id: string, correct: number, no
 
 export function recordReading(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
   return recordBest(state, "readings", id, correct, now);
+}
+
+export function recordSayDrill(state: LearnerState, id: string, correct: number, now = new Date()): LearnerState {
+  return recordBest(state, "sayDrills", id, correct, now);
 }
 
 export function recordListening(state: LearnerState, itemId: string, correct: boolean): LearnerState {
