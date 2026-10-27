@@ -14,6 +14,7 @@ import { Avatar } from "@/components/Avatar";
 import { KeepGoing } from "@/components/KeepGoing";
 import { QuizQuestion } from "@/components/QuizQuestion";
 import { ShadowDrill } from "./ShadowDrill";
+import { blankOut } from "@/lib/text/cloze";
 
 type Phase = "listen" | "questions" | "review";
 
@@ -80,8 +81,8 @@ export function StoryPlayer({ story }: { story: Story }) {
     learner.addPhrases(
       story.phrases.map((p) => ({
         ...p,
-        example: story.lines.find((l) => l.text.toLowerCase().includes(p.text.toLowerCase().replace(/[.?]$/, "")))
-          ?.text,
+        // The line it was said in, even inflected ("push back" in "they pushed it back").
+        example: story.lines.find((l) => blankOut(l.text, p.text.replace(/[.?]$/, "")) !== null)?.text,
       })),
       "Stories",
     );

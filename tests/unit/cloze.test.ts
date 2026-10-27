@@ -25,3 +25,18 @@ describe("blankOut", () => {
     expect(blanked.length / words.length).toBeGreaterThan(0.85);
   });
 });
+
+describe("blankOut with objects and dictionary forms", () => {
+  it("finds a phrase split by an object or with another pronoun", () => {
+    expect(blankOut("Actually, they pushed it back to two.", "push back")).toBe("Actually, they _____ to two.");
+    expect(blankOut("We could roll it out across the department.", "roll out")).toBe(
+      "We could _____ across the department.",
+    );
+    expect(blankOut("Let me get that sorted for you.", "get it sorted")).toBe("Let me _____ for you.");
+  });
+
+  it("drops be and it's from the dictionary form", () => {
+    expect(blankOut("Are you still up for the hike?", "be up for")).toBe("Are you still _____ the hike?");
+    expect(blankOut("And the drinks are on us.", "it's on us")).toBe("And the drinks are _____.");
+  });
+});

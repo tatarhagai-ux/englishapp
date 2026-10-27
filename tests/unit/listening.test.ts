@@ -1,3 +1,4 @@
+import { blankOut } from "@/lib/text/cloze";
 import { describe, expect, it } from "vitest";
 import { LISTENING } from "@/content/listening";
 import { diffWords } from "@/lib/text/diff";
@@ -80,6 +81,12 @@ describe("listening stories", () => {
       expect(s.questions).toHaveLength(3);
       for (const q of s.questions) expect(q.options[q.answer], q.q).toBeTruthy();
       expect(s.phrases.length).toBeGreaterThanOrEqual(2);
+      // Each saved phrase gets the line it was said in as its word-card example.
+      for (const p of s.phrases)
+        expect(
+          s.lines.some((l) => blankOut(l.text, p.text.replace(/[.?]$/, "")) !== null),
+          `${s.id}: ${p.text}`,
+        ).toBe(true);
     }
   });
 
