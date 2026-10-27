@@ -499,4 +499,124 @@ export const RADIO: readonly Story[] = [
       { text: "a waste of money", meaningEn: "money spent for nothing useful", meaningHe: "בזבוז כסף" },
     ],
   },
+  {
+    id: "r9-forgetting",
+    title: "Why you forget new words, and how to stop",
+    level: "B1+",
+    topic: "daily",
+    setting: "A short podcast about learning",
+    lines: [
+      {
+        voice: "sonia",
+        name: "Host",
+        text: "Here's a frustrating fact. A day after you learn a new word, you've probably forgotten most of it. Psychologists call this the forgetting curve, and it's been known for over a hundred years.",
+      },
+      {
+        voice: "sonia",
+        name: "Host",
+        text: "The good news is that every time you bring a word back from memory, the curve gets flatter. You forget it more slowly. So the second review might hold for three days, the third for two weeks.",
+      },
+      {
+        voice: "sonia",
+        name: "Host",
+        text: "The key word is bring back. Rereading a list doesn't count for much, because your eyes do the work, not your memory. Covering the answer and trying to recall it is what makes it stick.",
+      },
+      {
+        voice: "sonia",
+        name: "Host",
+        text: "And timing matters. Reviewing a word five times in one evening feels productive, but it's mostly wasted. One review just as you're about to forget it does far more.",
+      },
+      {
+        voice: "sonia",
+        name: "Host",
+        text: "So, little and often, spread out over days, and always try before you look. Your memory isn't bad. It just needs to be asked at the right moment.",
+      },
+    ],
+    questions: [
+      {
+        q: "What happens each time you recall a word?",
+        options: ["You forget it faster", "You forget it more slowly", "Nothing changes"],
+        answer: 1,
+        why: "“Every time you bring a word back from memory, the curve gets flatter.”",
+      },
+      {
+        q: "Why doesn't rereading a list help much?",
+        options: ["Lists are too long", "Your eyes do the work, not your memory", "It takes too much time"],
+        answer: 1,
+        why: "“Rereading a list doesn't count for much, because your eyes do the work, not your memory.”",
+      },
+      {
+        q: "When is the best time to review, according to the host?",
+        options: ["Five times in one evening", "Only before a test", "Just as you're about to forget it"],
+        answer: 2,
+        why: "“One review just as you're about to forget it does far more.”",
+      },
+    ],
+    phrases: [
+      { text: "bring back", meaningEn: "make something return, here: from memory", meaningHe: "להחזיר, לשלוף" },
+      { text: "make it stick", meaningEn: "make it stay in your memory", meaningHe: "לגרום לזה להיקלט" },
+      { text: "little and often", meaningEn: "small amounts many times", meaningHe: "מעט ובתדירות גבוהה" },
+      { text: "at the right moment", meaningEn: "at exactly the best time", meaningHe: "ברגע הנכון" },
+    ],
+  },
+  {
+    id: "r10-no-notes",
+    title: "Two minutes without notes",
+    level: "B2",
+    topic: "work",
+    setting: "A podcast about speaking at work",
+    lines: [
+      {
+        voice: "william",
+        name: "Host",
+        text: "Someone asks you to say a few words about your project, right now, no slides. Most people panic and either freeze or ramble. Here's a simple structure that gets you through two minutes calmly.",
+      },
+      {
+        voice: "william",
+        name: "Host",
+        text: "Point, reason, example, point. Start with your main point in one sentence: our project cuts the time it takes to answer customers. Then give the reason it matters: customers were waiting days.",
+      },
+      {
+        voice: "william",
+        name: "Host",
+        text: "Next, one concrete example. Not five, one. Last month a customer got an answer in an hour instead of three days, and she wrote to thank us. A single story sticks better than a list of numbers.",
+      },
+      {
+        voice: "william",
+        name: "Host",
+        text: "Finally, repeat your point in different words and stop. So, faster answers, happier customers. Then stop talking. The silence after a clear ending sounds confident, not awkward.",
+      },
+      {
+        voice: "william",
+        name: "Host",
+        text: "Practice it a few times with any topic, your weekend, a book, a tool you use. After a while you won't need to think about the structure at all.",
+      },
+    ],
+    questions: [
+      {
+        q: "What's the structure the host suggests?",
+        options: ["Point, reason, example, point", "Joke, story, question", "Problem, numbers, thanks"],
+        answer: 0,
+        why: "“Point, reason, example, point.”",
+      },
+      {
+        q: "Why one example instead of several?",
+        options: ["It saves time for questions", "A single story sticks better", "Examples are risky"],
+        answer: 1,
+        why: "“A single story sticks better than a list of numbers.”",
+      },
+      {
+        q: "What should you do after repeating your point?",
+        options: ["Ask if there are questions", "Add one more example", "Stop talking"],
+        answer: 2,
+        why: "“Then stop talking. The silence after a clear ending sounds confident.”",
+      },
+    ],
+    phrases: [
+      { text: "say a few words", meaningEn: "give a very short talk", meaningHe: "לומר כמה מילים" },
+      { text: "ramble", meaningEn: "talk for a long time without a clear point", meaningHe: "לקשקש בלי סוף" },
+      { text: "gets you through", meaningEn: "helps you manage a difficult situation", meaningHe: "מעביר אותך את זה" },
+      { text: "sticks better", meaningEn: "is remembered more easily", meaningHe: "נזכר טוב יותר" },
+    ],
+  },
 ];
