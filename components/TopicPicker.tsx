@@ -41,7 +41,7 @@ export function TopicPicker() {
           <p className="text-sm text-dim">One topic, three points, about a minute without stopping. Then a report.</p>
           <HowItWorks
             steps={[
-              "Read the card and take a few seconds to think.",
+              "Read the card and take a few seconds to think. Stuck for a shape? Point, reason, one example, then your point again.",
               "Tap the mic once and talk for about a minute. Pauses are fine; tap again when you're done.",
               "Your tutor asks one follow-up, then the report shows your fixes and how fluent you were.",
             ]}
