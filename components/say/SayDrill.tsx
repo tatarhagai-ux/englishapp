@@ -233,7 +233,9 @@ export function SayDrill({ set }: { set: SaySet }) {
           <p className="font-bold text-dim">
             {score === set.items.length
               ? "All of them on the first try."
-              : "Right on the first try. The missed ones got a second go."}
+              : score === 0
+                ? "None on the first try yet. That's normal for a trap like this: go again tomorrow."
+                : "Right on the first try. The missed ones got a second go."}
           </p>
           {pattern && <p className="rounded-xl bg-elev-2 p-3 text-sm font-bold">{pattern.tip}</p>}
           <button
