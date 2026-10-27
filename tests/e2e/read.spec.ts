@@ -6,6 +6,7 @@ test("short read: tap a phrase for help, save it, answer the questions", async (
   );
   await page.goto("/practice");
   await page.getByRole("link", { name: /Short reads/ }).click();
+  await expect(page.getByRole("link", { name: /Why small habits beat big plans/ })).toContainText("Next");
   await page.getByRole("link", { name: /Why small habits beat big plans/ }).click();
   await expect(page.getByRole("heading", { name: "Why small habits beat big plans" })).toBeVisible();
 
@@ -25,4 +26,5 @@ test("short read: tap a phrase for help, save it, answer the questions", async (
   await expect(page.getByText("adds up", { exact: true })).toBeVisible();
   await page.goto("/read");
   await expect(page.getByRole("link", { name: /Why small habits beat big plans/ })).toContainText("2/2");
+  await expect(page.getByRole("link", { name: /Index funds in plain English/ })).toContainText("Next");
 });

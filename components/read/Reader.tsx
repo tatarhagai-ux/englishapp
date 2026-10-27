@@ -17,6 +17,7 @@ import { QuizQuestion } from "@/components/QuizQuestion";
 export function ReadingList() {
   const hydrated = useHydrated();
   const state = useLearner();
+  const nextId = hydrated ? READINGS.find((r) => !state.readings?.[r.id])?.id : undefined;
   return (
     <div className="space-y-5">
       <header className="flex items-start gap-2">
@@ -61,10 +62,16 @@ export function ReadingList() {
                 <span
                   className={clsx(
                     "text-xs font-black",
-                    best === undefined ? "text-faint" : best === r.questions.length ? "text-good" : "text-warn",
+                    best !== undefined
+                      ? best === r.questions.length
+                        ? "text-good"
+                        : "text-warn"
+                      : r.id === nextId
+                        ? "text-accent"
+                        : "text-faint",
                   )}
                 >
-                  {best === undefined ? "New" : `${best}/${r.questions.length}`}
+                  {best !== undefined ? `${best}/${r.questions.length}` : r.id === nextId ? "Next" : "New"}
                 </span>
               </Link>
             </li>
