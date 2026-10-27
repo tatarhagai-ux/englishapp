@@ -139,6 +139,10 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   const more = page.getByRole("region", { name: "Want more?" });
   await expect(more.getByRole("link", { name: /Something different/ })).toBeVisible();
   await expect(more.getByRole("link", { name: /Listening round/ })).toHaveAttribute("href", "/listen");
+  await expect(more.getByRole("link", { name: /Say it in English: For and since/ })).toHaveAttribute(
+    "href",
+    "/say/for-and-since",
+  );
   await expect(page.getByLabel(/XP earned/)).toContainText("+");
   await expect(page.getByRole("list", { name: "Session stats" }).or(page.getByLabel("Session stats"))).toContainText(
     "“I'm stuck”",

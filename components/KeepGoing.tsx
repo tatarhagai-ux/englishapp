@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Headphones, MessageCircle, Repeat2, Shuffle, Volume2 } from "lucide-react";
+import { ArrowRight, Headphones, Languages, MessageCircle, Repeat2, Shuffle, Volume2 } from "lucide-react";
 import { useLearner } from "@/lib/client/learner";
 import { differentScenario, warmupItems } from "@/lib/learner/model";
+import { SAY_SETS } from "@/content/say";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 
 export interface NextStep {
@@ -21,6 +22,8 @@ export function KeepGoing({ next, avoid }: { next: NextStep | null; avoid: strin
   const state = useLearner();
   const other = differentScenario(state, [...avoid, ...(next ? [idFromHref(next.href)] : [])]);
   const due = warmupItems(state, new Date(), QUICK_REVIEW_MAX).length;
+  // The first "Say it in English" set he hasn't done yet, in order.
+  const saySet = SAY_SETS.find((s) => !state.sayDrills?.[s.id]);
 
   return (
     <section aria-labelledby="keep-going-title" className="space-y-2.5">
@@ -59,6 +62,14 @@ export function KeepGoing({ next, avoid }: { next: NextStep | null; avoid: strin
         )}
         <Option href="/listen" icon={Headphones} title="Listening round" detail="Real speech · 3 min" compact />
       </div>
+      {saySet && (
+        <Option
+          href={`/say/${saySet.id}`}
+          icon={Languages}
+          title={`Say it in English: ${saySet.title}`}
+          detail={`${saySet.items.length} sentences from Hebrew · 3 min`}
+        />
+      )}
     </section>
   );
 }

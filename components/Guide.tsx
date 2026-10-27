@@ -48,7 +48,7 @@ const WEEK = [
   { day: "Tue", plan: "Plan day + a one-minute talk (4 min)" },
   { day: "Wed", plan: "Plan day + a short read (3 min)" },
   { day: "Thu", plan: "Plan day + a pronunciation unit, record yourself (5 min)" },
-  { day: "Fri", plan: "Word cards, and drill your top mistake (5 min)" },
+  { day: "Fri", plan: "Word cards, and a Say it in English set (5 min)" },
   { day: "Sat", plan: "Rest, or a job interview question if you feel like it" },
 ];
 
