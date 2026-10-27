@@ -159,3 +159,10 @@ describe("trap breaker", () => {
     expect(ACHIEVEMENTS.find((a) => a.key === "trap_breaker")!.progress(stats)).toBe(1);
   });
 });
+
+describe("set order", () => {
+  it("lists every grammar set before the word-choice ones, so Next follows the screen", () => {
+    const areas = SAY_SETS.map((s) => HEBREW_PATTERNS.find((p) => p.key === s.pattern)?.area);
+    expect(areas.lastIndexOf("grammar")).toBeLessThan(areas.indexOf("usage"));
+  });
+});

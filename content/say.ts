@@ -6,6 +6,8 @@
  * word-for-word version he's likely to say, shown when he says it.
  */
 
+import { HEBREW_PATTERNS } from "./l1/he";
+
 export interface SayItem {
   he: string;
   answers: string[];
@@ -700,7 +702,13 @@ const SAY_SETS_MORE: readonly SaySet[] = [
   },
 ];
 
-export const SAY_SETS: readonly SaySet[] = [...SAY_SETS_CORE, ...SAY_SETS_MORE];
+/** Grammar traps first, then word choice and tone: the order the list shows and "Next" follows. */
+const AREA_ORDER = ["grammar", "usage"];
+const areaRank = (set: SaySet) =>
+  Math.max(0, AREA_ORDER.indexOf(HEBREW_PATTERNS.find((p) => p.key === set.pattern)?.area ?? "grammar"));
+export const SAY_SETS: readonly SaySet[] = [...SAY_SETS_CORE, ...SAY_SETS_MORE].sort(
+  (a, b) => areaRank(a) - areaRank(b),
+);
 
 export function saySetById(id: string): SaySet | undefined {
   return SAY_SETS.find((s) => s.id === id);
