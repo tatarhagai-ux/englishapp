@@ -28,6 +28,7 @@ import {
 } from "@/lib/learner/model";
 import { wordCount } from "@/lib/text/compare";
 import { monthKey } from "@/lib/cost/budget";
+import { skillProgress } from "@/lib/learner/skills";
 
 const STATUS_STYLE: Record<ErrorStatus, string> = {
   new: "bg-warn/15 text-warn",
@@ -116,6 +117,8 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
             : `From the placement quiz on ${PLACEMENT.date} (${PLACEMENT.quizScore} plus a writing sample). Each conversation updates it.`}
         </p>
       </section>
+
+      <SkillsCard state={state} />
 
       <InterviewReadinessCard state={state} />
 
@@ -437,5 +440,45 @@ function WeekSection() {
         </p>
       </section>
     </>
+  );
+}
+
+/** How far he is in each practice area, each a tap away. */
+function SkillsCard({ state }: { state: Parameters<typeof skillProgress>[0] }) {
+  const p = skillProgress(state);
+  const rows: { href: string; label: string; value: string; detail: string }[] = [
+    {
+      href: "/words",
+      label: "Words",
+      value: String(p.wordsSteady),
+      detail: `steady · ${p.wordsStarted} started on cards`,
+    },
+    {
+      href: "/listen#stories",
+      label: "Stories",
+      value: `${p.stories.done}/${p.stories.total}`,
+      detail: "heard and answered",
+    },
+    { href: "/listen#radio", label: "Radio", value: `${p.radio.done}/${p.radio.total}`, detail: "talks heard" },
+    { href: "/read", label: "Short reads", value: `${p.reads.done}/${p.reads.total}`, detail: "read and answered" },
+    { href: "/talk", label: "One-minute talks", value: String(p.minuteTalks), detail: "with a report" },
+  ];
+  return (
+    <section className="tile p-4" aria-labelledby="areas-title">
+      <h2 id="areas-title" className="font-black">
+        Practice areas
+      </h2>
+      <ul className="mt-2 divide-y-2 divide-line">
+        {rows.map((r) => (
+          <li key={r.label}>
+            <Link href={r.href} className="flex items-baseline gap-3 py-2.5">
+              <span className="w-28 shrink-0 text-sm font-extrabold">{r.label}</span>
+              <span className="text-xl font-black text-accent">{r.value}</span>
+              <span className="min-w-0 flex-1 truncate text-xs font-bold text-dim">{r.detail}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
