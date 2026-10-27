@@ -48,7 +48,7 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
                 aria-label={`Day ${i + 1}${d ? ", done" : current ? ", next" : ""}`}
                 className={clsx(
                   "grid size-8 place-items-center rounded-full text-sm font-black",
-                  d ? "bg-xp text-[#3a2a00]" : current ? "bg-white text-accent" : "bg-white/20",
+                  d ? "bg-xp text-[#3a2a00]" : current ? "bg-white text-accent-deep" : "bg-white/20",
                 )}
               >
                 {d ? <Check className="size-4" strokeWidth={3} aria-hidden /> : i + 1}
@@ -57,7 +57,7 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
           })}
         </ol>
 
-        <p className="mt-3 rounded-xl bg-white/15 px-3 py-2 text-sm font-bold">
+        <p className="mt-3 rounded-xl bg-black/20 px-3 py-2 text-sm font-bold">
           <span>This week&apos;s focus: </span>
           {pos.week.focus}
         </p>
