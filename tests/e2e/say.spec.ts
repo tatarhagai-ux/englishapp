@@ -6,6 +6,11 @@ test("say it in English: a missing word is named, a missed sentence comes back, 
   );
   await page.goto("/practice");
   await page.getByRole("link", { name: /Say it in English/ }).click();
+  await expect(page.getByRole("heading", { name: "Grammar" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Words and tone" })).toBeVisible();
+  await expect(page.getByRole("link").filter({ has: page.getByText("For and since", { exact: true }) })).toContainText(
+    "Next",
+  );
   await page
     .getByRole("link")
     .filter({ has: page.getByText("A and the", { exact: true }) })

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { SAY_MISSES_ID, SAY_SETS, sayMissSet, type SaySet } from "@/content/say";
-import { HEBREW_PATTERNS } from "@/content/l1/he";
+import { HEBREW_PATTERNS, type L1Pattern } from "@/content/l1/he";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { openSayMisses } from "@/lib/learner/model";
 import { usePrefs } from "@/lib/client/prefs";
@@ -37,11 +37,19 @@ function patternOf(key: string) {
   return HEBREW_PATTERNS.find((p) => p.key === key);
 }
 
-/** The sets, one per Hebrew-speaker pattern, with his best score on each. */
+/** Grammar traps first, then word choice and tone. */
+const SAY_GROUPS: { id: string; title: string; areas: L1Pattern["area"][] }[] = [
+  { id: "grammar", title: "Grammar", areas: ["grammar"] },
+  { id: "words", title: "Words and tone", areas: ["usage", "pronunciation", "prosody"] },
+];
+
+/** The sets, grouped, with his best score on each and the next one to do marked. */
 export function SayList() {
   const hydrated = useHydrated();
   const state = useLearner();
   const misses = hydrated ? openSayMisses(state).length : 0;
+  // The first set not done yet, in list order (the same one "Want more?" suggests).
+  const nextId = hydrated ? SAY_SETS.find((s) => !state.sayDrills?.[s.id])?.id : undefined;
   return (
     <div className="space-y-5">
       <header className="flex items-start gap-2">
@@ -84,37 +92,57 @@ export function SayList() {
           <ArrowRight className="size-5 text-accent" aria-hidden />
         </Link>
       )}
-      <ul className="space-y-2.5">
-        {SAY_SETS.map((s) => {
-          const best = hydrated ? state.sayDrills?.[s.id]?.best : undefined;
-          return (
-            <li key={s.id}>
-              <Link
-                href={`/say/${s.id}`}
-                className="tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60"
-              >
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
-                  <Languages className="size-5" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-extrabold">{s.title}</span>
-                  <span className="block truncate text-xs font-bold text-dim">
-                    {patternOf(s.pattern)?.title} · {s.items.length} sentences
-                  </span>
-                </span>
-                <span
-                  className={clsx(
-                    "text-xs font-black",
-                    best === undefined ? "text-faint" : best === s.items.length ? "text-good" : "text-warn",
-                  )}
-                >
-                  {best === undefined ? "New" : `${best}/${s.items.length}`}
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      {SAY_GROUPS.map((group) => {
+        const sets = SAY_SETS.filter((s) => group.areas.includes(patternOf(s.pattern)?.area ?? "grammar"));
+        return (
+          <section key={group.title} aria-labelledby={`say-${group.id}`} className="space-y-2.5">
+            <h2 id={`say-${group.id}`} className="font-black">
+              {group.title}
+            </h2>
+            <ul className="space-y-2.5">
+              {sets.map((s) => {
+                const best = hydrated ? state.sayDrills?.[s.id]?.best : undefined;
+                const isNext = s.id === nextId;
+                return (
+                  <li key={s.id}>
+                    <Link
+                      href={`/say/${s.id}`}
+                      className={clsx(
+                        "tile flex items-center gap-3 p-4 transition-colors hover:border-accent/60",
+                        isNext && "border-accent/60",
+                      )}
+                    >
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
+                        <Languages className="size-5" aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-extrabold">{s.title}</span>
+                        <span className="block truncate text-xs font-bold text-dim">
+                          {patternOf(s.pattern)?.title} · {s.items.length} sentences
+                        </span>
+                      </span>
+                      <span
+                        className={clsx(
+                          "text-xs font-black",
+                          isNext
+                            ? "text-accent"
+                            : best === undefined
+                              ? "text-faint"
+                              : best === s.items.length
+                                ? "text-good"
+                                : "text-warn",
+                        )}
+                      >
+                        {best !== undefined ? `${best}/${s.items.length}` : isNext ? "Next" : "New"}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

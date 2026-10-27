@@ -15,6 +15,8 @@ describe("say-it content", () => {
         s.id,
       ).toBe(true);
       expect(s.items.length).toBeGreaterThanOrEqual(5);
+      // Listed under Grammar or Words and tone.
+      expect(["grammar", "usage"], s.id).toContain(HEBREW_PATTERNS.find((p) => p.key === s.pattern)?.area);
     }
   });
 
