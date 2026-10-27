@@ -162,7 +162,7 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
                 </li>
               ))}
             </ul>
-            {report.task.feedback_en && <p className="mt-3 text-sm font-bold opacity-90">{report.task.feedback_en}</p>}
+            {report.task.feedback_en && <p className="mt-3 text-sm font-bold">{report.task.feedback_en}</p>}
           </section>
 
           <div className="flex items-center justify-between gap-3">

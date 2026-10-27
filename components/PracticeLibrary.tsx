@@ -244,7 +244,7 @@ export function PracticeLibrary() {
               {track.label}
             </p>
             <p className="mt-1 text-sm font-bold text-dim">{track.builds}</p>
-            <p className="mt-1 text-xs font-bold text-faint">Goal: {CATEGORY_INFO[track.categories[0]].goal}</p>
+            <p className="mt-1 text-xs font-bold text-dim">Goal: {CATEGORY_INFO[track.categories[0]].goal}</p>
           </div>
           <ol className="space-y-2.5">
             {scenarios.map((s, i) => (

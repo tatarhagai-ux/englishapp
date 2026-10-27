@@ -25,13 +25,13 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
   return (
     <section aria-labelledby="today-title" className="space-y-3">
       <div className="rounded-3xl bg-accent p-5 text-white" style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}>
-        <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">
+        <p className="text-xs font-extrabold uppercase tracking-wider">
           {next ? `Week ${pos.week.week} of 12 · ${pos.week.title}` : "12-week plan complete"}
         </p>
         <h2 id="today-title" className="mt-1 text-2xl font-black leading-tight">
           {doneToday && next ? "Today's done. Keep going?" : (scenario?.title ?? "You finished the plan")}
         </h2>
-        <p className="mt-1 font-bold opacity-95">
+        <p className="mt-1 font-bold">
           {next
             ? `${doneToday ? "Next: " : ""}Day ${next.day} of 5${next.check ? " · speaking check" : ""} · ${
                 scenario?.minutes ?? 10
@@ -58,7 +58,7 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
         </ol>
 
         <p className="mt-3 rounded-xl bg-white/15 px-3 py-2 text-sm font-bold">
-          <span className="opacity-85">This week&apos;s focus: </span>
+          <span>This week&apos;s focus: </span>
           {pos.week.focus}
         </p>
 

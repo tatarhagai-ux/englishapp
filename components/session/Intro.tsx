@@ -88,11 +88,11 @@ export function Intro({
       )}
 
       <section className="rounded-3xl bg-accent p-5 text-white" style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}>
-        <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider opacity-90">
+        <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider">
           <Target className="size-4" aria-hidden /> Your mission
         </p>
         <p className="mt-1.5 text-lg font-extrabold leading-snug">{scenario.task}</p>
-        <ul className="mt-3 space-y-1 text-sm font-bold opacity-95">
+        <ul className="mt-3 space-y-1 text-sm font-bold">
           {scenario.successCriteria.map((c) => (
             <li key={c} className="flex gap-2">
               <span aria-hidden>○</span>

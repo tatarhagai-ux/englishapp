@@ -101,11 +101,11 @@ export function WordCards() {
       )}
 
       <section className="rounded-3xl bg-accent p-5 text-white" style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}>
-        <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">Today</p>
+        <p className="text-xs font-extrabold uppercase tracking-wider">Today</p>
         <p className="mt-1 text-2xl font-black">
           {all.due.length} to review · {all.fresh.length} new
         </p>
-        <p className="mt-1 text-sm font-bold opacity-90">Up to 10 new words a day, so reviews stay short.</p>
+        <p className="mt-1 text-sm font-bold">Up to 10 new words a day, so reviews stay short.</p>
         <button
           type="button"
           onClick={() => start("all")}

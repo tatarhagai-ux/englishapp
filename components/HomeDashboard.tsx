@@ -114,11 +114,11 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
             className="rounded-3xl bg-accent p-5 text-white"
             style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}
           >
-            <p className="text-xs font-extrabold uppercase tracking-wider opacity-85">Start here</p>
+            <p className="text-xs font-extrabold uppercase tracking-wider">Start here</p>
             <h2 id="mission-title" className="mt-1 text-2xl font-black leading-tight">
               Find your speaking level
             </h2>
-            <p className="mt-1.5 font-bold opacity-95">
+            <p className="mt-1.5 font-bold">
               A relaxed 4-minute chat, 5 questions. No corrections during it. Your 12-week plan starts right after.
             </p>
           </section>
