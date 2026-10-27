@@ -20,7 +20,7 @@ export interface SaySet {
   items: SayItem[];
 }
 
-export const SAY_SETS: readonly SaySet[] = [
+const SAY_SETS_CORE: readonly SaySet[] = [
   {
     id: "for-and-since",
     pattern: "present_tenses",
@@ -374,6 +374,136 @@ export const SAY_SETS: readonly SaySet[] = [
     ],
   },
 ];
+
+const SAY_SETS_MORE: readonly SaySet[] = [
+  {
+    id: "questions",
+    pattern: "question_order",
+    title: "Asking questions",
+    items: [
+      { he: "איפה אתה עובד?", answers: ["Where do you work?"], trap: "Where you work?" },
+      {
+        he: "מה זה אומר?",
+        answers: ["What does it mean?", "What does that mean?", "What does this mean?"],
+        trap: "What it means?",
+      },
+      {
+        he: "איך אומרים את זה באנגלית?",
+        answers: [
+          "How do you say this in English?",
+          "How do you say it in English?",
+          "How do you say that in English?",
+        ],
+        trap: "How say this in English?",
+      },
+      {
+        he: "אתה יכול להגיד לי איפה התחנה?",
+        answers: ["Can you tell me where the station is?", "Could you tell me where the station is?"],
+        trap: "Can you tell me where is the station?",
+      },
+      {
+        he: "אתה יודע מה השעה?",
+        answers: ["Do you know what time it is?"],
+        trap: "Do you know what time is it?",
+      },
+      {
+        he: "למה עזבת את העבודה?",
+        answers: ["Why did you leave your job?", "Why did you leave the job?"],
+        trap: "Why you left the job?",
+      },
+    ],
+  },
+  {
+    id: "have-you-ever",
+    pattern: "ever_perfect",
+    title: "Have you ever",
+    items: [
+      {
+        he: "היית פעם בלונדון?",
+        answers: ["Have you ever been to London?", "Have you been to London?"],
+        trap: "Were you ever in London?",
+      },
+      {
+        he: "אף פעם לא אכלתי סושי.",
+        answers: ["I've never eaten sushi.", "I've never had sushi."],
+        trap: "I never ate sushi.",
+      },
+      {
+        he: "ראית את הסרט הזה?",
+        answers: [
+          "Have you seen this movie?",
+          "Have you seen that movie?",
+          "Have you seen this film?",
+          "Have you ever seen this movie?",
+        ],
+        trap: "Did you see this movie?",
+      },
+      {
+        he: "עבדתי עם לקוחות מחו״ל הרבה פעמים.",
+        answers: [
+          "I've worked with clients from abroad many times.",
+          "I've worked with foreign clients many times.",
+          "I've worked with clients from abroad a lot of times.",
+        ],
+        trap: "I worked with clients from abroad many times.",
+      },
+      {
+        he: "הוא עוד לא סיים.",
+        answers: ["He hasn't finished yet.", "He hasn't finished."],
+        trap: "He didn't finish yet.",
+      },
+      {
+        he: "כבר דיברתי איתו.",
+        answers: [
+          "I've already talked to him.",
+          "I've already spoken to him.",
+          "I've already talked with him.",
+          "I've already spoken with him.",
+        ],
+        trap: "I already talked with him.",
+      },
+    ],
+  },
+  {
+    id: "word-for-word",
+    pattern: "calques",
+    title: "Word for word",
+    items: [
+      {
+        he: "כיביתי את האור.",
+        answers: [
+          "I turned off the light.",
+          "I turned the light off.",
+          "I switched off the light.",
+          "I switched the light off.",
+        ],
+        trap: "I closed the light.",
+      },
+      { he: "קיבלתי החלטה.", answers: ["I made a decision.", "I've made a decision."], trap: "I took a decision." },
+      {
+        he: "אני בן עשרים.",
+        answers: ["I'm twenty.", "I'm twenty years old.", "I'm 20.", "I'm 20 years old."],
+        trap: "I have twenty years.",
+      },
+      { he: "אני מסכים איתך.", answers: ["I agree with you.", "I agree."], trap: "I'm agree with you." },
+      { he: "עשיתי טעות.", answers: ["I made a mistake."], trap: "I did a mistake." },
+      {
+        he: "אתה יכול להלוות לי כסף?",
+        answers: [
+          "Can you lend me some money?",
+          "Could you lend me some money?",
+          "Can you lend me money?",
+          "Could you lend me money?",
+          "Can I borrow some money?",
+          "Could I borrow some money?",
+        ],
+        trap: "Can you borrow me money?",
+      },
+    ],
+  },
+];
+
+export const SAY_SETS: readonly SaySet[] = [...SAY_SETS_CORE, ...SAY_SETS_MORE];
 
 export function saySetById(id: string): SaySet | undefined {
   return SAY_SETS.find((s) => s.id === id);
