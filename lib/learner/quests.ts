@@ -1,8 +1,8 @@
 /**
  * Today's three small quests (Duolingo-style), one per skill, so a day has a clear finish
  * line beyond the minutes: talk, recall words, listen. Worked out from what is already
- * stored (no new state): minutes from sessions, reviews from each card's last review, and
- * listening from rounds and stories.
+ * stored (no new state): minutes from sessions, reviews from each card's last review and
+ * the Say it sentences answered, and listening from rounds and stories.
  */
 import { dayKey } from "@/lib/game/streak";
 import { minutesOnDay, type LearnerState } from "./model";
@@ -24,7 +24,9 @@ function reviewedOn(iso: string | Date | undefined, today: string): boolean {
 export function dailyQuests(state: LearnerState, today: string, goalMinutes: number): Quest[] {
   const reviews =
     state.phrases.filter((p) => reviewedOn(p.card.last_review, today)).length +
-    Object.values(state.errors).filter((e) => reviewedOn(e.card?.last_review, today)).length;
+    Object.values(state.errors).filter((e) => reviewedOn(e.card?.last_review, today)).length +
+    // "Say it in English" sentences answered today, right or missed, are fixes recalled too.
+    Object.values(state.sayMisses ?? {}).filter((m) => reviewedOn(m.at, today)).length;
   const listened =
     (state.listening?.rounds.filter((r) => r.day === today).length ?? 0) +
     Object.values(state.stories ?? {}).filter((s) => reviewedOn(s.at, today)).length;

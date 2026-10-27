@@ -30,6 +30,12 @@ describe("daily quests", () => {
     // Yesterday's work doesn't count today.
     expect(dailyQuests(s, "2026-10-27", 12).find((x) => x.id === "words")!.done).toBe(0);
   });
+
+  it("counts Say it in English sentences answered today, right or missed", async () => {
+    const { recordSayMisses } = await import("@/lib/learner/model");
+    const s = recordSayMisses(initialState(NOW), ["הוא מהנדס."], ["זמן זה כסף.", "קניתי טלפון חדש."], NOW);
+    expect(dailyQuests(s, TODAY, 12).find((x) => x.id === "words")!.done).toBe(3);
+  });
 });
 
 describe("perfect week", () => {
