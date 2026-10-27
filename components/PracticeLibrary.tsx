@@ -34,7 +34,7 @@ import {
 import { voiceById } from "@/content/voices";
 import { useHydrated, useLearner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
-import { cardQueue, rankedErrors, warmupItems } from "@/lib/learner/model";
+import { cardQueue, openSayMisses, rankedErrors, warmupItems } from "@/lib/learner/model";
 import { STORIES } from "@/content/stories";
 import { DECKS } from "@/content/decks";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
@@ -110,6 +110,7 @@ export function PracticeLibrary() {
   const due = hydrated ? warmupItems(state, new Date(), QUICK_REVIEW_MAX).length : 0;
   const cards = hydrated ? cardQueue(state, new Date()) : null;
   const cardsDue = cards ? cards.due.length + cards.fresh.length : 0;
+  const sayMisses = hydrated ? openSayMisses(state).length : 0;
   const storiesNew = hydrated ? STORIES.filter((st) => !state.stories?.[st.id]).length : STORIES.length;
   const mistakes = hydrated ? rankedErrors(state).length : 0;
 
@@ -163,7 +164,8 @@ export function PracticeLibrary() {
           href="/say"
           icon={Languages}
           title="Say it in English"
-          detail="From Hebrew, out loud · the classic traps"
+          detail={sayMisses > 0 ? `${sayMisses} to say again` : "From Hebrew, out loud · the classic traps"}
+          badge={sayMisses}
         />
       </SkillGroup>
 
