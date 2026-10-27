@@ -638,6 +638,66 @@ const SAY_SETS_MORE: readonly SaySet[] = [
       },
     ],
   },
+  {
+    id: "say-tell",
+    pattern: "verb_pairs",
+    title: "Say or tell",
+    items: [
+      { he: "הוא אמר לי לבוא מוקדם.", answers: ["He told me to come early."], trap: "He said me to come early." },
+      { he: "תגיד לי מה קרה.", answers: ["Tell me what happened."], trap: "Say me what happened." },
+      {
+        he: "היא אמרה שהיא עייפה.",
+        answers: ["She said she was tired.", "She said that she was tired.", "She said she's tired."],
+        trap: "She told that she was tired.",
+      },
+      {
+        he: "תספר לי על הטיול.",
+        answers: ["Tell me about the trip.", "Tell me about your trip."],
+        trap: "Say me about the trip.",
+      },
+      { he: "מה אמרת?", answers: ["What did you say?"], trap: "What did you tell?" },
+      { he: "הוא סיפר לנו בדיחה.", answers: ["He told us a joke."], trap: "He said us a joke." },
+    ],
+  },
+  {
+    id: "remind-lend",
+    pattern: "verb_pairs",
+    title: "Remind, lend, earn, teach",
+    items: [
+      {
+        he: "תזכיר לי להתקשר אליה.",
+        answers: ["Remind me to call her.", "Can you remind me to call her?", "Could you remind me to call her?"],
+        trap: "Remember me to call her.",
+      },
+      {
+        he: "אתה יכול להשאיל לי עט?",
+        answers: [
+          "Can you lend me a pen?",
+          "Could you lend me a pen?",
+          "Can I borrow a pen?",
+          "Could I borrow a pen?",
+          "Can I borrow your pen?",
+        ],
+        trap: "Can you borrow me a pen?",
+      },
+      {
+        he: "הוא הרוויח הרבה כסף השנה.",
+        answers: ["He earned a lot of money this year.", "He made a lot of money this year."],
+        trap: "He won a lot of money this year.",
+      },
+      { he: "ניצחנו במשחק.", answers: ["We won the game."], trap: "We earned the game." },
+      {
+        he: "הוא לימד אותי לשחות.",
+        answers: ["He taught me to swim.", "He taught me how to swim."],
+        trap: "He learned me to swim.",
+      },
+      {
+        he: "ראית את המשחק אתמול?",
+        answers: ["Did you watch the game yesterday?", "Did you see the game yesterday?"],
+        trap: "Did you look at the game yesterday?",
+      },
+    ],
+  },
 ];
 
 export const SAY_SETS: readonly SaySet[] = [...SAY_SETS_CORE, ...SAY_SETS_MORE];

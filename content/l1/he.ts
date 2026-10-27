@@ -141,6 +141,19 @@ export const HEBREW_PATTERNS: readonly L1Pattern[] = [
     inferred: true,
   },
   {
+    key: "verb_pairs",
+    area: "usage",
+    title: "Pairs Hebrew mixes up",
+    pattern:
+      "Two English verbs where Hebrew habit picks the wrong one (say/tell, borrow/lend, remember/remind, earn/win, learn/teach)",
+    example: "He said me to come. Can you borrow me a pen? Remember me to call her.",
+    fix: "He told me to come. Can you lend me a pen? Remind me to call her.",
+    tip: "Tell takes a person (tell me), say doesn't (say it). You lend to someone and borrow from them. Remind a person, remember a thing. Earn by working, win by luck or a game.",
+    whyHe:
+      "״אמר לי״ הוא told me ולא said me, ״תזכיר לי״ הוא remind me, ו״להרוויח״ בעבודה הוא earn, לא win. מילה אחת בעברית, שתיים באנגלית.",
+    inferred: true,
+  },
+  {
     key: "directness",
     area: "usage",
     title: "Softening requests",
