@@ -429,6 +429,78 @@ export const READINGS: readonly Reading[] = [
       },
     ],
   },
+  {
+    id: "r-etf-types",
+    title: "Accumulating or distributing?",
+    level: "B2",
+    minutes: 2,
+    paragraphs: [
+      "Many ETFs come in two versions that hold exactly the same shares. The difference is what happens to the dividends the companies pay out.",
+      "A distributing fund sends those dividends to your account, usually every quarter. An accumulating fund keeps them and buys more shares with the money, so the value of each unit you own goes up instead.",
+      "If you live off your investments, cash in hand is useful. But if you're investing for the long haul, accumulating usually makes more sense. The money goes back to work automatically, and you don't have to remember to reinvest it.",
+      "In some countries there's a tax angle too: dividends you receive may be taxed right away, while reinvested ones are often taxed only when you sell. It's worth checking the rules where you live before you choose.",
+    ],
+    glossary: [
+      g("pay out", "give money to shareholders", "מחלקות"),
+      g("live off", "use as the money you live on", "להתקיים מ"),
+      g("for the long haul", "for a long period of time", "לטווח הארוך"),
+      g("makes more sense", "is the more logical choice", "הגיוני יותר"),
+      g("goes back to work", "is invested again and keeps earning", "חוזר לעבוד"),
+      g("a tax angle", "a part of the question connected to tax", "היבט מיסויי"),
+    ],
+    questions: [
+      {
+        q: "What does an accumulating fund do with dividends?",
+        options: ["Sends them to your account", "Uses them to buy more shares", "Pays them as fees"],
+        answer: 1,
+      },
+      {
+        q: "Who might prefer a distributing fund, according to the text?",
+        options: [
+          "Someone who lives off their investments",
+          "Someone investing for twenty years",
+          "Someone who never checks their account",
+        ],
+        answer: 0,
+      },
+    ],
+  },
+  {
+    id: "r-small-talk",
+    title: "Small talk that isn't awkward",
+    level: "B1+",
+    minutes: 2,
+    paragraphs: [
+      "Small talk has a bad name, but it does an important job. Those two minutes by the coffee machine are how people decide whether they feel comfortable with you, long before any meeting.",
+      "The easiest way in is to comment on something you both share: the weather, the traffic, the long queue for the microwave. It doesn't need to be clever. It just needs to be friendly.",
+      "Then ask an open question, one that can't be answered with yes or no. “How was your weekend?” works better than “Did you have a good weekend?” And when they answer, pick up on one detail and ask about it. That shows you were actually listening.",
+      "Finally, don't feel you have to keep it going forever. “Anyway, I'd better get back to it. Good to see you!” is a perfectly polite way to wrap things up.",
+    ],
+    glossary: [
+      g("has a bad name", "people think badly of it", "יש לו שם רע"),
+      g("The easiest way in", "the simplest way to start", "הדרך הכי קלה להתחיל"),
+      g("pick up on", "notice and respond to", "לשים לב ל, להיתפס ל"),
+      g("keep it going", "make it continue", "להמשיך את זה"),
+      g("I'd better get back to it", "I should return to my work now", "כדאי שאחזור לעבודה"),
+      g("wrap things up", "finish a conversation or activity", "לסיים"),
+    ],
+    questions: [
+      {
+        q: "What's the easiest way to start, according to the text?",
+        options: ["Tell a clever joke", "Comment on something you both share", "Ask about their salary"],
+        answer: 1,
+      },
+      {
+        q: "Why should you ask about a detail from their answer?",
+        options: [
+          "It shows you were listening",
+          "It makes the conversation shorter",
+          "It lets you talk about yourself",
+        ],
+        answer: 0,
+      },
+    ],
+  },
 ];
 
 export function readingById(id: string): Reading | undefined {
