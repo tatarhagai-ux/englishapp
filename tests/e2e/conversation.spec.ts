@@ -129,6 +129,10 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await expect(page.getByText("I've been studying for AZ-900 for two weeks")).toBeVisible();
   await page.getByRole("button", { name: "Translate" }).first().click();
   await expect(page.getByText("משתמשים ב-present perfect")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Drill this trap from Hebrew: For and since/ })).toHaveAttribute(
+    "href",
+    "/say/for-and-since",
+  );
   await expect(page.getByText("Saved to your phrase bank")).toBeVisible();
   await expect(page.getByText("Your tutor will remember:")).toBeVisible();
   await expect(page.getByRole("region", { name: "Your best sentence" })).toContainText(
