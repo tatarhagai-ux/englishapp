@@ -36,6 +36,10 @@ const METHOD = [
     body: "Word cards show the meaning and a sentence with a gap; you say the word. Pulling it out of memory is what makes it come to you while speaking. Recognizing it isn't enough.",
   },
   {
+    title: "Build the sentence yourself",
+    body: "Say it in English gives you a Hebrew sentence built on a trap Hebrew speakers fall into, and you say the English. The check is strict on purpose, because a dropped “a” is exactly the habit you're breaking. Sentences you miss wait in “Your misses” until you say them right.",
+  },
+  {
     title: "Listening a little above comfortable",
     body: "The listening gym speeds up after three right answers in a row and slows down after a miss, so it stays just hard enough.",
   },
