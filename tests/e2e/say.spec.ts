@@ -6,7 +6,10 @@ test("say it in English: a missing word is named, a missed sentence comes back, 
   );
   await page.goto("/practice");
   await page.getByRole("link", { name: /Say it in English/ }).click();
-  await page.getByRole("link", { name: /A and the/ }).click();
+  await page
+    .getByRole("link")
+    .filter({ has: page.getByText("A and the", { exact: true }) })
+    .click();
   await expect(page.getByRole("heading", { name: "A and the" })).toBeVisible();
   await expect(page.getByText(/The rule: a \/ the/)).toBeVisible();
   await expect(page.getByText("קניתי טלפון חדש.")).toBeVisible();
@@ -43,5 +46,7 @@ test("say it in English: a missing word is named, a missed sentence comes back, 
   await expect(page.getByText("5/6", { exact: true })).toBeVisible();
 
   await page.goto("/say");
-  await expect(page.getByRole("link", { name: /A and the/ })).toContainText("5/6");
+  await expect(page.getByRole("link").filter({ has: page.getByText("A and the", { exact: true }) })).toContainText(
+    "5/6",
+  );
 });

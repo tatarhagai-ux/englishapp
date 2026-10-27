@@ -501,6 +501,141 @@ const SAY_SETS_MORE: readonly SaySet[] = [
       },
     ],
   },
+  {
+    id: "small-words-2",
+    pattern: "prepositions",
+    title: "The small words, round two",
+    items: [
+      {
+        he: "אני מתעניין בבינה מלאכותית.",
+        answers: ["I'm interested in artificial intelligence.", "I'm interested in AI."],
+        trap: "I'm interested about artificial intelligence.",
+      },
+      {
+        he: "תקשיב לי רגע.",
+        answers: ["Listen to me for a second.", "Listen to me for a moment.", "Listen to me a second."],
+        trap: "Listen me for a second.",
+      },
+      {
+        he: "אני בעבודה עד חמש.",
+        answers: ["I'm at work until five.", "I'm at work till five."],
+        trap: "I'm in the work until five.",
+      },
+      {
+        he: "הוא עלה על האוטובוס הלא נכון.",
+        answers: ["He got on the wrong bus.", "He took the wrong bus."],
+        trap: "He went up on the wrong bus.",
+      },
+      {
+        he: "נדבר על זה בבוקר.",
+        answers: ["We'll talk about it in the morning.", "Let's talk about it in the morning."],
+        trap: "We'll talk on it at the morning.",
+      },
+      {
+        he: "היא אחראית על הפרויקט.",
+        answers: ["She's in charge of the project.", "She's responsible for the project."],
+        trap: "She's responsible on the project.",
+      },
+    ],
+  },
+  {
+    id: "a-and-the-2",
+    pattern: "articles",
+    title: "A and the at work",
+    items: [
+      { he: "יש לי שאלה.", answers: ["I have a question.", "I've got a question."], trap: "I have question." },
+      {
+        he: "אני גר בדירה קטנה.",
+        answers: ["I live in a small apartment.", "I live in a small flat."],
+        trap: "I live in small apartment.",
+      },
+      { he: "אנחנו מחפשים מפתח.", answers: ["We're looking for a developer."], trap: "We're looking for developer." },
+      { he: "זמן זה כסף.", answers: ["Time is money."], trap: "The time is money." },
+      { he: "שלחתי לך מייל אתמול.", answers: ["I sent you an email yesterday."], trap: "I sent you email yesterday." },
+      {
+        he: "הפגישה של מחר בוטלה.",
+        answers: [
+          "Tomorrow's meeting was canceled.",
+          "Tomorrow's meeting was cancelled.",
+          "Tomorrow's meeting has been cancelled.",
+          "Tomorrow's meeting has been canceled.",
+          "Tomorrow's meeting is canceled.",
+          "The meeting tomorrow was canceled.",
+        ],
+        trap: "The meeting of tomorrow was canceled.",
+      },
+    ],
+  },
+  {
+    id: "soften-it-2",
+    pattern: "directness",
+    title: "Soften it at work",
+    items: [
+      {
+        he: "תעדכן אותי.",
+        answers: [
+          "Could you keep me posted?",
+          "Can you keep me posted?",
+          "Could you keep me updated?",
+          "Can you keep me updated?",
+          "Could you let me know?",
+          "Can you let me know?",
+        ],
+        trap: "Update me.",
+      },
+      {
+        he: "אני צריך את זה עד יום ראשון.",
+        answers: [
+          "Would it be possible to get it by Sunday?",
+          "Could I get it by Sunday?",
+          "Could you send it by Sunday?",
+          "Could I have it by Sunday?",
+          "Could you get it to me by Sunday?",
+        ],
+        trap: "I need it until Sunday.",
+      },
+      {
+        he: "זה לא נכון.",
+        answers: [
+          "I'm not sure that's right.",
+          "I don't think that's right.",
+          "I'm not sure that's correct.",
+          "I don't think that's correct.",
+        ],
+        trap: "It's not correct.",
+      },
+      {
+        he: "תסתכל על זה.",
+        answers: [
+          "Could you take a look at this?",
+          "Can you take a look at this?",
+          "Could you have a look at this?",
+          "Would you mind taking a look at this?",
+        ],
+        trap: "Look on this.",
+      },
+      {
+        he: "תחכה רגע.",
+        answers: [
+          "Could you give me a second?",
+          "Give me a second, please.",
+          "Could you hold on a second?",
+          "One moment, please.",
+        ],
+        trap: "Wait a moment.",
+      },
+      {
+        he: "אני לא מסכים.",
+        answers: [
+          "I see it a bit differently.",
+          "I'm not sure I agree.",
+          "I see it differently.",
+          "I'm not sure I agree with that.",
+        ],
+        trap: "I don't agree.",
+      },
+    ],
+  },
 ];
 
 export const SAY_SETS: readonly SaySet[] = [...SAY_SETS_CORE, ...SAY_SETS_MORE];
