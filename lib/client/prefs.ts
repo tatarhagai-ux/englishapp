@@ -27,6 +27,12 @@ export interface Prefs {
   theme: "dark" | "light" | "system";
   /** The Home card about natural voices on Android was opened or dismissed. */
   voiceTipSeen: boolean;
+  /**
+   * Write down what he says with a speech model on the server (much better with an accent)
+   * instead of the phone's own recognizer. Costs about half a cent per minute of speech, so
+   * it's off until he turns it on.
+   */
+  accurateSpeech: boolean;
 }
 
 const KEY = "sw_prefs_v1";
@@ -41,6 +47,7 @@ const DEFAULTS: Prefs = {
   micMode: "tap",
   theme: "dark",
   voiceTipSeen: false,
+  accurateSpeech: false,
 };
 
 const listeners = new Set<() => void>();
@@ -73,6 +80,11 @@ function subscribe(cb: () => void) {
     listeners.delete(cb);
     window.removeEventListener("storage", onStorage);
   };
+}
+
+/** The current preferences, for code outside React (the speech layer). */
+export function readPrefs(): Prefs {
+  return typeof window === "undefined" ? DEFAULTS : getSnapshot();
 }
 
 export function usePrefs(): [Prefs, (patch: Partial<Prefs>) => void] {

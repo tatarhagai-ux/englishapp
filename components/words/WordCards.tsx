@@ -399,7 +399,7 @@ function Study({ queue: initial, onDone }: { queue: PhraseRecord[]; onDone: (n: 
           <button
             type="button"
             onClick={() => void say()}
-            disabled={mic.phase === "opening"}
+            disabled={mic.waiting}
             className="btn-3d btn-go flex items-center justify-center gap-2 py-3.5"
           >
             {mic.busy ? (

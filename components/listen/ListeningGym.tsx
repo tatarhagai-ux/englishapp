@@ -415,7 +415,7 @@ export function ListeningGym() {
             <button
               type="button"
               onClick={() => void shadow()}
-              disabled={mic.phase === "opening"}
+              disabled={mic.waiting}
               className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 uppercase disabled:opacity-70"
             >
               {mic.busy ? (

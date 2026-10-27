@@ -3,6 +3,8 @@
 import type * as SpeechSdk from "microsoft-cognitiveservices-speech-sdk";
 import { fetchSpeech, TtsRequestError } from "./tts";
 import { chooseAlternative } from "@/lib/text/compare";
+import { readPrefs } from "./prefs";
+import { canRecordAudio, recordUtterance, serverSttReady, SttError, transcribeRecording } from "./server-stt";
 import { diffWords } from "@/lib/text/diff";
 import {
   browserSpeechActive,
@@ -87,6 +89,10 @@ export interface ListenHandlers {
    * the microphone beeps on Android and flashes the status-bar icon, so it stops instead.
    */
   onIdle?: () => void;
+  /** Accurate recognition: the answer was recorded and is being written down (true), or done (false). */
+  onChecking?: (busy: boolean) => void;
+  /** What writing it down cost, for the monthly budget. */
+  onCost?: (usd: number) => void;
 }
 
 /**
@@ -100,25 +106,38 @@ export interface ListenHandlers {
  */
 export const IDLE_AFTER_MS = 20_000;
 
+/** Hands-free with accurate recognition: this much quiet after speaking ends the turn. */
+const HANDS_FREE_END_MS = 2500;
+/** One recorded answer can't run longer than this. */
+const MAX_ANSWER_MS = 120_000;
+
 export class Listener {
   private recognizer: SpeechSdk.SpeechRecognizer | null = null;
   private browser: BrowserRecognition | null = null;
+  private recording: { abort: AbortController; done: Promise<void> } | null = null;
   /** Set by stop(), even if start() is still connecting, so a late start never runs on. */
   private cancelled = false;
+  private flushing = false;
+  /**
+   * True when the words arrive only after the answer ends (accurate recognition): there are
+   * no words while he talks, and a finished answer is already a full turn.
+   */
+  transcribesAfter = false;
 
   constructor(
     private readonly language: string,
     private readonly silenceMs = 1200,
+    private readonly handsFree = false,
   ) {}
 
   /** Each Listener is single-use: start once, stop once. */
   async start(h: ListenHandlers): Promise<void> {
-    if (browserSpeechActive()) return this.startBrowser(h);
+    if (browserSpeechActive()) return this.startWithoutAzure(h);
     let config: Awaited<ReturnType<typeof speechConfig>>;
     try {
       config = await speechConfig(this.language);
     } catch (err) {
-      if (err instanceof SpeechSetupError && err.kind === "not_configured") return this.startBrowser(h);
+      if (err instanceof SpeechSetupError && err.kind === "not_configured") return this.startWithoutAzure(h);
       throw err;
     }
     const { sdk, cfg } = config;
@@ -150,6 +169,68 @@ export class Listener {
     );
     // stop() may have been called while we were connecting.
     if (this.cancelled) await this.shutdown(recognizer);
+  }
+
+  private async startWithoutAzure(h: ListenHandlers): Promise<void> {
+    if (await serverSttOn()) return this.startRecording(h);
+    return this.startBrowser(h);
+  }
+
+  /**
+   * Accurate recognition: record the whole answer, then have it written down. In tap mode
+   * the answer runs until he taps (or goes quiet for a long while), pauses included; in
+   * hands-free mode a short quiet ends it. stop() throws the recording away; flush() keeps it.
+   */
+  private startRecording(h: ListenHandlers): void {
+    if (this.cancelled) return;
+    this.transcribesAfter = true;
+    const abort = new AbortController();
+    const language = this.language.startsWith("he") ? "he" : "en";
+    const done = (async () => {
+      let rec: Awaited<ReturnType<typeof recordUtterance>>;
+      try {
+        rec = await recordUtterance({
+          signal: abort.signal,
+          silenceMs: this.handsFree ? Math.max(this.silenceMs, HANDS_FREE_END_MS) : IDLE_AFTER_MS,
+          maxMs: MAX_ANSWER_MS,
+          noSpeechMs: IDLE_AFTER_MS,
+        });
+      } catch (err) {
+        if (this.cancelled) return;
+        const e = fromSttError(err);
+        if (e.kind === "no_speech") {
+          if (!this.flushing) h.onIdle?.();
+        } else h.onError(e);
+        return;
+      }
+      if (this.cancelled) return;
+      h.onChecking?.(true);
+      try {
+        const { text, costUsd } = await transcribeRecording(rec, language);
+        if (costUsd) h.onCost?.(costUsd);
+        if (!this.cancelled && text) h.onFinal(text, rec.seconds);
+      } catch (err) {
+        if (!this.cancelled) h.onError(fromSttError(err));
+        return;
+      } finally {
+        h.onChecking?.(false);
+      }
+      // The answer ended by itself (a long quiet in tap mode): let the screen show it to check.
+      if (!this.cancelled && !this.flushing) h.onIdle?.();
+    })();
+    this.recording = { abort, done };
+  }
+
+  /**
+   * End the answer now and wait until its words have arrived (accurate recognition only;
+   * the other recognizers deliver words as he talks, so there's nothing to wait for).
+   */
+  async flush(): Promise<void> {
+    const r = this.recording;
+    if (!r || this.cancelled) return;
+    this.flushing = true;
+    r.abort.abort();
+    await r.done;
   }
 
   /** Web Speech fallback. Chrome ends a "continuous" session after a long silence, so it restarts. */
@@ -208,6 +289,8 @@ export class Listener {
 
   async stop(): Promise<void> {
     this.cancelled = true;
+    this.recording?.abort.abort();
+    this.recording = null;
     if (this.browser) {
       this.browser.abort();
       this.browser = null;
@@ -240,6 +323,78 @@ export interface PronunciationResult {
   words: WordScore[];
   /** False with the browser fallback: only the words are checked, not how they sounded. */
   scored: boolean;
+}
+
+/** Words only (no sound scores): each target word is marked heard or not. */
+function wordResult(text: string, reference: string, seconds: number): PronunciationResult {
+  const { tokens, accuracy } = diffWords(text, reference);
+  return {
+    text,
+    seconds: Math.max(1, seconds),
+    pronunciation: 0,
+    accuracy: Math.round(accuracy * 100),
+    fluency: 0,
+    completeness: 0,
+    prosody: null,
+    words: tokens
+      .filter((t) => t.status !== "extra")
+      .map((t) => ({
+        word: t.word,
+        accuracy: t.status === "ok" ? 100 : 0,
+        error: t.status === "ok" ? "None" : "Omission",
+      })),
+    scored: false,
+  };
+}
+
+/** Accurate recognition is on, the phone can record, and the server can transcribe. */
+async function serverSttOn(): Promise<boolean> {
+  return readPrefs().accurateSpeech && canRecordAudio() && (await serverSttReady());
+}
+
+function fromSttError(err: unknown): SpeechSetupError {
+  if (err instanceof SpeechSetupError) return err;
+  if (!(err instanceof SttError)) return new SpeechSetupError("unknown");
+  if (err.kind === "mic_denied" || err.kind === "no_speech" || err.kind === "unauthorized") {
+    return new SpeechSetupError(err.kind);
+  }
+  return new SpeechSetupError("network");
+}
+
+/** After speech, this much quiet ends a recorded answer (a tap on "done" ends it sooner). */
+const SERVER_DONE_AFTER_MS = 2000;
+
+/**
+ * One attempt with accurate recognition: record until he goes quiet, then have the server
+ * write it down. If the service turns out to be unavailable, the next attempt uses the
+ * browser's recognizer instead.
+ */
+async function recognizeOnceOnServer(
+  reference: string,
+  language: string,
+  opts: AttemptOptions,
+): Promise<PronunciationResult> {
+  try {
+    const rec = await recordUtterance({
+      signal: opts.signal,
+      silenceMs: SERVER_DONE_AFTER_MS,
+      maxMs: MAX_ATTEMPT_MS,
+      onListening: opts.onListening,
+    });
+    opts.onChecking?.();
+    const { text, costUsd } = await transcribeRecording(rec, language.startsWith("he") ? "he" : "en");
+    if (costUsd) opts.onCost?.(costUsd);
+    if (!text) throw new SpeechSetupError("no_speech");
+    return wordResult(text, reference, rec.seconds);
+  } catch (err) {
+    throw fromSttError(err);
+  }
+}
+
+/** One attempt without Azure: the server's speech model when it's on, else the browser's. */
+async function recognizeOnce(reference: string, language: string, opts: AttemptOptions) {
+  if (await serverSttOn()) return recognizeOnceOnServer(reference, language, opts);
+  return recognizeOnceInBrowser(reference, language, opts);
 }
 
 /**
@@ -281,24 +436,7 @@ function recognizeOnceInBrowser(
       clearTimeout(guard);
       const text = heard();
       if (!text) return reject(new SpeechSetupError("no_speech"));
-      const { tokens, accuracy } = diffWords(text, reference);
-      resolve({
-        text,
-        seconds: Math.max(1, (Date.now() - started) / 1000),
-        pronunciation: 0,
-        accuracy: Math.round(accuracy * 100),
-        fluency: 0,
-        completeness: 0,
-        prosody: null,
-        words: tokens
-          .filter((t) => t.status !== "extra")
-          .map((t) => ({
-            word: t.word,
-            accuracy: t.status === "ok" ? 100 : 0,
-            error: t.status === "ok" ? "None" : "Omission",
-          })),
-        scored: false,
-      });
+      resolve(wordResult(text, reference, (Date.now() - started) / 1000));
     };
     // A tap on "done", a long silence after speaking, or the time limit ends it.
     const finish = () => {
@@ -393,6 +531,10 @@ export interface AttemptOptions {
   onPartial?: (text: string) => void;
   /** Abort to finish the attempt now ("done"); what was heard is still scored. */
   signal?: AbortSignal;
+  /** Accurate recognition: the recording ended and the words are being written down. */
+  onChecking?: () => void;
+  /** What writing it down cost, for the monthly budget. */
+  onCost?: (usd: number) => void;
 }
 
 /** Score one attempt at a known sentence ("Say it again"). Resolves after one utterance. */
@@ -401,13 +543,13 @@ export async function assessPronunciation(
   language = "en-US",
   opts: AttemptOptions = {},
 ): Promise<PronunciationResult> {
-  if (browserSpeechActive()) return recognizeOnceInBrowser(reference, language, opts);
+  if (browserSpeechActive()) return recognizeOnce(reference, language, opts);
   let config: Awaited<ReturnType<typeof speechConfig>>;
   try {
     config = await speechConfig(language);
   } catch (err) {
     if (err instanceof SpeechSetupError && err.kind === "not_configured")
-      return recognizeOnceInBrowser(reference, language, opts);
+      return recognizeOnce(reference, language, opts);
     throw err;
   }
   const { sdk, cfg } = config;

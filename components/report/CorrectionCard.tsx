@@ -104,7 +104,7 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
         <button
           type="button"
           onClick={() => void sayIt()}
-          disabled={mic.phase === "opening"}
+          disabled={mic.waiting}
           className={clsx(
             "btn-3d flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm",
             fixed ? "btn-ghost" : "btn-go",

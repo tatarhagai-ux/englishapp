@@ -18,6 +18,8 @@ const schema = z.object({
   DEEPSEEK_API_KEY: z.string().min(10).optional(),
   LLM_CHAT_MODEL: z.string().optional(),
   LLM_ANALYZER_MODEL: z.string().optional(),
+  /** Speech-to-text model on OpenRouter's transcription endpoint (optional override). */
+  STT_MODEL: z.string().optional(),
 
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(10).optional(),

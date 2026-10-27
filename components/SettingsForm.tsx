@@ -75,6 +75,24 @@ export function SettingsForm({ budgetUsd }: { budgetUsd: number }) {
       </Section>
 
       <Section title="Conversation">
+        <Field
+          label="Understanding your speech"
+          hint={
+            prefs.accurateSpeech
+              ? "Your answers are recorded and written down by an AI speech model: much better with an accent. About half a cent per minute of speech, counted in your monthly spend."
+              : "The phone's own recognizer: free and shows words as you talk, but it often misses or swaps words with an accent."
+          }
+        >
+          <Segmented
+            label="Understanding your speech"
+            value={prefs.accurateSpeech ? "accurate" : "phone"}
+            onChange={(v) => setPrefs({ accurateSpeech: v === "accurate" })}
+            options={[
+              { value: "accurate", label: "Accurate (AI)" },
+              { value: "phone", label: "Phone's own" },
+            ]}
+          />
+        </Field>
         <Field label="Corrections during the conversation" hint={CORRECTION_HELP[prefs.correctionMode]}>
           <Segmented
             label="Correction style"

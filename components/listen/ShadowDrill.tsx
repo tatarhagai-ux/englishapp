@@ -118,7 +118,7 @@ export function ShadowDrill({ lines, rate }: { lines: StoryLine[]; rate: number 
         <button
           type="button"
           onClick={() => void say()}
-          disabled={mic.phase === "opening"}
+          disabled={mic.waiting}
           className="btn-3d btn-go flex items-center justify-center gap-1.5 py-2.5 text-sm"
         >
           {mic.busy ? (

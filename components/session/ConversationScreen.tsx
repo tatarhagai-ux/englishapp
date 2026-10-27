@@ -256,7 +256,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       setReview(null);
       pttBuffer.current = keep ?? { text: "", seconds: 0 };
       interimRef.current = "";
-      const listener = new Listener(language, language === "he-IL" ? 1500 : 1200);
+      const listener = new Listener(language, language === "he-IL" ? 1500 : 1200, handsFreeRef.current);
       listenerRef.current = listener;
       setOrb("listening");
       setPartial(pttBuffer.current.text);
@@ -284,6 +284,16 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
             // A second segment can arrive before the first submit has stopped this listener.
             if (listenerRef.current !== listener) return;
             interimRef.current = "";
+            if (listener.transcribesAfter && handsFreeRef.current) {
+              // A recorded answer already ended on a pause: it's the whole turn, send it now.
+              pttBuffer.current = {
+                text: `${pttBuffer.current.text} ${t}`.trim(),
+                seconds: pttBuffer.current.seconds + secs,
+              };
+              const heard = takeHeard();
+              void submitLearner(heard.text, heard.seconds, stuck ? "stuck" : "voice");
+              return;
+            }
             // Both modes collect the whole turn; it goes out on a tap or after a real silence.
             pttBuffer.current = {
               text: `${pttBuffer.current.text} ${t}`.trim(),
@@ -296,6 +306,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
             setOrb("idle");
             setError({ message: SPEECH_ERROR_TEXT[err.kind] });
           },
+          onChecking: (busy) => {
+            if (listenerRef.current !== listener) return;
+            // Recorded answers have no words while he talks; show that they're on the way.
+            setPartial(busy ? `${pttBuffer.current.text} …`.trim() : pttBuffer.current.text);
+          },
+          onCost: addCost,
           onIdle: () => {
             if (listenerRef.current !== listener) return;
             if ((pttBuffer.current.text || interimRef.current) && !handsFreeRef.current) {
@@ -320,7 +336,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         setError({ message: SPEECH_ERROR_TEXT[kind] });
       }
     },
-    [stopListening, submitLearner, clearSilence, takeHeard],
+    [stopListening, submitLearner, clearSilence, takeHeard, addCost],
   );
 
   const afterTutorSpoke = useCallback(() => {
@@ -587,6 +603,11 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     }
     if (orb === "listening") {
       const stuck = stuckListenRef.current;
+      // A recorded answer is written down when it ends: wait for its words first.
+      const listener = listenerRef.current;
+      await listener?.flush();
+      // Hands-free already sent those words as they came in; the turn has moved on.
+      if (handsFree && listener?.transcribesAfter) return;
       const heard = takeHeard();
       if (handsFree && heard.text) {
         // Hands-free: a tap sends right away instead of waiting for the silence.

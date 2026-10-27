@@ -511,7 +511,7 @@ export function SayDrill({ set, onRestart }: { set: SaySet; onRestart?: () => vo
           <button
             type="button"
             onClick={() => void say()}
-            disabled={mic.phase === "opening"}
+            disabled={mic.waiting}
             className="btn-3d btn-go col-span-3 flex items-center justify-center gap-2 py-3.5"
           >
             {mic.busy ? (

@@ -755,3 +755,57 @@ test("one-minute talk: pick a topic card, the tutor reads it out, a long answer,
   await endEarly(page);
   await expect(page).toHaveURL(/\/report\//);
 });
+
+test.describe("accurate recognition in a conversation", () => {
+  test("tap mode records the whole answer, writes it down on stop; hands-free sends after a pause", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => localStorage.setItem("sw_prefs_v1", JSON.stringify({ accurateSpeech: true })));
+    // A fake microphone that "talks" for about a second each time it's opened.
+    await page.addInitScript(() => {
+      navigator.mediaDevices.getUserMedia = async () => {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const dest = ctx.createMediaStreamDestination();
+        osc.frequency.value = 220;
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.setValueAtTime(0.6, ctx.currentTime + 0.7);
+        gain.gain.setValueAtTime(0, ctx.currentTime + 1.8);
+        osc.connect(gain).connect(dest);
+        osc.start();
+        return dest.stream;
+      };
+    });
+    const answers = ["I've been studying for AZ-900 for two weeks", "The hardest part is networking"];
+    let posted = 0;
+    await page.route("**/api/transcribe", async (route) => {
+      if (route.request().method() === "GET") return route.fulfill({ json: { available: true } });
+      await route.fulfill({ json: { text: answers[posted++] ?? "", costUsd: 0.0003 } });
+    });
+    const chatBodies: { history: { role: string; text: string; input?: string }[] }[] = [];
+    await mockApis(page, chatBodies);
+
+    await page.goto("/session/free-your-week");
+    await startSkippingWarmup(page);
+    await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
+
+    // Tap mode: nothing is sent while he talks and pauses; "done" writes it down for checking.
+    await page.getByRole("button", { name: "Start talking" }).click();
+    await page.waitForTimeout(3000);
+    expect(posted).toBe(0);
+    await page.getByRole("button", { name: "Done talking" }).click();
+    const heard = page.getByRole("textbox", { name: /Heard/ });
+    await expect(heard).toHaveValue(answers[0], { timeout: 10_000 });
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect.poll(() => chatBodies.length).toBe(1);
+    expect(chatBodies[0].history.at(-1)).toMatchObject({ role: "learner", text: answers[0], input: "voice" });
+
+    // Hands-free: the answer goes out by itself once he pauses.
+    await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+    await page.getByRole("button", { name: "Tap to talk" }).click();
+    await expect(page.getByRole("button", { name: "Hands-free" })).toBeVisible();
+    await expect.poll(() => chatBodies.length, { timeout: 15_000 }).toBe(2);
+    expect(chatBodies[1].history.at(-1)).toMatchObject({ role: "learner", text: answers[1], input: "voice" });
+  });
+});
