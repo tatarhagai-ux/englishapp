@@ -163,8 +163,17 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     if (!hydrated) return null;
     const cutoff = Date.now() - RESUME_WINDOW_MS;
     return (
-      state.sessions
-        .filter((s) => !s.demo && s.scenarioId === scenarioId && !s.endedAt && new Date(s.startedAt).getTime() > cutoff)
+      // The newest one, like the Home card picks.
+      [...state.sessions]
+        .reverse()
+        .filter(
+          (s) =>
+            !s.demo &&
+            s.scenarioId === scenarioId &&
+            !s.endedAt &&
+            !s.report &&
+            new Date(s.startedAt).getTime() > cutoff,
+        )
         .find((s) => s.turns.some((t) => t.role === "learner")) ?? null
     );
   }, [hydrated, state.sessions, scenarioId]);

@@ -172,7 +172,7 @@ describe("learner model", () => {
     let s = applyAnalysis(withSession(), "s1", analysis({ phrases: [{ text: "touch base" }] }), NOW);
     expect(duePhrases(s, NOW)).toHaveLength(1);
     s = JSON.parse(JSON.stringify(s));
-    s = reviewPhrase(s, "touch base", true, NOW);
+    s = reviewPhrase(s, "Touch base", true, NOW);
     expect(duePhrases(s, NOW)).toHaveLength(0);
     expect(new Date(s.phrases[0].card.due).getTime()).toBeGreaterThan(NOW.getTime());
   });
@@ -342,6 +342,13 @@ describe("unfinishedSession", () => {
     expect(unfinishedSession(withTurns(3, { endedAt: soon.toISOString() }), soon)).toBeNull();
     expect(unfinishedSession(withTurns(3, { demo: true }), soon)).toBeNull();
     expect(unfinishedSession(withTurns(3), new Date("2026-11-05T10:00:00Z"))).toBeNull();
+  });
+
+  it("stops offering it once a later conversation was finished", () => {
+    const soon = new Date("2026-10-26T12:00:00Z");
+    const s = withTurns(3);
+    const finished = { ...s.sessions[0], id: "s2", startedAt: "2026-10-26T11:00:00Z", report: analysis({}) };
+    expect(unfinishedSession({ ...s, sessions: [...s.sessions, finished] }, soon)).toBeNull();
   });
 });
 

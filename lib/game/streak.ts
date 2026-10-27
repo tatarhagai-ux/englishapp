@@ -5,7 +5,7 @@
  * restDays a short gap (the plan is 5 days a week) doesn't break it either.
  */
 
-function toDayNumber(day: string): number {
+export function toDayNumber(day: string): number {
   const [y, m, d] = day.split("-").map(Number);
   return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
 }

@@ -23,13 +23,24 @@ self.addEventListener("activate", (event) => {
 });
 
 // Build files the kept offline pages load: never trimmed, or those pages couldn't start offline.
-async function filesInUse() {
+// Read the saved pages once per burst of downloads, not once per file.
+let usedMemo = null;
+function filesInUse() {
+  if (!usedMemo) {
+    usedMemo = readFilesInUse();
+    setTimeout(() => (usedMemo = null), 30000);
+  }
+  return usedMemo;
+}
+
+async function readFilesInUse() {
   const shell = await caches.open(SHELL);
   const used = new Set();
   for (const path of OFFLINE_PAGES) {
     const res = await shell.match(path);
     if (!res) continue;
-    for (const m of (await res.text()).matchAll(/\/_next\/static\/[^"'\s)]+/g)) used.add(m[0]);
+    // Paths can sit inside escaped JSON (a trailing backslash) or carry a query string.
+    for (const m of (await res.text()).matchAll(/\/_next\/static\/[^"'\s)\\?#]+/g)) used.add(m[0]);
   }
   return used;
 }

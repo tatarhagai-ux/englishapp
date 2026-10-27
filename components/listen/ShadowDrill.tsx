@@ -70,7 +70,10 @@ export function ShadowDrill({ lines, rate }: { lines: StoryLine[]; rate: number 
         )}
         <button
           type="button"
-          onClick={() => go(0)}
+          onClick={() => {
+            setMatched(0);
+            go(0);
+          }}
           className="btn-3d btn-go flex items-center gap-2 px-4 py-2.5 text-sm"
         >
           <Mic className="size-4" aria-hidden /> {matched > 0 ? "Again" : "Start shadowing"}

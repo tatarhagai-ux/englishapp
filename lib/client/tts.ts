@@ -131,7 +131,9 @@ export async function speakSequence(
         try {
           blob = await fetchSpeech(text, voiceId, rate, signal);
         } catch (err) {
-          if (signal?.aborted || !(err instanceof TtsRequestError)) return;
+          if (signal?.aborted) return;
+          // Anything unexpected surfaces, so a caller never counts a line that never played.
+          if (!(err instanceof TtsRequestError)) throw err;
           // Any Azure problem (not set up, offline, over budget): the device voice still works.
         }
         if (signal?.aborted) return;
@@ -154,7 +156,7 @@ export async function speakSequence(
           continue;
         }
       }
-      await speakInBrowser(text, voiceId, rate);
+      await speakInBrowser(text, voiceId, rate, signal);
     }
   } finally {
     signal?.removeEventListener("abort", onAbort);

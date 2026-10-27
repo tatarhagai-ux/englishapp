@@ -5,13 +5,8 @@
 import { PLAN_DAYS } from "@/content/plan";
 import { PLACEMENT_ID } from "@/content/scenarios";
 import { wordCount } from "@/lib/text/compare";
-import { weekStart } from "@/lib/game/streak";
+import { toDayNumber as dayNumber, weekStart } from "@/lib/game/streak";
 import { isRealSession, type LearnerState, type SessionRecord } from "./model";
-
-function dayNumber(day: string): number {
-  const [y, m, d] = day.split("-").map(Number);
-  return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
-}
 
 export { weekStart };
 

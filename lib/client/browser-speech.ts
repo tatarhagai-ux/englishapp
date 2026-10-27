@@ -141,9 +141,11 @@ export async function deviceVoiceNames(voiceIds: string[]): Promise<Record<strin
 }
 
 /** Speak one sentence; resolves when it ends (or fails). Cancel with stopSpeaking(). */
-export async function speakInBrowser(text: string, voiceId: string, rate: number): Promise<void> {
+export async function speakInBrowser(text: string, voiceId: string, rate: number, signal?: AbortSignal): Promise<void> {
   if (!canSpeak()) throw new Error("no_speech_synthesis");
   const voice = pickVoice(await loadVoices(), voiceId);
+  // Stopped while the voices were still loading: there's nothing to cancel yet, so don't start.
+  if (signal?.aborted) return;
   await new Promise<void>((resolve) => {
     const u = new SpeechSynthesisUtterance(text);
     try {

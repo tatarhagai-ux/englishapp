@@ -195,7 +195,7 @@ function PlanComplete() {
         <div className="rounded-xl bg-elev-2 p-3">
           <dt className="text-xs font-bold text-dim">Speaking level</dt>
           <dd className="text-xl font-black">
-            {first && last && first !== last ? `${first.cefr} → ${last.cefr}` : (last?.cefr ?? "—")}
+            {first && last && first.cefr !== last.cefr ? `${first.cefr} → ${last.cefr}` : (last?.cefr ?? "—")}
           </dd>
         </div>
         <div className="rounded-xl bg-elev-2 p-3">

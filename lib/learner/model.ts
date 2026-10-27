@@ -199,18 +199,18 @@ export function unfinishedSession(
   state: LearnerState,
   now = new Date(),
 ): { session: SessionRecord; resumable: boolean } | null {
-  // The newest one that qualifies: a short session opened later doesn't hide it.
+  // The newest one that qualifies: a short session opened later doesn't hide it, but a
+  // finished one does (he's moved on; an old cut-off talk shouldn't keep coming back).
   const ageOf = (s: SessionRecord) => now.getTime() - new Date(s.startedAt).getTime();
-  const last = [...state.sessions]
-    .reverse()
-    .find(
-      (s) =>
-        !s.demo &&
-        !s.endedAt &&
-        !s.report &&
-        s.turns.filter((t) => t.role === "learner").length >= 2 &&
-        ageOf(s) <= 7 * 24 * 60 * 60 * 1000,
-    );
+  let last: SessionRecord | undefined;
+  for (const s of [...state.sessions].reverse()) {
+    if (s.demo) continue;
+    if (s.report) break;
+    if (!s.endedAt && s.turns.filter((t) => t.role === "learner").length >= 2 && ageOf(s) <= 7 * 24 * 60 * 60 * 1000) {
+      last = s;
+      break;
+    }
+  }
   if (!last) return null;
   return { session: last, resumable: ageOf(last) < RESUME_WINDOW_MS };
 }
@@ -479,7 +479,7 @@ export function reviewPhrase(state: LearnerState, text: string, good: boolean, n
   return {
     ...state,
     phrases: state.phrases.map((p) =>
-      p.text === text
+      p.text.toLowerCase() === text.toLowerCase()
         ? { ...p, card: scheduler.next(reviveCard(p.card), now, good ? Rating.Good : Rating.Again).card }
         : p,
     ),
