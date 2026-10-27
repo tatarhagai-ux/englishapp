@@ -227,6 +227,208 @@ export const READINGS: readonly Reading[] = [
       },
     ],
   },
+  {
+    id: "r-cloud",
+    title: 'What "the cloud" actually means',
+    level: "B2",
+    minutes: 2,
+    paragraphs: [
+      "When people say a file is \"in the cloud\", it isn't floating anywhere. It's sitting on a computer in a huge data center owned by a company like Microsoft, Amazon or Google.",
+      "The big change is that you rent that computing power instead of buying it. A small startup can spin up a hundred servers for an afternoon, pay for those few hours and shut them down again. Twenty years ago, that would have meant buying expensive hardware up front.",
+      "Cloud providers also spread their data centers across regions, so if one building loses power, your app keeps running somewhere else. That's what people mean by high availability.",
+      "The catch is that you don't control the hardware, and costs can quietly add up if nobody keeps an eye on them. That's why companies now hire people just to manage their cloud bills.",
+    ],
+    glossary: [
+      g("sitting on", "stored on", "יושב על, מאוחסן ב"),
+      g("spin up", "create and start quickly", "להרים, להפעיל"),
+      g("shut them down", "turn them off", "לכבות אותם"),
+      g("up front", "at the start, before using it", "מראש"),
+      g("The catch is", "the hidden problem is", "המלכוד הוא"),
+      g("keeps an eye on", "watches carefully", "שם עין על"),
+    ],
+    questions: [
+      {
+        q: "What's the big change the cloud brought, according to the text?",
+        options: ["Files float in the air", "You rent computing power instead of buying it", "Computers got smaller"],
+        answer: 1,
+      },
+      {
+        q: "What's a risk mentioned at the end?",
+        options: ["Costs can grow without anyone noticing", "Data centers are slow", "Only big companies can use it"],
+        answer: 0,
+      },
+    ],
+  },
+  {
+    id: "r-feedback",
+    title: "How to take feedback without getting defensive",
+    level: "B1+",
+    minutes: 2,
+    paragraphs: [
+      "Nobody enjoys hearing what they did wrong. When a manager gives us feedback, our first reaction is often to explain ourselves, or to point out what someone else did.",
+      "The problem is that the other person stops listening, and next time they might not bother telling you at all. Feedback is free information about how others see your work.",
+      'A simple habit helps: before you answer, say "Thanks, that\'s useful." Then ask one question to make sure you understood, like "Can you give me an example?"',
+      "You don't have to agree with everything. But if you take a day to think about it, you'll usually find at least one thing worth changing.",
+    ],
+    glossary: [
+      g("explain ourselves", "give reasons for what we did", "להסביר את עצמנו"),
+      g("point out", "mention, draw attention to", "להצביע על"),
+      g("might not bother", "might not make the effort", "אולי לא יטרחו"),
+      g("make sure", "check that something is true", "לוודא"),
+      g("worth changing", "good enough to change", "ששווה לשנות"),
+    ],
+    questions: [
+      {
+        q: "Why is getting defensive a problem?",
+        options: ["It makes you look tired", "People may stop giving you feedback", "It's against company rules"],
+        answer: 1,
+      },
+      {
+        q: "What's the first thing the writer suggests saying?",
+        options: ['"That\'s not my fault"', '"Thanks, that\'s useful"', '"I disagree"'],
+        answer: 1,
+      },
+    ],
+  },
+  {
+    id: "r-lisbon",
+    title: "48 hours in Lisbon",
+    level: "B1+",
+    minutes: 2,
+    paragraphs: [
+      "Lisbon is one of the easiest cities in Europe to visit for a short break. It's compact, the food is great, and most people in the center speak good English.",
+      "Start in Alfama, the oldest neighborhood, and just get lost in the narrow streets. Then take the famous yellow tram 28 up the hills. It gets packed by ten, so go early.",
+      "In the evening, head to the riverside for sunset. Locals grab a drink at one of the kiosks and sit on the steps. It's cheap and it's where the city feels most alive.",
+      "One tip: wear comfortable shoes. Lisbon is built on seven hills, and those beautiful stone streets are slippery when it rains.",
+    ],
+    glossary: [
+      g("a short break", "a short holiday", "חופשה קצרה"),
+      g("get lost", "walk without a plan", "ללכת לאיבוד, לשוטט"),
+      g("gets packed", "becomes very crowded", "מתמלא לגמרי"),
+      g("head to", "go toward", "ללכת לכיוון"),
+      g("grab a drink", "get a quick drink", "לשתות משהו"),
+      g("slippery", "easy to slip on", "חלקלק"),
+    ],
+    questions: [
+      {
+        q: "Why should you take tram 28 early?",
+        options: ["It's cheaper in the morning", "It gets very crowded later", "It stops at noon"],
+        answer: 1,
+      },
+      {
+        q: "What's the practical tip at the end?",
+        options: ["Book restaurants early", "Wear comfortable shoes", "Learn some Portuguese"],
+        answer: 1,
+      },
+    ],
+  },
+  {
+    id: "r-focus",
+    title: "Your phone and your focus",
+    level: "B2",
+    minutes: 2,
+    paragraphs: [
+      "Most of us check our phones dozens of times a day, often without noticing. Each check only takes a few seconds, but getting back into deep focus can take much longer.",
+      "Researchers call this the cost of switching. Your brain needs time to reload what you were working on, so a day full of small interruptions ends up feeling busy but unproductive.",
+      "You don't need to throw your phone away. Small changes go a long way: turn off notifications you don't need, keep the phone in another room for one focused hour, and check messages at set times.",
+      "It feels uncomfortable for the first few days. After that, many people find they get more done before lunch than they used to in a whole day.",
+    ],
+    glossary: [
+      g("without noticing", "without being aware of it", "בלי לשים לב"),
+      g("getting back into", "returning to", "לחזור ל"),
+      g("ends up feeling", "finally feels", "בסוף מרגיש"),
+      g("go a long way", "make a big difference", "עושים הבדל גדול"),
+      g("at set times", "at fixed, planned times", "בשעות קבועות"),
+      g("get more done", "finish more work", "להספיק יותר"),
+    ],
+    questions: [
+      {
+        q: 'What is "the cost of switching"?',
+        options: [
+          "The price of a new phone",
+          "The time your brain needs to refocus after an interruption",
+          "The cost of mobile data",
+        ],
+        answer: 1,
+      },
+      {
+        q: "What does the writer suggest?",
+        options: [
+          "Throwing the phone away",
+          "Small changes like fewer notifications and set times",
+          "Working only at night",
+        ],
+        answer: 1,
+      },
+    ],
+  },
+  {
+    id: "r-interview-story",
+    title: "Tell a story, not a list",
+    level: "B2",
+    minutes: 2,
+    paragraphs: [
+      'When an interviewer asks "Tell me about a time you handled a difficult situation", many candidates answer with a list of qualities: hardworking, calm, a team player. The interviewer has heard that a thousand times.',
+      "What sticks is a story. Set the scene in one sentence, explain what was at stake, say what you did, and finish with the result. That's the STAR method in plain words.",
+      "Keep it short. Two minutes is plenty. If the interviewer wants more detail, they'll ask, and a follow-up question is a good sign.",
+      "And practice out loud. A story that sounds great in your head often comes out messy the first time. By the third time, it flows.",
+    ],
+    glossary: [
+      g("What sticks", "what people remember", "מה שנשאר בזיכרון"),
+      g("Set the scene", "describe the situation briefly", "לתאר את הרקע"),
+      g("at stake", "at risk, what could be lost", "על הכף"),
+      g("plenty", "more than enough", "די והותר"),
+      g("comes out messy", "sounds confused when you say it", "יוצא מבולגן"),
+      g("it flows", "it sounds smooth and natural", "זה זורם"),
+    ],
+    questions: [
+      {
+        q: "What do many candidates do wrong?",
+        options: [
+          "They talk too fast",
+          "They list qualities instead of telling a story",
+          "They ask too many questions",
+        ],
+        answer: 1,
+      },
+      {
+        q: "How long should the story be, according to the text?",
+        options: ["About two minutes", "At least five minutes", "One sentence"],
+        answer: 0,
+      },
+    ],
+  },
+  {
+    id: "r-protein",
+    title: "Protein, without the hype",
+    level: "B1+",
+    minutes: 2,
+    paragraphs: [
+      "Walk into any gym and you'll hear people talking about protein. Some drink three shakes a day. Others eat chicken with every meal. So how much do you really need?",
+      "For most people who train regularly, a good rule of thumb is about 1.6 grams per kilo of body weight per day. More than that usually doesn't build extra muscle.",
+      "Shakes are convenient, but they aren't magic. Eggs, yogurt, beans, fish and chicken all do the job, and they come with other nutrients your body needs.",
+      "The bigger factors are still the boring ones: training consistently, sleeping enough and eating enough overall. Protein helps, but it can't make up for skipping the gym.",
+    ],
+    glossary: [
+      g("aren't magic", "don't solve everything by themselves", "הם לא קסם"),
+      g("a good rule of thumb", "a simple practical guideline", "כלל אצבע טוב"),
+      g("convenient", "easy and quick to use", "נוח"),
+      g("do the job", "work well enough", "עושים את העבודה"),
+      g("make up for", "replace something missing", "לפצות על"),
+    ],
+    questions: [
+      {
+        q: "What's the rule of thumb in the text?",
+        options: ["Three shakes a day", "About 1.6 grams per kilo per day", "Chicken with every meal"],
+        answer: 1,
+      },
+      {
+        q: "What matters more than protein, according to the writer?",
+        options: ["Expensive supplements", "Consistent training, sleep and eating enough", "Training twice a day"],
+        answer: 1,
+      },
+    ],
+  },
 ];
 
 export function readingById(id: string): Reading | undefined {
