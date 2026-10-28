@@ -11,6 +11,7 @@ import { mistakeSentences, type WarmupItem } from "@/lib/learner/model";
 import { Warmup } from "@/components/session/Warmup";
 import { saySetForMistake } from "@/content/say";
 import { shuffle } from "@/lib/text/shuffle";
+import { count } from "@/lib/text/plural";
 
 const DRILL_SIZE = 4;
 
@@ -183,7 +184,7 @@ export function MistakeLesson({ mistakeKey }: { mistakeKey: string }) {
             onClick={startDrill}
             className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-4 text-lg uppercase"
           >
-            <Dumbbell className="size-5" aria-hidden /> Drill {Math.min(DRILL_SIZE, sayable.length)} sentences
+            <Dumbbell className="size-5" aria-hidden /> Drill {count(Math.min(DRILL_SIZE, sayable.length), "sentence")}
           </button>
         </section>
       )}

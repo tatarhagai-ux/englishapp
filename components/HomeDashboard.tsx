@@ -15,6 +15,7 @@ import { PlanToday } from "./PlanToday";
 import { CoachCard } from "./CoachCard";
 import { KeepGoing } from "./KeepGoing";
 import { DailyQuests } from "./DailyQuests";
+import { count } from "@/lib/text/plural";
 
 const SESSION_STEPS = [
   { icon: Sparkles, title: "Warm-up", detail: "Say phrases from past sessions out loud" },
@@ -169,7 +170,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           <span className="flex-1">
             <span className="block font-extrabold">Last report</span>
             <span className="block text-sm text-dim">
-              {lastReport.report.corrections.length} fixes ·{" "}
+              {count(lastReport.report.corrections.length, "fix", "fixes")} ·{" "}
               {lastReport.report.task.completed ? "mission complete" : "mission open"}
             </span>
           </span>
