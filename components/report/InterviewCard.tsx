@@ -50,7 +50,7 @@ export function InterviewCard({
         type="button"
         onClick={() => setExplain((v) => !v)}
         aria-expanded={explain}
-        className="inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+        className="inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
       >
         <HelpCircle className="size-4" aria-hidden /> What do these four mean?
       </button>

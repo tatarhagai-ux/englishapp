@@ -71,7 +71,7 @@ export function HelperPanel({
           <button
             type="button"
             onClick={() => setShowHe(true)}
-            className="mt-2 inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+            className="mt-2 inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
           >
             <Languages className="size-4" aria-hidden /> Translate
           </button>

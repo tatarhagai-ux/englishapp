@@ -236,7 +236,7 @@ function Achievements({ stats }: { stats: ReturnType<typeof statsFrom> }) {
         })}
       </ul>
       {!all && shown.length < ACHIEVEMENTS.length && (
-        <button type="button" onClick={() => setAll(true)} className="text-sm font-extrabold text-accent">
+        <button type="button" onClick={() => setAll(true)} className="text-sm font-extrabold text-accent tap">
           Show all {ACHIEVEMENTS.length}
         </button>
       )}
@@ -310,7 +310,7 @@ function InterviewReadinessCard({ state }: { state: Parameters<typeof interviewR
             : "Each interview report checks four things: a direct answer, a real example, what you did, and the result."}
       </p>
       {r.practiced < r.total && (
-        <Link href="/practice" className="inline-flex items-center gap-1 text-sm font-extrabold text-accent">
+        <Link href="/practice" className="inline-flex items-center gap-1 text-sm font-extrabold text-accent tap">
           Practice an interview question <ArrowRight className="size-4" aria-hidden />
         </Link>
       )}

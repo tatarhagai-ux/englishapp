@@ -51,7 +51,7 @@ import { Warmup } from "./Warmup";
 import { LearnWords } from "./LearnWords";
 import { Transcript } from "./Transcript";
 import { MissionBar } from "./MissionBar";
-import { demoReply } from "@/lib/client/demo";
+import { DEMO_TURNS, demoReply } from "@/lib/client/demo";
 import { HelperPanel, type HelperState } from "./HelperPanel";
 import { Orb, type OrbState } from "./Orb";
 
@@ -345,9 +345,11 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       void finish();
       return;
     }
-    if (modeRef.current === "voice" && handsFreeRef.current) void startListening();
+    // The demo has wrapped up: no more listening, the sample report button takes over.
+    const demoOver = demo && turnsRef.current.filter((t) => t.role === "learner").length >= DEMO_TURNS;
+    if (modeRef.current === "voice" && handsFreeRef.current && !demoOver) void startListening();
     else setOrb("idle");
-  }, [finish, startListening]);
+  }, [demo, finish, startListening]);
 
   const ensureQueue = useCallback(() => {
     queueRef.current ??= new SpeechQueue({
@@ -542,6 +544,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   const lastTutor = [...turns].reverse().find((t) => t.role === "tutor")?.text ?? "";
   const lastLearner = [...turns].reverse().find((t) => t.role === "learner" && t.input !== "stuck")?.text ?? "";
+  const demoDone =
+    demo && turns.at(-1)?.role === "tutor" && turns.filter((t) => t.role === "learner").length >= DEMO_TURNS;
   const busy = orb === "thinking" || orb === "speaking";
 
   async function replay(rate: number) {
@@ -826,7 +830,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       </div>
 
       <footer className="border-t-2 border-line px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-        {mode === "voice" && review ? (
+        {demoDone ? (
+          // The scripted tutor has wrapped up: lead to the sample report instead of more of the same.
+          <button type="button" onClick={() => void finish()} className="btn-3d btn-go w-full py-4 text-lg">
+            See the sample report
+          </button>
+        ) : mode === "voice" && review ? (
           <div className="space-y-2" role="group" aria-label="Check before sending">
             <label htmlFor="heard" className="text-xs font-extrabold text-dim">
               {review.stuck ? "Heard (Hebrew). Fix anything, then send." : "Heard. Fix anything, then send."}

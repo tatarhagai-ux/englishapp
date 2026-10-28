@@ -235,7 +235,7 @@ export function PhraseBank() {
                   <button
                     type="button"
                     onClick={() => setOpenHe(new Set(openHe).add(p.text))}
-                    className="inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+                    className="inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
                   >
                     <Languages className="size-4" aria-hidden /> Translate
                   </button>

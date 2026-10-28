@@ -144,7 +144,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           <TutorBadge />
         </div>
         {dueReviews > 0 && !goalMet && (
-          <Link href="/review" className="block text-center text-sm font-extrabold text-accent">
+          <Link href="/review" className="block text-center text-sm font-extrabold text-accent tap">
             Short on time? 2-minute review ({dueReviews} due)
           </Link>
         )}
@@ -215,7 +215,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
           <p className="mt-2 text-sm text-dim">{boss.why}</p>
           <Link
             href={`/mistakes/${encodeURIComponent(boss.key)}`}
-            className="mt-2 inline-block text-sm font-extrabold text-accent"
+            className="mt-2 inline-block text-sm font-extrabold text-accent tap"
           >
             Practice it: rule and drill →
           </Link>

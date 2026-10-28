@@ -13,7 +13,7 @@ export function HowItWorks({ steps, why }: { steps: string[]; why: string }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex items-center gap-1.5 text-sm font-extrabold text-accent"
+        className="flex items-center gap-1.5 text-sm font-extrabold text-accent tap"
       >
         <Info className="size-4" aria-hidden /> How it works
         <ChevronDown className={clsx("size-4 transition-transform", open && "rotate-180")} aria-hidden />

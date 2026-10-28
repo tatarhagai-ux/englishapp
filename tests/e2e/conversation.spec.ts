@@ -585,6 +585,24 @@ test("quick review: two minutes on due items without a conversation", async ({ p
   await expect(page.getByRole("status").filter({ hasText: "Done." })).toBeVisible();
 });
 
+test("demo mode: once the tutor wraps up, a button leads to the sample report", async ({ page }) => {
+  await page.goto("/session/free-your-week?demo=1");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: "Start conversation" }).click();
+  const box = page.getByLabel("Your reply");
+  for (const [i, reply] of ["I study for AZ-900", "Two weeks", "Networking is hard"].entries()) {
+    await box.fill(reply);
+    await box.press("Enter");
+    const next = ["How long have you been doing that?", "What's the hardest part so far?"][i];
+    if (next) await expect(page.getByText(next)).toBeVisible();
+  }
+  await expect(page.getByText(/That was great talking with you/)).toBeVisible();
+  await expect(box).toHaveCount(0);
+  await page.getByRole("button", { name: "See the sample report" }).click();
+  await expect(page).toHaveURL(/\/report\//);
+  await expect(page.getByRole("note")).toContainText("Sample report from the demo");
+});
+
 test("demo mode: a full conversation and sample report with no keys at all", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: /Try a demo conversation/ }).click();

@@ -82,7 +82,7 @@ export function VoiceTipCard() {
         type="button"
         onClick={() => setPrefs({ voiceTipSeen: true })}
         aria-label="Dismiss the voice tip"
-        className="rounded-full p-1.5 text-faint hover:text-text"
+        className="tap rounded-full p-1.5 text-faint hover:text-text"
       >
         <X className="size-4" aria-hidden />
       </button>

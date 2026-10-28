@@ -8,6 +8,8 @@ test("word cards: add a pack, recall from the meaning, rate, finish", async ({ p
   await page.getByRole("link", { name: /Word cards/ }).click();
   await expect(page.getByRole("heading", { name: "Word cards" })).toBeVisible();
   await expect(page.getByText("0 to review · 0 new")).toBeVisible();
+  // Nothing added yet: it points to the packs instead of saying "all done".
+  await expect(page.getByRole("button", { name: "Add a pack below to start" })).toBeDisabled();
 
   // Preview a pack, then add it.
   await page.getByRole("button", { name: /^Office and meetings B1\+/ }).click();

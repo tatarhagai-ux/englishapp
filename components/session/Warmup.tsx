@@ -188,7 +188,7 @@ export function Warmup({
             <button
               type="button"
               onClick={() => setShowHe(true)}
-              className="inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+              className="inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
             >
               <Languages className="size-4" aria-hidden /> Translate
             </button>

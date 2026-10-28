@@ -358,7 +358,7 @@ export function SayDrill({ set, onRestart }: { set: SaySet; onRestart?: () => vo
             type="button"
             onClick={() => setRuleOpen((v) => !v)}
             aria-expanded={ruleOpen}
-            className="flex w-full items-center justify-between text-left font-black"
+            className="tap flex w-full items-center justify-between text-left font-black"
           >
             The rule: {pattern.title}
             <span className="text-xs font-extrabold text-accent">{ruleOpen ? "Hide" : "Show"}</span>
