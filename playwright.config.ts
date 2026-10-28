@@ -10,6 +10,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
+    // Audio may play without a tap, so the fake microphones in the speech tests can run.
+    launchOptions: { args: ["--autoplay-policy=no-user-gesture-required"] },
   },
   projects: [
     { name: "mobile", use: { ...devices["Pixel 7"] } },

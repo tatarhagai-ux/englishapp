@@ -124,7 +124,7 @@ export function LearnWords({
           <button
             type="button"
             onClick={() => void say()}
-            disabled={mic.phase === "opening"}
+            disabled={mic.waiting}
             className="btn-3d btn-ghost flex items-center justify-center gap-2 py-3.5"
           >
             {mic.busy ? (

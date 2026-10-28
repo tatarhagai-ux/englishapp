@@ -201,7 +201,9 @@ interface RecognitionAlternative {
 }
 interface RecognitionResult {
   isFinal: boolean;
+  length: number;
   0: RecognitionAlternative;
+  [i: number]: RecognitionAlternative | boolean | number;
 }
 interface RecognitionEvent {
   resultIndex: number;
@@ -211,6 +213,8 @@ export interface BrowserRecognition {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  /** How many guesses the engine reports per phrase (default 1). */
+  maxAlternatives?: number;
   onresult: ((e: RecognitionEvent) => void) | null;
   onerror: ((e: { error: string }) => void) | null;
   onend: (() => void) | null;

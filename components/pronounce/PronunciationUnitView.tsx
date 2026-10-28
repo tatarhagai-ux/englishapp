@@ -170,7 +170,7 @@ export function PronunciationUnitView({ unit }: { unit: PronunciationUnit }) {
                 <button
                   type="button"
                   onClick={() => void say(i, sentence)}
-                  disabled={(mic.busy && active !== i) || (active === i && mic.phase === "opening")}
+                  disabled={(mic.busy && active !== i) || (active === i && mic.waiting)}
                   className="btn-3d btn-go flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm disabled:opacity-70"
                 >
                   {active === i && mic.busy ? (

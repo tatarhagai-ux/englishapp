@@ -5,10 +5,11 @@ import type { MicPhase } from "@/lib/client/use-mic-attempt";
 
 /** Button content while a "say it" attempt runs: opening, then a live red dot and "done". */
 export function MicBusyLabel({ phase }: { phase: MicPhase }) {
-  if (phase === "opening") {
+  if (phase === "opening" || phase === "checking") {
     return (
       <>
-        <Loader2 className="size-4 animate-spin" aria-hidden /> Opening the mic…
+        <Loader2 className="size-4 animate-spin" aria-hidden />{" "}
+        {phase === "opening" ? "Opening the mic…" : "Checking what you said…"}
       </>
     );
   }
