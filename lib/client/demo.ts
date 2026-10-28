@@ -45,7 +45,7 @@ export const DEMO_TURNS = 3;
 export function demoReply(scenario: Scenario, history: Turn[]): string {
   const learnerTurns = history.filter((t) => t.role === "learner").length;
   if (learnerTurns >= DEMO_TURNS) {
-    return "That was great talking with you. In the real app, I'd now give you your report. Tap the X to see a sample one.";
+    return "That was great talking with you. In the real app, I'd now give you your report. Tap below to see a sample one.";
   }
   const i = Math.max(0, learnerTurns - 1);
   const questions = FOLLOW_UPS[scenario.category];
@@ -57,8 +57,7 @@ export function demoReply(scenario: Scenario, history: Turn[]): string {
  * so even the demo shows mistakes that are really his.
  */
 export function demoAnalysis(scenario: Scenario, turns: Turn[]): Analysis {
-  const said = turns.find((t) => t.role === "learner" && t.input !== "stuck")?.text ?? "";
-  const lastSaid = [...turns].reverse().find((t) => t.role === "learner" && t.input !== "stuck")?.text ?? "";
+  const said = turns.some((t) => t.role === "learner" && t.input !== "stuck");
   const picks = SEED_ERRORS.filter((e) => e.key === "present_perfect_duration" || e.key === "looking_forward_to_ing");
   return analysisSchema.parse({
     corrections: picks.map((e) => ({
@@ -76,9 +75,12 @@ export function demoAnalysis(scenario: Scenario, turns: Turn[]): Analysis {
       met: scenario.successCriteria.slice(0, 1),
       feedback_en: "This is a sample. With the AI connected, this line reacts to what you actually said.",
     },
-    praise_en: said ? `You answered in full sentences: “${said.slice(0, 80)}”` : "You kept the conversation going.",
-    // The latest thing he said, so it isn't the same line the praise quotes.
-    best_sentence: (lastSaid || said).split(/(?<=[.!?])\s+/)[0].slice(0, 160),
+    // The demo can't check his grammar, so it doesn't quote him as praise or as a model
+    // sentence: a mistake shown as "your best" would teach the wrong thing.
+    praise_en: said
+      ? "You answered every question. With the AI connected, this quotes something you said well."
+      : "You kept the conversation going.",
+    best_sentence: "",
     level: { cefr: "B1+", confidence: "medium", note_en: "Sample estimate. The real one comes from your own words." },
     ...(scenario.category === "interview"
       ? {

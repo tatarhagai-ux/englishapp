@@ -384,7 +384,7 @@ function PhraseRow({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="mt-1 inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+            className="mt-1 inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
           >
             <Languages className="size-4" aria-hidden /> Translate
           </button>

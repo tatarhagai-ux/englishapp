@@ -169,13 +169,13 @@ function PatternCard({ p, showHe }: { p: L1Pattern; showHe: boolean }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+          className="inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
         >
           <Languages className="size-4" aria-hidden /> Why (in Hebrew)
         </button>
       )}
       {p.unit && (
-        <Link href={`/pronounce/${p.unit}`} className="flex items-center gap-1 text-sm font-extrabold text-accent">
+        <Link href={`/pronounce/${p.unit}`} className="flex items-center gap-1 text-sm font-extrabold text-accent tap">
           Practice it <ArrowRight className="size-4" aria-hidden />
         </Link>
       )}

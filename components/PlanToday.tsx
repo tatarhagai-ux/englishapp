@@ -99,7 +99,7 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
           type="button"
           onClick={() => setHowOpen((v) => !v)}
           aria-expanded={howOpen}
-          className="flex items-center gap-1.5 text-sm font-extrabold text-accent"
+          className="flex items-center gap-1.5 text-sm font-extrabold text-accent tap"
         >
           <Info className="size-4" aria-hidden /> How the plan works
           <ChevronDown className={clsx("size-4 transition-transform", howOpen && "rotate-180")} aria-hidden />

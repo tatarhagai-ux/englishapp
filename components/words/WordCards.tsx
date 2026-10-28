@@ -112,7 +112,11 @@ export function WordCards() {
           disabled={all.due.length + all.fresh.length === 0}
           className="btn-3d btn-go mt-4 w-full py-3.5 uppercase disabled:opacity-60"
         >
-          {all.due.length + all.fresh.length === 0 ? "All done for today" : "Study now"}
+          {all.due.length + all.fresh.length > 0
+            ? "Study now"
+            : added.size === 0 && own.length === 0
+              ? "Add a pack below to start"
+              : "All done for today"}
         </button>
       </section>
 
@@ -168,7 +172,7 @@ export function WordCards() {
         {DECKS.every((d) => added.has(d.id)) && (
           <p className="text-sm text-dim">You&apos;ve added every pack. Import your own lists in the phrase bank.</p>
         )}
-        <Link href="/phrases" className="block text-sm font-extrabold text-accent">
+        <Link href="/phrases" className="block text-sm font-extrabold text-accent tap">
           Import your own words (a book, a course) in the phrase bank
         </Link>
       </section>
@@ -381,7 +385,7 @@ function Study({ queue: initial, onDone }: { queue: PhraseRecord[]; onDone: (n: 
             <button
               type="button"
               onClick={() => setShowHe(true)}
-              className="inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+              className="inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
             >
               <Languages className="size-4" aria-hidden /> Hebrew
             </button>

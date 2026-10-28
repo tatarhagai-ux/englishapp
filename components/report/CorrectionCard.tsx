@@ -87,7 +87,7 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
           <button
             type="button"
             onClick={() => setShowHe(true)}
-            className="inline-flex items-center gap-1 text-sm font-extrabold text-accent"
+            className="inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
           >
             <Languages className="size-4" aria-hidden /> Translate
           </button>
@@ -126,7 +126,10 @@ export function CorrectionCard({ correction: c, sessionId, fixed, hebrewHelp, vo
 
       <MicHeard phase={mic.phase} heard={mic.heard} />
       {saySet && (
-        <Link href={`/say/${saySet.id}`} className="inline-flex items-center gap-1 text-sm font-extrabold text-accent">
+        <Link
+          href={`/say/${saySet.id}`}
+          className="inline-flex items-center gap-1 text-sm font-extrabold text-accent tap"
+        >
           <Languages className="size-4" aria-hidden /> Drill this trap from Hebrew: {saySet.title}
         </Link>
       )}

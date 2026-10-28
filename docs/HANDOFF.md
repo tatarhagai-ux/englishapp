@@ -111,7 +111,7 @@ Next.js 15 (App Router), TypeScript strict, Tailwind v4, PWA (service worker `sw
   - צבעים לפי WCAG AA. טוקני `--accent-ink`, `--xp-ink` ו-`--accent-2-ink`, ו-`.text-accent` משתמש ב-ink.
   - בדיקת axe ב-e2e (`tests/e2e/a11y.spec.ts`). הפעם `@axe-core/playwright` נמצא ב-lockfile.
 
-### PR #16 (27.10, טיוטה, לא ממוזג)
+### PR #16 (27.10, מוזג ב-28.10)
 
 [tatarhagai-ux/englishapp#16](https://github.com/tatarhagai-ux/englishapp/pull/16). חגי דיווח שהמקליט לא רושם מה שהוא אומר ולפעמים ממציא מילים.
 - **שיפור לזיהוי של הדפדפן:** `maxAlternatives = 5`, ו-`chooseAlternative` ב-`lib/text/compare.ts` בוחר ניחוש מאוחר יותר רק אם הוא קרוב מאוד למשפט המצופה (דמיון של 0.8 לפחות). משפט ארוך מוקלט ב-`continuous`.
@@ -125,6 +125,14 @@ Next.js 15 (App Router), TypeScript strict, Tailwind v4, PWA (service worker `sw
   - עם Azure מוגדר, Azure קודם והבחירה לא משפיעה.
   - בשיחה: במצב לחיצה מקליטים עד הלחיצה. ב-Hands-free נשלח אחרי 2.5 שניות שקט. המילים לא מופיעות תוך כדי דיבור, רק אחרי שנייה או שתיים ("Checking what you said…").
 - **לא נבדק במכשיר אמיתי ולא מול OpenRouter** (האתר חסום מהסביבה). ה-e2e משתמש במיקרופון מדומה ובתשובה מדומה.
+
+### PR #17 (28.10, טיוטה, לא ממוזג)
+
+בדיקת חוויה בטלפון מדומה (Pixel 7, כהה ובהיר, כל המסכים): בלי גלישה לרוחב ובלי שגיאות בקונסול. מה תוקן:
+- **כפתורי טקסט קטנים** ("How it works", "Translate", "Show all" ועוד) היו בגובה 20 פיקסלים. מחלקה `.tap` ב-`app/globals.css` מגדילה את אזור הלחיצה לכ-40 בלי לשנות את המראה. נבדק שאזורי לחיצה לא נחפפים.
+- **הדמו:** אחרי 3 תשובות המורה חזר על אותו משפט בכל הודעה. עכשיו מופיע כפתור "See the sample report", ו-Hands-free לא פותח מיקרופון שוב.
+- **דוח הדמו** הציג משפט עם טעות ("Networking is the most hard") בתור "Your best sentence". הדמו לא בודק דקדוק, ולכן הוא כבר לא מצטט את המשפטים של חגי.
+- **כרטיסיות:** משתמש בלי חבילות קיבל "All done for today". עכשיו: "Add a pack below to start".
 
 ## 6. החלטות והסיבות להן
 

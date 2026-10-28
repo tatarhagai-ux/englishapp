@@ -70,7 +70,7 @@ export function TopicPicker() {
         <button
           type="button"
           onClick={() => setIndex(index + 1)}
-          className="inline-flex items-center gap-1.5 text-sm font-extrabold text-accent"
+          className="inline-flex items-center gap-1.5 text-sm font-extrabold text-accent tap"
         >
           <Shuffle className="size-4" aria-hidden /> Another topic
         </button>
