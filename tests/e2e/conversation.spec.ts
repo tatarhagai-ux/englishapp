@@ -585,6 +585,45 @@ test("quick review: two minutes on due items without a conversation", async ({ p
   await expect(page.getByRole("status").filter({ hasText: "Done." })).toBeVisible();
 });
 
+test("pause: the timer and the conversation stop until resume, and leaving the app pauses too", async ({ page }) => {
+  await page.goto("/session/free-your-week?demo=1");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: "Start conversation" }).click();
+  const clock = page.getByLabel("Elapsed time");
+  await expect(clock).not.toHaveText("0:00");
+
+  await page.getByRole("button", { name: "Pause the conversation" }).click();
+  const dialog = page.getByRole("dialog", { name: "Paused" });
+  await expect(dialog).toBeVisible();
+  const frozen = await clock.textContent();
+  await page.waitForTimeout(2200);
+  await expect(clock).toHaveText(frozen!);
+
+  await dialog.getByRole("button", { name: "Resume" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(clock).not.toHaveText(frozen!, { timeout: 3000 });
+
+  // Switching to another app (the page goes hidden) pauses by itself.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(dialog).toBeVisible();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+  });
+
+  // From the pause, a reply first, then ending goes to the report.
+  await dialog.getByRole("button", { name: "Resume" }).click();
+  const box = page.getByLabel("Your reply");
+  await box.fill("I study for AZ-900");
+  await box.press("Enter");
+  await expect(page.getByText("How long have you been doing that?")).toBeVisible();
+  await page.getByRole("button", { name: "Pause the conversation" }).click();
+  await dialog.getByRole("button", { name: "End and see report" }).click();
+  await expect(page).toHaveURL(/\/report\//);
+});
+
 test("demo mode: once the tutor wraps up, a button leads to the sample report", async ({ page }) => {
   await page.goto("/session/free-your-week?demo=1");
   await page.getByRole("button", { name: /Quiet mode/ }).click();

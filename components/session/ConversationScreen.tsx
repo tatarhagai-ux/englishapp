@@ -10,6 +10,8 @@ import {
   Lightbulb,
   LifeBuoy,
   Mic,
+  Pause,
+  Play,
   Repeat,
   RotateCcw,
   Send,
@@ -128,7 +130,9 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const [draft, setDraft] = useState("");
   /** Asking before ending early: the X sits where a thumb lands by accident. */
   const [confirmEnd, setConfirmEnd] = useState(false);
-  useWakeLock(phase !== "intro");
+  /** Paused: no timer, no microphone, no voice, and the screen may sleep. */
+  const [paused, setPaused] = useState(false);
+  useWakeLock(phase !== "intro" && !paused);
 
   const turnsRef = useRef<Turn[]>([]);
   const sessionRef = useRef<string | null>(null);
@@ -148,6 +152,11 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   /** True while a tutor reply is still streaming, so the audio queue going idle isn't "done". */
   const pendingRef = useRef(false);
+  const pausedRef = useRef(false);
+  /** A tutor line that was cut off or arrived during the pause, to be heard on resume. */
+  const missedRef = useRef(false);
+  /** Hands-free words heard before the pause, so the answer picks up where it stopped. */
+  const keptRef = useRef<{ heard: { text: string; seconds: number }; stuck: boolean } | null>(null);
   // How hard to pitch it today, from his recent conversations; fixed for this conversation.
   const tutorLevel = useMemo(
     () => (hydrated ? adaptation(learner.get(), dayKey(new Date())).level : "steady"),
@@ -341,6 +350,10 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   const afterTutorSpoke = useCallback(() => {
     if (endedRef.current) return;
+    if (pausedRef.current) {
+      setOrb("idle");
+      return;
+    }
     if (wrapSentRef.current && !pendingRef.current) {
       void finish();
       return;
@@ -382,6 +395,19 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     setError(null);
     pendingRef.current = true;
     const chunker = new SentenceChunker();
+    // A reply that lands during a pause is shown, and spoken whole once he's back.
+    let held = false;
+    const say = (sentence: string) => {
+      if (pausedRef.current || held) {
+        held = true;
+        missedRef.current = true;
+      } else queue.speak(sentence);
+    };
+    const sayHeld = (text: string) => {
+      if (!held || pausedRef.current) return;
+      missedRef.current = false;
+      queue.speak(text);
+    };
     let shown = "";
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -390,11 +416,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         await new Promise((r) => setTimeout(r, 900));
         if (ctrl.signal.aborted) return;
         const text = demoReply(scenario, turnsRef.current);
-        for (const sentence of chunker.push(text)) queue.speak(sentence);
-        for (const rest of chunker.flush()) queue.speak(rest);
+        for (const sentence of chunker.push(text)) say(sentence);
+        for (const rest of chunker.flush()) say(rest);
         setTurnsBoth([...turnsRef.current, { role: "tutor", text }]);
         if (sessionRef.current) learner.appendTurn(sessionRef.current, { role: "tutor", text });
         pendingRef.current = false;
+        sayHeld(text);
         if (!queue.busy) afterTutorSpoke();
         return;
       }
@@ -420,17 +447,18 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         (delta) => {
           shown += delta;
           setPendingTutor(shown);
-          for (const sentence of chunker.push(delta)) queue.speak(sentence);
+          for (const sentence of chunker.push(delta)) say(sentence);
         },
         ctrl.signal,
       );
-      for (const rest of chunker.flush()) queue.speak(rest);
+      for (const rest of chunker.flush()) say(rest);
       const turn: Turn = { role: "tutor", text: res.text };
       setPendingTutor("");
       setTurnsBoth([...turnsRef.current, turn]);
       if (sessionRef.current) learner.appendTurn(sessionRef.current, turn);
       addCost(usageCostUsd(res.model, res.usage));
       pendingRef.current = false;
+      sayHeld(res.text);
       // If the audio already finished (or failed), move on now; otherwise onIdle will.
       if (!queue.busy) afterTutorSpoke();
     } catch (err) {
@@ -465,10 +493,22 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   useEffect(() => {
     if (phase !== "live") return;
     const t = setInterval(() => {
+      if (pausedRef.current) return;
       elapsedRef.current += 1;
       setElapsed(elapsedRef.current);
     }, 1000);
     return () => clearInterval(t);
+  }, [phase]);
+
+  // Leaving the app or locking the phone pauses the conversation, so it doesn't run on alone.
+  const pauseRef = useRef<() => Promise<void>>(async () => {});
+  useEffect(() => {
+    if (phase !== "live") return;
+    const onHide = () => {
+      if (document.visibilityState === "hidden") void pauseRef.current();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
   }, [phase]);
 
   useEffect(
@@ -597,6 +637,57 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     if (orb === "speaking") queueRef.current?.stop();
   }
 
+  async function pause() {
+    if (pausedRef.current || endedRef.current) return;
+    pausedRef.current = true;
+    setPaused(true);
+    setConfirmEnd(false);
+    clearSilence();
+    if (queueRef.current?.busy) missedRef.current = true;
+    queueRef.current?.stop();
+    const listener = listenerRef.current;
+    if (listener) {
+      const stuck = stuckListenRef.current;
+      // A recorded answer is written down first, so what he said isn't lost.
+      if (listener.transcribesAfter) await listener.flush();
+      if (listenerRef.current === listener) {
+        const heard = takeHeard();
+        await stopListening();
+        if (heard.text) {
+          if (handsFreeRef.current) keptRef.current = { heard, stuck };
+          else setReview({ ...heard, stuck });
+        }
+      }
+    }
+    if (!pendingRef.current) setOrb("idle");
+  }
+  pauseRef.current = pause;
+
+  async function resume() {
+    pausedRef.current = false;
+    setPaused(false);
+    if (endedRef.current) return;
+    // A reply is still on its way: it speaks in full when it lands, then listening starts.
+    if (pendingRef.current) return;
+    const kept = keptRef.current;
+    keptRef.current = null;
+    if (missedRef.current) {
+      // Hear the line that was cut off or came in meanwhile; listening follows as usual.
+      missedRef.current = false;
+      if (lastTutor) {
+        ensureQueue().speak(lastTutor);
+        return;
+      }
+    }
+    if (wrapSentRef.current) {
+      void finish();
+      return;
+    }
+    if (modeRef.current === "voice" && handsFreeRef.current && !review) {
+      void startListening(kept?.stuck ? "he-IL" : "en-US", kept?.heard);
+    }
+  }
+
   async function onMic() {
     if (orb === "thinking" || endedRef.current) return;
     if (orb === "speaking") {
@@ -703,7 +794,45 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const progress = Math.min(1, elapsed / limitSeconds);
 
   return (
-    <div className="mx-auto flex h-dvh max-w-xl flex-col">
+    <div className="relative mx-auto flex h-dvh max-w-xl flex-col">
+      {paused && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="paused-title"
+          className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-bg/95 px-6 text-center"
+        >
+          <span className="grid size-16 place-items-center rounded-full bg-accent-soft text-accent">
+            <Pause className="size-8" aria-hidden />
+          </span>
+          <div className="space-y-2">
+            <h2 id="paused-title" className="text-2xl font-black">
+              Paused
+            </h2>
+            <p className="text-dim">
+              The timer, the microphone and {speakerName} are stopped. Pick it up whenever you&apos;re ready.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void resume()}
+            autoFocus
+            className="btn-3d btn-go flex w-full max-w-xs items-center justify-center gap-2 py-4 text-lg"
+          >
+            <Play className="size-5" aria-hidden /> Resume
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              pausedRef.current = false;
+              void finish();
+            }}
+            className="btn-3d btn-ghost w-full max-w-xs py-3"
+          >
+            {turns.some((t) => t.role === "learner") ? "End and see report" : "Leave"}
+          </button>
+        </div>
+      )}
       <header className="flex items-center gap-3 px-4 pb-2 pt-4">
         <button
           type="button"
@@ -739,6 +868,14 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
             />
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => void pause()}
+          aria-label="Pause the conversation"
+          className="grid size-10 place-items-center rounded-xl border-2 border-line bg-elev text-dim hover:text-text"
+        >
+          <Pause className="size-5" />
+        </button>
         <button
           type="button"
           onClick={() => setHideText((v) => !v)}
