@@ -17,6 +17,7 @@ import { dayKey } from "@/lib/game/streak";
 import { cardQueue, isUnstudied, type CardRating, type PhraseRecord } from "@/lib/learner/model";
 import { usedPhrase } from "@/lib/text/compare";
 import { blankOut } from "@/lib/text/cloze";
+import { count } from "@/lib/text/plural";
 
 /** "own" = phrases saved from conversations or imported, not from a pack. */
 type DeckFilter = string | "all" | "own";
@@ -93,8 +94,8 @@ export function WordCards() {
       {lastRound !== null && lastRound > 0 && (
         <section className="space-y-4">
           <p role="status" className="tile flex items-center gap-2 p-4 font-extrabold text-good">
-            <Check className="size-5" aria-hidden /> {lastRound} cards done. They&apos;ll come back right before
-            you&apos;d forget them.
+            <Check className="size-5" aria-hidden /> {count(lastRound, "card")} done. They&apos;ll come back right
+            before you&apos;d forget them.
           </p>
           <KeepGoing next={null} avoid={[]} />
         </section>

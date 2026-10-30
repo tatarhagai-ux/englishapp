@@ -29,6 +29,7 @@ import {
 import { wordCount } from "@/lib/text/compare";
 import { monthKey } from "@/lib/cost/budget";
 import { skillProgress } from "@/lib/learner/skills";
+import { count } from "@/lib/text/plural";
 
 const STATUS_STYLE: Record<ErrorStatus, string> = {
   new: "bg-warn/15 text-warn",
@@ -124,8 +125,8 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
 
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Current streak", value: `${stats.currentStreak} days` },
-          { label: "Best streak", value: `${stats.bestStreak} days` },
+          { label: "Current streak", value: count(stats.currentStreak, "day") },
+          { label: "Best streak", value: count(stats.bestStreak, "day") },
           { label: "Minutes spoken", value: Math.round(stats.totalSpeakingSeconds / 60) },
           { label: "Conversations", value: stats.sessions },
           { label: "Phrases saved", value: state.phrases.length },

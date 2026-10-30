@@ -12,9 +12,9 @@ const ITEMS = [
     href: "/practice",
     label: "Practice",
     icon: Mic,
-    also: ["/listen", "/pronounce", "/review", "/words", "/mistakes", "/talk", "/read", "/say"],
+    also: ["/listen", "/pronounce", "/review", "/words", "/phrases", "/mistakes", "/talk", "/read", "/say"],
   },
-  { href: "/progress", label: "Progress", icon: BarChart3, also: ["/phrases"] },
+  { href: "/progress", label: "Progress", icon: BarChart3, also: [] },
   { href: "/settings", label: "Settings", icon: Settings, also: ["/guide"] },
 ] as const;
 
