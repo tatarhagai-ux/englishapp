@@ -7,6 +7,7 @@ import { errorResponse } from "@/lib/http/errors";
 import { turn } from "@/lib/conversation/types";
 import { buildAnalyzerMessages, buildCoachMessages, parseAnalysis, parseCoach } from "@/lib/prompts/analyzer";
 import { scenarioById } from "@/content/scenarios";
+import { challengeById } from "@/content/challenges";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ const body = z.object({
   history: z.array(turn).min(1).max(120),
   /** Facts already remembered, so the report can retire the ones that are out of date. */
   memory: z.array(z.string().max(160)).max(40).default([]),
+  /** Today's challenge id, so the wrap-up can say whether he met it. */
+  challenge: z.string().max(40).optional(),
 });
 
 function addUsage(a: Usage | undefined, b: Usage | undefined): Usage | undefined {
@@ -95,12 +98,17 @@ export async function POST(req: Request) {
         started,
         req.signal,
       ),
-      jsonCall(analyzerModel, buildCoachMessages(scenario, history), 1200, parseCoach, started, req.signal).catch(
-        (err: unknown) => {
-          console.error("coach summary failed", err);
-          return { value: null, usage: undefined };
-        },
-      ),
+      jsonCall(
+        analyzerModel,
+        buildCoachMessages(scenario, history, challengeById(parsed.data.challenge)),
+        1200,
+        parseCoach,
+        started,
+        req.signal,
+      ).catch((err: unknown) => {
+        console.error("coach summary failed", err);
+        return { value: null, usage: undefined };
+      }),
     ]);
     const usage = addUsage(core.usage, coach.usage);
     if (!core.value) return NextResponse.json({ error: "analysis_failed" }, { status: 502 });

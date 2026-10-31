@@ -123,6 +123,7 @@ export const learner = {
     opener: string,
     demo = false,
     planDay?: string,
+    challenge?: string,
   ): string {
     const now = new Date();
     const id = `${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -140,6 +141,7 @@ export const learner = {
       costUsd: 0,
       ...(demo ? { demo: true } : {}),
       ...(planDay && !demo ? { planDay } : {}),
+      ...(challenge && !demo ? { challenge } : {}),
     };
     let next: LearnerState = { ...get(), sessions: [...get().sessions, session] };
     // A plan day brings its week's words into the phrase bank (once), for review and counting.
@@ -174,6 +176,13 @@ export const learner = {
       speakingSeconds: s.speakingSeconds + speakingSeconds,
       stuckCount: s.stuckCount + (turn.input === "stuck" ? 1 : 0),
     }));
+  },
+
+  /** Swap the scripted first line for the fresh one the tutor actually said. */
+  replaceOpener(id: string, text: string) {
+    learner.updateSession(id, (s) =>
+      s.turns.length === 1 && s.turns[0].role === "tutor" ? { ...s, turns: [{ role: "tutor", text }] } : s,
+    );
   },
 
   finishSession(id: string) {

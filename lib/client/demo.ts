@@ -101,6 +101,14 @@ export function demoAnalysis(scenario: Scenario, turns: Turn[]): Analysis {
       },
       { kind: "cards", target: "", why_en: "Keep this week's words fresh.", why_he: "לשמור על מילות השבוע טריות." },
     ],
+    upgrades: [
+      {
+        plain: "very hard",
+        better: "challenging",
+        meaning_he: "מאתגר",
+        example: "Networking is the most challenging part.",
+      },
+    ],
     homework: {
       task_en: "Say three sentences about your week using for or since.",
       task_he: "תגיד שלושה משפטים על השבוע שלך עם for או since.",

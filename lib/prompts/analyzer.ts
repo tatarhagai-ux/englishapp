@@ -5,6 +5,7 @@ import { HEBREW_PATTERNS } from "@/content/l1/he";
 import type { Turn } from "@/lib/conversation/types";
 import type { ChatMessage } from "@/lib/providers/llm/types";
 import { SAY_SETS } from "@/content/say";
+import type { Challenge } from "@/content/challenges";
 import { LEARNER_PROFILE } from "./learner";
 
 const keyField = z
@@ -99,6 +100,24 @@ export const analysisSchema = z.object({
   felt_en: z.string().trim().max(300).catch("").default(""),
   felt_he: z.string().trim().max(300).catch("").default(""),
   next_steps: z.array(nextStep).max(3).catch([]).default([]),
+  /** Today's challenge: did he meet it (only when there was one). */
+  challenge: z
+    .object({ met: z.boolean().catch(false), note_en: z.string().trim().max(240).default("") })
+    .optional()
+    .catch(undefined),
+  /** Plain words he leaned on, each with a stronger one to learn. */
+  upgrades: z
+    .array(
+      z.object({
+        plain: z.string().trim().min(1).max(60),
+        better: z.string().trim().min(1).max(60),
+        meaning_he: z.string().trim().max(80).default(""),
+        example: z.string().trim().max(200).default(""),
+      }),
+    )
+    .max(3)
+    .catch([])
+    .default([]),
   /** One small task for before the next conversation. */
   homework: z
     .object({
@@ -243,6 +262,8 @@ export const coachSchema = analysisSchema.pick({
   felt_he: true,
   next_steps: true,
   homework: true,
+  challenge: true,
+  upgrades: true,
 });
 export type Coach = z.infer<typeof coachSchema>;
 
@@ -259,7 +280,7 @@ function transcriptOf(history: Turn[]): string {
  * the fixes, run at the same time, so neither reply is long enough to time out on a cheap
  * model; if this one fails the report still has its fixes.
  */
-export function buildCoachMessages(scenario: Scenario, history: Turn[]): ChatMessage[] {
+export function buildCoachMessages(scenario: Scenario, history: Turn[], challenge?: Challenge): ChatMessage[] {
   const known = SEED_ERRORS.map((e) => `${e.key}: ${e.title}`).join("\n");
   const system = `You are an experienced, demanding but warm English teacher for Hebrew speakers. You just listened to a practice conversation. Write your wrap-up for the learner and return ONLY a JSON object.
 
@@ -278,10 +299,18 @@ Rules:
 - felt_en and felt_he: two or three sentences from the teacher's side, in plain words: where he flowed, where he got stuck or searched for a word, and one thing that stood out. Warm but real. The same text in natural Hebrew for felt_he.
 - next_steps: up to 3 things to do right now, most useful first. Each has a kind: "say" (target = one of the Say it set ids listed above, the one that fits his biggest mistake), "mistake" (target = one of the known mistake keys above that he made in this conversation), "cards" (his word cards), "listen" (a listening story), "talk" (a one-minute talk), or "review" (quick review of old mistakes). why_en: one short reason that points at something he said in THIS conversation. why_he: the same in Hebrew.
 - homework: one small, concrete task for before the next conversation, doable in five minutes, tied to a mistake or a goal from this conversation (for example: "Say three sentences about your week using for or since", or "Record one minute about your exam without saying very"). task_he: the same in Hebrew.
-- Keep every text short. Hebrew must be natural, not a word-for-word translation.
+- upgrades: up to 3 plain or overused words or phrases he actually said (like very good, thing, big, I think), each with ONE stronger, natural alternative that fits what he meant, its Hebrew meaning, and a short example sentence in his own context. Skip it if nothing stood out.
+${
+  challenge
+    ? `- challenge: today's challenge was "${challenge.task}". met = true only if he clearly did it. note_en: one honest sentence on how it went, quoting him if you can.
+`
+    : ""
+}- Keep every text short. Hebrew must be natural, not a word-for-word translation.
 
 JSON shape:
-{"summary_en":"","score":{"fluency":60,"accuracy":60,"range":55,"task":70,"note_en":""},"felt_en":"","felt_he":"","next_steps":[{"kind":"say","target":"","why_en":"","why_he":""}],"homework":{"task_en":"","task_he":""}}`;
+{"summary_en":"","score":{"fluency":60,"accuracy":60,"range":55,"task":70,"note_en":""},"felt_en":"","felt_he":"","next_steps":[{"kind":"say","target":"","why_en":"","why_he":""}],"homework":{"task_en":"","task_he":""},"upgrades":[{"plain":"","better":"","meaning_he":"","example":""}]${
+    challenge ? `,"challenge":{"met":false,"note_en":""}` : ""
+  }}`;
 
   const user = `Scenario: ${scenario.title}
 Task: ${scenario.task}

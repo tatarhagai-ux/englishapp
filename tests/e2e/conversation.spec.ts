@@ -60,6 +60,8 @@ async function mockApis(page: Page, chatBodies: unknown[]) {
     route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
   );
   await page.route("**/api/chat", async (route: Route) => {
+    // The fresh first line fails here, so the scripted opener stays (tested on its own below).
+    if (route.request().postDataJSON()?.opening) return route.fulfill({ status: 500, body: "{}" });
     chatBodies.push(route.request().postDataJSON());
     const lines = [
       { t: "delta", text: "Oh nice, so you've been studying for two weeks. " },
@@ -232,6 +234,7 @@ test("a chat failure shows a retry that works", async ({ page }) => {
     route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
   );
   await page.route("**/api/chat", (route) => {
+    if (route.request().postDataJSON()?.opening) return route.fulfill({ status: 500, body: "{}" });
     if (fail) {
       fail = false;
       return route.fulfill({ status: 429, contentType: "application/json", body: '{"error":"provider_error"}' });
@@ -583,6 +586,40 @@ test("quick review: two minutes on due items without a conversation", async ({ p
   await expect(page.getByRole("button", { name: "Next" })).toBeInViewport();
   await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Done." })).toBeVisible();
+});
+
+test("today's challenge shows before starting, and the tutor opens with a fresh line", async ({ page }) => {
+  const bodies: { opening?: boolean; challenge?: string; history: unknown[] }[] = [];
+  await page.route("**/api/chat", (route: Route) => {
+    const body = route.request().postDataJSON();
+    bodies.push(body);
+    const text = body.opening ? "Hi Hagai! Quick one: what was the best part of your week?" : "Why that part?";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: JSON.stringify({ t: "delta", text }) + "\n" + JSON.stringify({ t: "done", model: "m", usage: null }) + "\n",
+    });
+  });
+  await page.goto("/session/free-your-week");
+  const card = page.getByRole("region", { name: /Today's challenge/ });
+  await expect(card).toBeVisible();
+  const first = await card.getByRole("heading").textContent();
+  await card.getByRole("button", { name: "Another" }).click();
+  await expect(card.getByRole("heading")).not.toHaveText(first ?? "");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  await expect(page.getByText("Hi Hagai! Quick one: what was the best part of your week?")).toBeVisible();
+  await expect(page.getByText("Hey! So, what have you been up to this week?")).toHaveCount(0);
+  await page.getByLabel("Your reply").fill("The weekend with my family");
+  await page.getByLabel("Your reply").press("Enter");
+  await expect(page.getByText("Why that part?")).toBeVisible();
+  expect(bodies[0]).toMatchObject({ opening: true, history: [] });
+  const reply = bodies.find((b) => !b.opening)!;
+  expect(reply.challenge).toBeTruthy();
+  expect(reply.history[0]).toMatchObject({
+    role: "tutor",
+    text: "Hi Hagai! Quick one: what was the best part of your week?",
+  });
 });
 
 test("demo mode: once the tutor wraps up, a button leads to the sample report", async ({ page }) => {

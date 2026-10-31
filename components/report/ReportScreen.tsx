@@ -59,6 +59,7 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
         session.scenarioId,
         session.turns,
         memoryForTutor(learner.get(), MEMORY_MAX, 6000),
+        session.challenge,
       );
       learner.addSpend(session.id, usageCostUsd(res.model, res.usage));
       learner.saveReport(session.id, res.analysis, prefs.dailyGoalMinutes);
@@ -158,6 +159,7 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
             previousScore={previousScore}
             hebrewHelp={prefs.hebrewHelp}
             demo={!!session.demo}
+            challengeId={session.challenge}
           />
 
           <section

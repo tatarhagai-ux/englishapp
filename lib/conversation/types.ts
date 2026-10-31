@@ -27,6 +27,10 @@ export const chatRequest = z.object({
   memory: z.array(z.string().max(160)).max(12).default([]),
   /** One line per recent conversation, newest first: what it was about. */
   recent: z.array(z.string().max(340)).max(3).default([]),
+  /** Today's challenge id (content/challenges.ts). */
+  challenge: z.string().max(40).optional(),
+  /** The conversation is just starting: write a fresh first line instead of the scripted one. */
+  opening: z.boolean().optional(),
   /** Homework from the last report that he hasn't ticked off. */
   homework: z.string().max(240).optional(),
   /** Time is up: the tutor should close the conversation warmly. */

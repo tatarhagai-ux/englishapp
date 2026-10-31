@@ -61,6 +61,18 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("POST /api/chat", () => {
+  it("writes a fresh opening line from an empty history", async () => {
+    fake.streamEvents = [{ type: "delta", text: "Hi Hagai!" }, { type: "done" }];
+    const { POST } = await import("@/app/api/chat/route");
+    const res = await POST(post({ scenarioId: "free-your-week", history: [], opening: true, challenge: "pushback" }));
+    expect(res.status).toBe(200);
+    const sent = fake.calls[0];
+    expect(sent.messages).toHaveLength(2);
+    expect(sent.messages[1]).toMatchObject({ role: "user" });
+    expect(sent.messages[0].content).toContain("very start of the conversation");
+    expect(sent.messages[0].content).toContain("Today's challenge for him");
+  });
+
   it("streams NDJSON deltas and a done line with usage", async () => {
     fake.streamEvents = [
       { type: "delta", text: "Oh nice, so you've been " },

@@ -94,6 +94,8 @@ export interface SessionRecord {
   planDay?: string;
   /** Help asked for during the conversation; the tutor adapts to it (lib/learner/adapt.ts). */
   help?: Partial<Record<HelpKind, number>>;
+  /** Today's challenge for this conversation (content/challenges.ts). */
+  challenge?: string;
   /** He marked the homework from this conversation's report as done. */
   homeworkDone?: boolean;
 }
