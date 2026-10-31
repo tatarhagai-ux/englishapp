@@ -36,6 +36,8 @@ export async function POST(req: Request) {
       targetKeys: body.targetKeys,
       practicePhrases: body.practicePhrases,
       memory: body.memory,
+      recent: body.recent,
+      homework: body.homework,
       wrapUp: body.wrapUp,
       level: body.level,
     });

@@ -129,10 +129,10 @@ export async function streamChat(
   return { text: text.trim(), model, usage };
 }
 
-export function analyzeSession(scenarioId: string, history: Turn[], signal?: AbortSignal) {
+export function analyzeSession(scenarioId: string, history: Turn[], memory: string[] = [], signal?: AbortSignal) {
   return postJson<{ analysis: Analysis; model: string; usage: Usage | null }>(
     "/api/analyze",
-    { scenarioId, history },
+    { scenarioId, history, memory },
     signal,
   );
 }

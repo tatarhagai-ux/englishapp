@@ -27,7 +27,10 @@ import { usageCostUsd } from "@/lib/cost/pricing";
 import { criterionMet, wordCount } from "@/lib/text/compare";
 import { planDayByKey, planWeek } from "@/content/plan";
 import { planPosition } from "@/lib/learner/plan";
-import { phraseUsedIn, recommendScenario } from "@/lib/learner/model";
+import { memoryForTutor, MEMORY_MAX, phraseUsedIn, recommendScenario } from "@/lib/learner/model";
+import { stepLinks } from "@/lib/learner/steps";
+import { totalScore } from "@/lib/prompts/analyzer";
+import { LessonSummary } from "./LessonSummary";
 import { CorrectionCard } from "./CorrectionCard";
 import { InterviewCard } from "./InterviewCard";
 import { demoAnalysis } from "@/lib/client/demo";
@@ -52,7 +55,11 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
     }
     setStatus("analyzing");
     try {
-      const res = await analyzeSession(session.scenarioId, session.turns);
+      const res = await analyzeSession(
+        session.scenarioId,
+        session.turns,
+        memoryForTutor(learner.get(), MEMORY_MAX, 6000),
+      );
       learner.addSpend(session.id, usageCostUsd(res.model, res.usage));
       learner.saveReport(session.id, res.analysis, prefs.dailyGoalMinutes);
       setStatus("idle");
@@ -103,6 +110,11 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
   const said = englishTurns.map((t) => t.text).join(" ");
   const wordsUsed = week ? week.words.filter((w) => phraseUsedIn(said, w.text)) : [];
   const isMet = (c: string) => criterionMet(report?.task.met ?? [], c);
+  // The score from the conversation before this one, for "+5 since last time".
+  const prevScored = state.sessions
+    .filter((s) => !s.demo && s.id !== session.id && s.startedAt < session.startedAt && s.report?.score)
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
+  const previousScore = prevScored?.report?.score ? totalScore(prevScored.report.score) : null;
 
   return (
     <Shell>
@@ -138,6 +150,16 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
 
       {report && (
         <>
+          <LessonSummary
+            report={report}
+            steps={stepLinks(report.next_steps, state)}
+            sessionId={session.id}
+            homeworkDone={!!session.homeworkDone}
+            previousScore={previousScore}
+            hebrewHelp={prefs.hebrewHelp}
+            demo={!!session.demo}
+          />
+
           <section
             className={clsx("rounded-3xl p-5", report.task.completed ? "bg-go text-go-ink" : "bg-warn/15 text-text")}
             style={report.task.completed ? { boxShadow: "0 6px 0 var(--go-deep)" } : undefined}

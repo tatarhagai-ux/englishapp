@@ -14,6 +14,8 @@ export const maxDuration = 60;
 const body = z.object({
   scenarioId: z.string().min(1).max(80),
   history: z.array(turn).min(1).max(120),
+  /** Facts already remembered, so the report can retire the ones that are out of date. */
+  memory: z.array(z.string().max(160)).max(40).default([]),
 });
 
 function addUsage(a: Usage | undefined, b: Usage | undefined): Usage | undefined {
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
 
   try {
     const { analyzerModel } = llmConfig();
-    const messages = buildAnalyzerMessages(scenario, parsed.data.history);
+    const messages = buildAnalyzerMessages(scenario, parsed.data.history, parsed.data.memory);
     let usage: Usage | undefined;
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await llm().complete({
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
                 { role: "user", content: "Your last reply was not valid JSON. Reply with the JSON object only." },
               ],
         temperature: 0.2,
-        maxTokens: 1800,
+        maxTokens: 2600,
         json: true,
         signal: req.signal,
       });

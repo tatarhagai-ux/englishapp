@@ -624,6 +624,11 @@ test("demo mode: a full conversation and sample report with no keys at all", asy
   await expect(page.getByRole("note")).toContainText("Sample report from the demo");
   await expect(page.getByText("I've been living in Shoham for ten years.")).toBeVisible();
   await expect(page.getByLabel(/XP earned/)).toHaveCount(0);
+  // The teacher's wrap-up: a score, what to do now (real links only) and homework.
+  const summary = page.getByRole("region", { name: "Lesson summary" });
+  await expect(summary.getByLabel(/Score \d+ out of 100/)).toBeVisible();
+  await expect(summary.getByRole("link", { name: /Say it: / })).toHaveAttribute("href", "/say/for-and-since");
+  await expect(summary.getByText("Say three sentences about your week using for or since.")).toBeVisible();
 
   // It doesn't count: progress still shows no conversations.
   await page.goto("/progress");

@@ -24,7 +24,11 @@ export const chatRequest = z.object({
   practicePhrases: z.array(z.string().max(120)).max(5).default([]),
   tutorName: z.string().min(1).max(40).default("Ava"),
   /** Facts from earlier conversations, so the tutor can pick up where they left off. */
-  memory: z.array(z.string().max(160)).max(6).default([]),
+  memory: z.array(z.string().max(160)).max(12).default([]),
+  /** One line per recent conversation, newest first: what it was about. */
+  recent: z.array(z.string().max(340)).max(3).default([]),
+  /** Homework from the last report that he hasn't ticked off. */
+  homework: z.string().max(240).optional(),
   /** Time is up: the tutor should close the conversation warmly. */
   wrapUp: z.boolean().default(false),
   /** How hard to pitch the English, from his recent conversations (lib/learner/adapt.ts). */

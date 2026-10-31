@@ -34,6 +34,8 @@ import { usageCostUsd } from "@/lib/cost/pricing";
 import { monthKey } from "@/lib/cost/budget";
 import {
   memoryForTutor,
+  openHomework,
+  recentSummaries,
   phrasesToPractice,
   RESUME_WINDOW_MS,
   targetKeysForNext,
@@ -413,6 +415,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
               ].slice(0, 4)
             : phrasesToPractice(learner.get()),
           memory: memoryForTutor(learner.get()),
+          recent: recentSummaries(learner.get()),
+          homework: openHomework(learner.get())?.task,
           tutorName,
           wrapUp,
           level: tutorLevel,

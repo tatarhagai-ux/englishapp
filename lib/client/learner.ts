@@ -13,6 +13,8 @@ import {
   removePhrase,
   removeSession,
   forgetFact,
+  addFact,
+  completeHomework,
   applyAnalysis,
   reviewMistake,
   initialState,
@@ -299,6 +301,14 @@ export const learner = {
 
   forgetFact(text: string) {
     set(forgetFact(get(), text));
+  },
+
+  addFact(text: string) {
+    set(addFact(get(), text));
+  },
+
+  completeHomework(sessionId: string) {
+    set(completeHomework(get(), sessionId));
   },
 
   removePhrase(text: string) {
