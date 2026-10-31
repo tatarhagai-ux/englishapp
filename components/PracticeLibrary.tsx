@@ -19,6 +19,8 @@ import {
   MessageCircle,
   Plane,
   RotateCcw,
+  Shuffle,
+  Sparkles,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -38,6 +40,7 @@ import { cardQueue, openSayMisses, rankedErrors, warmupItems } from "@/lib/learn
 import { STORIES } from "@/content/stories";
 import { DECKS } from "@/content/decks";
 import { PRONUNCIATION } from "@/content/pronunciation";
+import { practiceSuggestions } from "@/lib/learner/recommend";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { HowItWorks } from "./HowItWorks";
 import { Avatar } from "./Avatar";
@@ -126,6 +129,7 @@ export function PracticeLibrary() {
   }, []);
   function pickTrack(id: TrackId) {
     setTrackId(id);
+    setShowAll(false);
     try {
       window.localStorage.setItem(TRACK_KEY, id);
     } catch {
@@ -135,6 +139,13 @@ export function PracticeLibrary() {
   const track = TRACKS.find((t) => t.id === trackId)!;
   const scenarios = trackScenarios(track);
   const nextId = scenarios.find((s) => !done.has(s.id))?.id;
+  // The list shows the next few; the rest is one tap away.
+  const [showAll, setShowAll] = useState(false);
+  const nextIndex = Math.max(
+    0,
+    scenarios.findIndex((s) => s.id === nextId),
+  );
+  const shown = showAll ? scenarios : scenarios.slice(Math.max(0, nextIndex - 1), nextIndex + 3);
 
   return (
     <div className="space-y-7">
@@ -146,55 +157,59 @@ export function PracticeLibrary() {
           <Link href="/" className="font-extrabold text-accent">
             Home
           </Link>
-          ; here you pick anything you like, and it all counts toward today&apos;s minutes.
+          . Not sure what to do? Start with the suggestion below: it comes from your last report and what is due today.
         </p>
         <HowItWorks
           steps={[
-            "Words, listening and mistake drills take 2 to 5 minutes each. A small number means something is waiting today.",
+            "The suggestion at the top is the most useful thing right now. Tap “Something else” for the next one.",
+            "Each exercise below says what you do and how long it takes. A small number means something is waiting today.",
             "Conversations are 5 to 15 minutes. Pick a goal, then a conversation. Numbered ones go from easier to harder.",
-            "Every conversation ends with a report: your top fixes to say again, and new phrases.",
           ]}
           why="The plan keeps you moving forward; this is for the days you want more, or something specific."
         />
       </div>
 
-      <SkillGroup title="Speaking">
-        <SkillTile href="/talk" icon={Timer} title="One-minute talk" detail="A topic card, a long answer" />
-        <SkillTile
-          href="/pronounce"
-          icon={AudioLines}
-          title="Pronunciation"
-          detail={`${PRONUNCIATION.length} sounds · record yourself`}
-        />
+      {hydrated && <Suggested state={state} />}
+
+      <SkillGroup title="Speak">
         <SkillTile
           href="/say"
           icon={Languages}
           title="Say it in English"
-          detail={sayMisses > 0 ? `${sayMisses} to say again` : "From Hebrew, out loud · the classic traps"}
+          detail={sayMisses > 0 ? `${sayMisses} to say again` : "See Hebrew, say it in English · 3 min"}
           badge={sayMisses}
+        />
+        <SkillTile href="/talk" icon={Timer} title="One-minute talk" detail="Talk for a minute on a topic · 3 min" />
+        <SkillTile
+          href="/pronounce"
+          icon={AudioLines}
+          title="Pronunciation"
+          detail={`${PRONUNCIATION.length} sounds · hear it, record yourself`}
         />
       </SkillGroup>
 
-      <SkillGroup title="Words">
+      <SkillGroup title="Words and listening">
         <SkillTile
           href="/words"
           icon={Layers}
           title="Word cards"
-          detail={cardsDue > 0 ? `${cardsDue} for today` : `${DECKS.length} packs · say the word`}
+          detail={cardsDue > 0 ? `${cardsDue} for today` : `See the meaning, say the word · ${DECKS.length} packs`}
           badge={cardsDue}
         />
-        <SkillTile href="/read" icon={BookOpen} title="Short reads" detail="Tap a phrase for help" />
-        <SkillTile href="/phrases" icon={BookMarked} title="Phrase bank" detail="Everything you saved" />
-      </SkillGroup>
-
-      <SkillGroup title="Listening">
         <SkillTile
           href="/listen#stories"
           icon={BookOpenText}
           title="Stories"
-          detail={storiesNew > 0 ? `${storiesNew} new · 3 questions each` : "Replay to beat your best"}
+          detail={storiesNew > 0 ? `Listen, answer 3 questions · ${storiesNew} new` : "Replay to beat your best"}
         />
-        <SkillTile href="/listen" icon={Headphones} title="Listening gym" detail="Dictation and shadowing" />
+        <SkillTile href="/read" icon={BookOpen} title="Short reads" detail="Read, tap a phrase for help · 4 min" />
+        <SkillTile
+          href="/listen"
+          icon={Headphones}
+          title="Listening gym"
+          detail="Write what you hear, then repeat it · 3 min"
+        />
+        <SkillTile href="/phrases" icon={BookMarked} title="Phrase bank" detail="Everything you saved, to review" />
       </SkillGroup>
 
       <SkillGroup title="Fix your mistakes">
@@ -202,7 +217,7 @@ export function PracticeLibrary() {
           href="/review"
           icon={RotateCcw}
           title="Quick review"
-          detail={due > 0 ? `${due} due now` : "Nothing due"}
+          detail={due > 0 ? `${due} due now · 2 min` : "Nothing due"}
           badge={due}
         />
         <SkillTile
@@ -262,11 +277,11 @@ export function PracticeLibrary() {
             <p className="mt-1 text-xs font-bold text-dim">Goal: {CATEGORY_INFO[track.categories[0]].goal}</p>
           </div>
           <ol className="space-y-2.5">
-            {scenarios.map((s, i) => (
+            {shown.map((s) => (
               <li key={s.id}>
                 <ScenarioCard
                   scenario={s}
-                  step={i + 1}
+                  step={scenarios.indexOf(s) + 1}
                   done={done.has(s.id)}
                   next={hydrated && s.id === nextId}
                   tutorName={tutorName}
@@ -275,9 +290,49 @@ export function PracticeLibrary() {
               </li>
             ))}
           </ol>
+          {shown.length < scenarios.length && (
+            <button type="button" onClick={() => setShowAll(true)} className="btn-3d btn-ghost w-full py-2.5 text-sm">
+              Show all {scenarios.length} conversations
+            </button>
+          )}
         </div>
       </section>
     </div>
+  );
+}
+
+/** The one thing to do now, with the reason; "Something else" moves to the next idea. */
+function Suggested({ state }: { state: ReturnType<typeof useLearner> }) {
+  const list = practiceSuggestions(state);
+  const [i, setI] = useState(0);
+  const s = list[i % list.length];
+  if (!s) return null;
+  return (
+    <section
+      aria-labelledby="suggested-title"
+      className="rounded-3xl bg-accent p-5 text-white"
+      style={{ boxShadow: "0 6px 0 var(--accent-deep)" }}
+    >
+      <p id="suggested-title" className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider">
+        <Sparkles className="size-4" aria-hidden /> Suggested for you
+      </p>
+      <p className="mt-1 text-xl font-black leading-tight">{s.title}</p>
+      <p className="mt-1 text-sm font-bold">{s.why}</p>
+      <div className="mt-4 flex items-center gap-3">
+        <Link href={s.href} className="btn-3d btn-go flex flex-1 items-center justify-center gap-2 py-3 uppercase">
+          Start · {s.minutes} min <ArrowRight className="size-4" aria-hidden />
+        </Link>
+        {list.length > 1 && (
+          <button
+            type="button"
+            onClick={() => setI((v) => v + 1)}
+            className="tap inline-flex items-center gap-1 text-sm font-extrabold"
+          >
+            <Shuffle className="size-4" aria-hidden /> Something else
+          </button>
+        )}
+      </div>
+    </section>
   );
 }
 

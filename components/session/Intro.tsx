@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, Flame, Keyboard, Mic, Shuffle, Target } from "lucide-react";
 import clsx from "clsx";
 import type { Scenario } from "@/content/scenarios";
@@ -48,10 +49,18 @@ export function Intro({
   hebrewHelp,
 }: Props) {
   const speaker = characterName(scenario) ?? voice.displayName;
+  const router = useRouter();
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col gap-5 px-4 py-6">
       <Link
-        href="/practice"
+        href="/"
+        onClick={(e) => {
+          // Back to wherever he came from (Home, Practice, a report); Home when opened directly.
+          if (window.history.length > 1) {
+            e.preventDefault();
+            router.back();
+          }
+        }}
         className="-ml-2 inline-flex items-center gap-1 self-start rounded-full p-2 text-sm font-bold text-dim"
       >
         <ChevronLeft className="size-5" aria-hidden /> Back

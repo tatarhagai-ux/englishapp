@@ -222,10 +222,10 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     queueRef.current?.stop();
     await stopListening();
     const id = sessionRef.current;
-    if (!id) return router.push("/practice");
+    if (!id) return router.push("/");
     if (!turnsRef.current.some((t) => t.role === "learner")) {
       learner.discardSession(id);
-      return router.push("/practice");
+      return router.push("/");
     }
     learner.finishSession(id);
     setPhase("finishing");

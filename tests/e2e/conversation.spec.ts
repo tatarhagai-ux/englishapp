@@ -223,7 +223,7 @@ test("ending before saying anything discards the session", async ({ page }) => {
   await startSkippingWarmup(page);
   await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
   await page.getByRole("button", { name: "End conversation" }).click();
-  await expect(page).toHaveURL("/practice");
+  await expect(page).toHaveURL("/");
   await page.goto("/progress");
   await expect(page.getByRole("heading", { name: "Recent conversations" })).toHaveCount(0);
 });
@@ -266,6 +266,12 @@ test("practice library lists every category and opens a scenario", async ({ page
   await expect(page.getByText(/Free practice/)).toBeVisible();
   await page.getByRole("button", { name: "How it works" }).click();
   await expect(page.getByText(/Numbered ones go from easier to harder/)).toBeVisible();
+  // One clear suggestion at the top, with a way to see another.
+  const suggested = page.getByRole("region", { name: "Suggested for you" });
+  await expect(suggested.getByRole("link", { name: /Start/ })).toBeVisible();
+  const firstIdea = await suggested.locator("p").nth(1).textContent();
+  await suggested.getByRole("button", { name: "Something else" }).click();
+  await expect(suggested.locator("p").nth(1)).not.toHaveText(firstIdea ?? "");
   const goals = page.getByRole("tablist", { name: "Goals" });
   for (const g of ["Job interview", "At work", "Life abroad", "Everyday talk"]) {
     await expect(goals.getByRole("tab", { name: new RegExp(g) })).toBeVisible();
@@ -274,15 +280,21 @@ test("practice library lists every category and opens a scenario", async ({ page
   const panel = page.getByRole("tabpanel");
   await expect(panel.getByRole("link").first()).toContainText("Tell me about yourself");
   await expect(panel.getByRole("link").first()).toContainText("Next");
+  // The next few are listed; the rest is one tap away.
+  await expect(panel.getByRole("link", { name: /Full mock interview/ })).toHaveCount(0);
+  await panel.getByRole("button", { name: /Show all \d+ conversations/ }).click();
   await expect(panel.getByRole("link").last()).toContainText("Full mock interview");
   // Everyday talk joins free talk and world topics.
   await goals.getByRole("tab", { name: /Everyday talk/ }).click();
+  await expect(panel).toHaveAccessibleName("Everyday talk");
+  await panel.getByRole("button", { name: /Show all 12/ }).click();
   await expect(panel.getByRole("link", { name: /Your week/ })).toBeVisible();
   await expect(panel.getByRole("link", { name: /Will AI take our jobs/ })).toBeVisible();
   // The chosen goal is remembered.
   await goals.getByRole("tab", { name: /Life abroad/ }).click();
   await page.reload();
   await expect(goals.getByRole("tab", { name: /Life abroad/ })).toHaveAttribute("aria-selected", "true");
+  await panel.getByRole("button", { name: /Show all/ }).click();
   await page.getByRole("link", { name: /Problem at the airport/ }).click();
   await expect(page.getByRole("heading", { name: "Problem at the airport" })).toBeVisible();
   await expect(page.getByText("Kate · Australian accent")).toBeVisible();
