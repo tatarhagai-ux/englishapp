@@ -6,6 +6,8 @@ const fake = {
   streamEvents: [] as ChatStreamEvent[],
   streamError: null as Error | null,
   completions: [] as string[],
+  /** Replies to the teacher's wrap-up call in /api/analyze, which runs alongside the fixes. */
+  coach: [] as string[],
   calls: [] as LlmChatRequest[],
 };
 
@@ -18,8 +20,10 @@ vi.mock("@/lib/providers/llm", () => ({
       for (const ev of fake.streamEvents) yield ev;
     },
     async complete(req: LlmChatRequest) {
-      fake.calls.push(req);
-      return { text: fake.completions.shift() ?? "", usage: { promptTokens: 10, completionTokens: 5 } };
+      const isCoach = String(req.messages[0]?.content).includes("Write your wrap-up");
+      if (!isCoach) fake.calls.push(req);
+      const text = (isCoach ? fake.coach : fake.completions).shift() ?? "";
+      return { text, usage: { promptTokens: 10, completionTokens: 5 } };
     },
   }),
 }));
@@ -51,6 +55,7 @@ beforeEach(() => {
   fake.streamEvents = [];
   fake.streamError = null;
   fake.completions = [];
+  fake.coach = [];
   fake.calls = [];
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -134,13 +139,44 @@ describe("POST /api/analyze", () => {
     expect(fake.calls[0].json).toBe(true);
   });
 
+  it("adds the teacher's wrap-up from its own call, and counts both calls' usage", async () => {
+    fake.completions = [good];
+    fake.coach = [
+      JSON.stringify({
+        score: { fluency: 60, accuracy: 55, range: 50, task: 70, note_en: "Short answers." },
+        felt_en: "You flowed on work.",
+        homework: { task_en: "Three sentences with since." },
+        next_steps: [{ kind: "say", target: "for-and-since" }],
+      }),
+    ];
+    const { POST } = await import("@/app/api/analyze/route");
+    const json = await (await POST(post({ scenarioId: "free-your-week", history }))).json();
+    expect(json.analysis.corrections).toHaveLength(1);
+    expect(json.analysis.score.fluency).toBe(60);
+    expect(json.analysis.homework.task_en).toBe("Three sentences with since.");
+    expect(json.usage.promptTokens).toBe(20);
+  });
+
+  it("still returns the fixes when the wrap-up fails", async () => {
+    fake.completions = [good];
+    fake.coach = ["not json", "still not json"];
+    const { POST } = await import("@/app/api/analyze/route");
+    const res = await POST(post({ scenarioId: "free-your-week", history }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.analysis.corrections).toHaveLength(1);
+    expect(json.analysis.score).toBeUndefined();
+  });
+
   it("retries once when the first reply is not valid JSON", async () => {
     fake.completions = ["Sorry, here is my analysis in prose.", good];
+    fake.coach = ["{}"];
     const { POST } = await import("@/app/api/analyze/route");
     const res = await POST(post({ scenarioId: "free-your-week", history }));
     expect(res.status).toBe(200);
     expect(fake.calls).toHaveLength(2);
-    expect((await res.json()).usage.promptTokens).toBe(20);
+    // Two tries for the fixes plus one for the wrap-up.
+    expect((await res.json()).usage.promptTokens).toBe(30);
   });
 
   it("gives up with 502 after two bad replies", async () => {

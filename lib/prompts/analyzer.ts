@@ -191,9 +191,6 @@ ${known}
 Typical Hebrew-speaker patterns to look for (use these keys for new mistakes when they fit):
 ${patterns}
 
-Say it set ids you can use for next_steps (id: title):
-${SAY_SETS.map((x) => `${x.id}: ${x.title}`).join("\n")}
-
 Facts already remembered about him (copy exact text into memory_drop only if one is now untrue):
 ${memory.length ? memory.map((m) => `- ${m}`).join("\n") : "(none yet)"}
 
@@ -215,15 +212,10 @@ ${
     : ""
 }- memory: up to 4 short facts about him that a good teacher would remember and use next time, in English in the third person ("He has an AZ-900 exam in two weeks."). Plans, work, interests, opinions, and everyday numbers he mentioned (what something costs, how he worked out a price or a plan). Only things he actually said, never guesses. Skip health, religion, and account or ID numbers. Empty if nothing new.
 - memory_drop: from the list of already remembered facts below, copy the exact text of any fact this conversation shows is no longer true (he finished it, changed his mind, said the opposite). Usually empty.
-- summary_en: one or two sentences on what the conversation was about and anything he said that matters, for the teacher's own notes.
-- score: fluency, accuracy, range and task, each 0 to 100, for THIS conversation. Be honest, not generous: 50 to 60 is a normal B1+ conversation, above 85 is rare. fluency = flow and little hesitation, accuracy = mistakes that matter relative to how much he said, range = variety of words and structures, task = how much of the task he completed. note_en: one sentence on what moved the score most.
-- felt_en and felt_he: two or three sentences from the teacher's side, in plain words: where he flowed, where he got stuck or searched for a word, and one thing that stood out. Warm but real. The same text in natural Hebrew for felt_he.
-- next_steps: up to 3 things to do right now, most useful first. Each has a kind: "say" (target = one of the Say it set ids below, the one that fits his biggest mistake), "mistake" (target = an error_key from your corrections), "cards" (his word cards), "listen" (a listening story), "talk" (a one-minute talk), or "review" (quick review of old mistakes). why_en: one short reason that points at something he said in THIS conversation. why_he: the same in Hebrew.
-- homework: one small, concrete task for before the next conversation, doable in five minutes, tied to a mistake or a goal from this conversation (for example: "Say three sentences about your week using for or since", or "Record one minute about your exam without saying very"). task_he: the same in Hebrew.
 - level: his SPEAKING level as shown here (A1, A2, B1, B1+, B2, B2+, C1, C2), judged on range, accuracy, fluency and how well he handles harder questions. confidence is "low" if he said little. note_en: one sentence on what would move him up.
 
 JSON shape:
-{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","best_sentence":"","memory":[""],"memory_drop":[""],"summary_en":"","score":{"fluency":60,"accuracy":60,"range":55,"task":70,"note_en":""},"felt_en":"","felt_he":"","next_steps":[{"kind":"say","target":"","why_en":"","why_he":""}],"homework":{"task_en":"","task_he":""},"level":{"cefr":"B1+","confidence":"medium","note_en":""}${
+{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","best_sentence":"","memory":[""],"memory_drop":[""],"level":{"cefr":"B1+","confidence":"medium","note_en":""}${
     scenario.category === "interview"
       ? `,"interview":{"answers":[{"question":"","direct":true,"example":false,"actions":true,"result":false,"tip_en":"","better_start":""}],"readiness":3,"note_en":""}`
       : ""
@@ -241,6 +233,74 @@ ${transcript}`;
     { role: "system", content: system },
     { role: "user", content: user },
   ];
+}
+
+/** The fields the teacher's summary call returns (see buildCoachMessages). */
+export const coachSchema = analysisSchema.pick({
+  summary_en: true,
+  score: true,
+  felt_en: true,
+  felt_he: true,
+  next_steps: true,
+  homework: true,
+});
+export type Coach = z.infer<typeof coachSchema>;
+
+function transcriptOf(history: Turn[]): string {
+  return history
+    .map((t) =>
+      t.role === "tutor" ? `TUTOR: ${t.text}` : `LEARNER${t.input === "stuck" ? " (in Hebrew, stuck)" : ""}: ${t.text}`,
+    )
+    .join("\n");
+}
+
+/**
+ * The teacher's wrap-up: score, how it felt, what to do now, homework. A separate call from
+ * the fixes, run at the same time, so neither reply is long enough to time out on a cheap
+ * model; if this one fails the report still has its fixes.
+ */
+export function buildCoachMessages(scenario: Scenario, history: Turn[]): ChatMessage[] {
+  const known = SEED_ERRORS.map((e) => `${e.key}: ${e.title}`).join("\n");
+  const system = `You are an experienced, demanding but warm English teacher for Hebrew speakers. You just listened to a practice conversation. Write your wrap-up for the learner and return ONLY a JSON object.
+
+${LEARNER_PROFILE}
+
+Say it set ids (id: title):
+${SAY_SETS.map((x) => `${x.id}: ${x.title}`).join("\n")}
+
+Known mistake keys (for next_steps of kind "mistake"):
+${known}
+
+Rules:
+- Only judge LEARNER lines. They come from speech recognition: ignore punctuation and plausible recognition errors. Lines marked "in Hebrew, stuck" are moments he could not find the words.
+- summary_en: one or two sentences on what the conversation was about and anything he said that matters, for the teacher's own notes.
+- score: fluency, accuracy, range and task, each 0 to 100, for THIS conversation. Be honest, not generous: 50 to 60 is a normal B1+ conversation, above 85 is rare. fluency = flow and little hesitation, accuracy = mistakes that matter relative to how much he said, range = variety of words and structures, task = how much of the task he completed. note_en: one sentence on what moved the score most.
+- felt_en and felt_he: two or three sentences from the teacher's side, in plain words: where he flowed, where he got stuck or searched for a word, and one thing that stood out. Warm but real. The same text in natural Hebrew for felt_he.
+- next_steps: up to 3 things to do right now, most useful first. Each has a kind: "say" (target = one of the Say it set ids listed above, the one that fits his biggest mistake), "mistake" (target = one of the known mistake keys above that he made in this conversation), "cards" (his word cards), "listen" (a listening story), "talk" (a one-minute talk), or "review" (quick review of old mistakes). why_en: one short reason that points at something he said in THIS conversation. why_he: the same in Hebrew.
+- homework: one small, concrete task for before the next conversation, doable in five minutes, tied to a mistake or a goal from this conversation (for example: "Say three sentences about your week using for or since", or "Record one minute about your exam without saying very"). task_he: the same in Hebrew.
+- Keep every text short. Hebrew must be natural, not a word-for-word translation.
+
+JSON shape:
+{"summary_en":"","score":{"fluency":60,"accuracy":60,"range":55,"task":70,"note_en":""},"felt_en":"","felt_he":"","next_steps":[{"kind":"say","target":"","why_en":"","why_he":""}],"homework":{"task_en":"","task_he":""}}`;
+
+  const user = `Scenario: ${scenario.title}
+Task: ${scenario.task}
+Success criteria:
+${scenario.successCriteria.map((c) => `- ${c}`).join("\n")}
+
+Transcript:
+${transcriptOf(history)}`;
+  return [
+    { role: "system", content: system },
+    { role: "user", content: user },
+  ];
+}
+
+export function parseCoach(text: string): Coach | null {
+  const raw = extractJson(text);
+  if (raw === null || typeof raw !== "object") return null;
+  const parsed = coachSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 /** Pull a JSON object out of a model reply, tolerating code fences and stray prose. */

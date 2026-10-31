@@ -163,3 +163,17 @@ describe("lesson summary", () => {
     expect(links.map((l) => l.href)).toEqual(["/say/for-and-since", "/mistakes/missing_be", "/words"]);
   });
 });
+
+describe("teacher's wrap-up prompt", () => {
+  it("asks for the summary fields, lists real Say it sets, and the fixes prompt stays short", async () => {
+    const { buildCoachMessages, parseCoach } = await import("@/lib/prompts/analyzer");
+    const coach = buildCoachMessages(free, [{ role: "learner", text: "I study two weeks" }])[0].content;
+    expect(coach).toContain("for-and-since:");
+    expect(coach).toContain("homework:");
+    const core = buildAnalyzerMessages(free, [])[0].content;
+    expect(core).not.toContain("homework");
+    expect(core).not.toContain("felt_en");
+    expect(parseCoach('{"felt_en":"ok","score":{"fluency":1,"accuracy":2,"range":3,"task":4}}')?.score?.task).toBe(4);
+    expect(parseCoach("nope")).toBeNull();
+  });
+});
