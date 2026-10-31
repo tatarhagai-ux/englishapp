@@ -49,3 +49,40 @@ describe("practice suggestions", () => {
     expect(misses).toBeLessThan(story);
   });
 });
+
+describe("score history", () => {
+  it("lists scored reports oldest first and counts challenges met", async () => {
+    const { scoreHistory } = await import("@/lib/learner/model");
+    const mk = (id: string, at: string, report: object, challenge?: string): SessionRecord => ({
+      id,
+      scenarioId: "free-your-week",
+      mode: "voice",
+      startedAt: at,
+      endedAt: at,
+      day: at.slice(0, 10),
+      turns: [{ role: "learner", text: "hi there" }],
+      speakingSeconds: 60,
+      stuckCount: 0,
+      fixedAloud: [],
+      xp: 0,
+      costUsd: 0,
+      challenge,
+      report: parseAnalysis(JSON.stringify(report))!,
+    });
+    const score = { fluency: 50, accuracy: 50, range: 50, task: 50 };
+    const s = {
+      ...initialState(now),
+      sessions: [
+        mk("b", "2026-10-02T10:00:00Z", { score: { ...score, task: 100 }, challenge: { met: true } }, "pushback"),
+        mk("a", "2026-10-01T10:00:00Z", { score }, "curveball"),
+        mk("c", "2026-10-03T10:00:00Z", {}),
+      ],
+    };
+    const h = scoreHistory(s);
+    expect(h.points.map((p) => [p.id, p.total])).toEqual([
+      ["a", 50],
+      ["b", 60],
+    ]);
+    expect([h.challengesMet, h.challengesTried]).toEqual([1, 1]);
+  });
+});

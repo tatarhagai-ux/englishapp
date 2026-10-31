@@ -9,7 +9,7 @@ import { SCENARIOS, scenarioById, type Scenario } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import { SAY_SETS } from "@/content/say";
 import type { Turn } from "@/lib/conversation/types";
-import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
+import { ANSWER_PARTS, totalScore, type Analysis } from "@/lib/prompts/analyzer";
 import { bestStreak, computeStreak, dayKey, weekStart } from "@/lib/game/streak";
 import { EMPTY_STATS, type LearnerStats } from "@/lib/game/achievements";
 import { xpForSession } from "@/lib/game/xp";
@@ -386,6 +386,21 @@ export function recentSummaries(state: LearnerState, max = 3): string[] {
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
     .slice(0, max)
     .map((s) => `${s.day}: ${s.report!.summary_en}`);
+}
+
+/** Lesson scores over time, oldest first, and how many challenges he met. */
+export function scoreHistory(state: LearnerState): {
+  points: { id: string; day: string; total: number }[];
+  challengesMet: number;
+  challengesTried: number;
+} {
+  const real = state.sessions.filter((s) => isRealSession(s) && s.report);
+  const points = real
+    .filter((s) => s.report!.score)
+    .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
+    .map((s) => ({ id: s.id, day: s.day, total: totalScore(s.report!.score!) }));
+  const tried = real.filter((s) => s.challenge && s.report!.challenge);
+  return { points, challengesMet: tried.filter((s) => s.report!.challenge!.met).length, challengesTried: tried.length };
 }
 
 /** The newest homework he hasn't ticked off yet, from the last conversation that set one. */
