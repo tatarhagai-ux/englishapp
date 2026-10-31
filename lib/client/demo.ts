@@ -82,6 +82,37 @@ export function demoAnalysis(scenario: Scenario, turns: Turn[]): Analysis {
       : "You kept the conversation going.",
     best_sentence: "",
     level: { cefr: "B1+", confidence: "medium", note_en: "Sample estimate. The real one comes from your own words." },
+    score: {
+      fluency: 58,
+      accuracy: 52,
+      range: 50,
+      task: said ? 75 : 30,
+      note_en: "A sample score. With the AI connected, each part is judged from what you said.",
+    },
+    felt_en:
+      "This is where your tutor tells you how the conversation felt: where you flowed, where you searched for a word, and what stood out.",
+    felt_he: "כאן המורה מספר איך השיחה הרגישה: איפה זרמת, איפה חיפשת מילה, ומה בלט.",
+    next_steps: [
+      {
+        kind: "say",
+        target: "for-and-since",
+        why_en: "For and since is a common trap for Hebrew speakers.",
+        why_he: "for ו-since הם מלכודת נפוצה לדוברי עברית.",
+      },
+      { kind: "cards", target: "", why_en: "Keep this week's words fresh.", why_he: "לשמור על מילות השבוע טריות." },
+    ],
+    upgrades: [
+      {
+        plain: "very hard",
+        better: "challenging",
+        meaning_he: "מאתגר",
+        example: "Networking is the most challenging part.",
+      },
+    ],
+    homework: {
+      task_en: "Say three sentences about your week using for or since.",
+      task_he: "תגיד שלושה משפטים על השבוע שלך עם for או since.",
+    },
     ...(scenario.category === "interview"
       ? {
           interview: {

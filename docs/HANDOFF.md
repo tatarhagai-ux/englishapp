@@ -1,8 +1,19 @@
 # Speakwise: סיכום מפורט למעבר לשיחה חדשה
 
-עודכן ב-27.10.2026 (לילה). מי שקורא: Claude בשיחה החדשה. המשתמש הוא חגי תתר. תקרא את כל הקובץ לפני שמתחילים, ואל תתחיל לבנות לפני שאישרת עם חגי מה הוא רוצה.
+עודכן ב-31.10.2026 (ערב). מי שקורא: Claude בשיחה החדשה. המשתמש הוא חגי תתר. תקרא את כל הקובץ לפני שמתחילים, ואל תתחיל לבנות לפני שאישרת עם חגי מה הוא רוצה.
 
 ## 0. איפה עצרנו
+
+**עדכון 31.10.2026:** [tatarhagai-ux/englishapp#20](https://github.com/tatarhagai-ux/englishapp/pull/20) (ענף `claude/upbeat-sagan-nrffii`, טיוטה, לא ממוזג). חגי ביקש: פחות חזרתיות, מורה שמאתגר אבל נעים, סיכום שיעור עם ציון ושיעורי בית, זיכרון אמיתי עליו, Practice מובן. נבנה בארבעה שלבים:
+1. **סיכום שיעור** (`components/report/LessonSummary.tsx`): ציון 0 עד 100 (Flow, Accuracy, Range, Task; המשקל ב-`totalScore`), "How it felt to your tutor", "Do this now" (רק קישורים אמיתיים, `lib/learner/steps.ts`), שיעורי בית (גם בבית, `openHomework`), מילים חזקות יותר עם "Add to my review". הדוח הוא **שתי קריאות במקביל** ב-`app/api/analyze/route.ts`: התיקונים (`buildAnalyzerMessages`) והסיכום (`buildCoachMessages`). קריאה אחת ארוכה חרגה מזמן התגובה, וחגי ראה שהסיכום לא עובד.
+2. **זיכרון:** `MEMORY_MAX` 40, `memory_drop` מוחק עובדות שהשתנו, `summary_en` לכל שיחה, והמורה מקבל `recent` (3 שיחות) ו-`homework`. הוספה ידנית ב-Settings, ו-`removed.facts` כדי שמחיקה לא תחזור בסנכרון.
+3. **מורה מאתגר:** `content/challenges.ts` (8 אתגרים עם `minLevel`), `lib/learner/challenge.ts` (לפי יום ותרחיש, בלי 3 האחרונים, לפי `adaptation()`), כרטיס ב-Intro עם "Another". כללי "teacher, not only a friend" בפרומפט. פתיחה חדשה בכל שיחה (`opening: true` ב-`/api/chat`, `fetchOpener`), ואם היא איטית מ-4 שניות חוזרים ל-`opener` הקבוע.
+4. **Practice:** "Suggested for you" (`lib/learner/recommend.ts`), שלוש קבוצות עם הסבר וזמן, רשימת שיחות מקוצרת עם "Show all". Back חוזר למקום הקודם.
+5. **Progress:** "Lesson scores" (`scoreHistory`).
+
+6. **מודל הדוח:** `anthropic/claude-haiku-5.5` (ב-`DEFAULT_MODELS` ב-`lib/env.ts`), באישור חגי ב-31.10 לשבוע ניסיון. השיחה נשארת על DeepSeek V4 Flash. אם Haiku נדחה (400/403/404), `withFallback` ב-`app/api/analyze/route.ts` חוזר למודל השיחה. המחיר ($0.10 / $0.50 למיליון) לקוח מאתרי השוואה, כי openrouter.ai חסום מהסביבה. **ב-7.11 לשאול את חגי** אם להשאיר, לפי איכות הדוחות והעלות ב-Progress.
+
+ציונים ומה עוד חסר: `docs/AUDIT.md`. לא נבדק מול המודל האמיתי ובמכשיר.
 
 **עדכון 27.10.2026 (בוקר):** [tatarhagai-ux/englishapp#15](https://github.com/tatarhagai-ux/englishapp/pull/15) **מוזג** לענף `claude/loving-sagan-htpldu` (שעולה לאוויר) אחרי שחגי ביקש למזג את מה שנעשה עד אז. בתיאור ה-PR יש טבלה לפי נושאים ולכל שורה מה לבדוק בטלפון. עבודה נוספת באה בענף `claude/intelligent-fermat-go7dia` ובכל PR חדש, והוא לא ממוזג עד שחגי אומר.
 

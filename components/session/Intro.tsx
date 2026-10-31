@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, Keyboard, Mic, Target } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Flame, Keyboard, Mic, Shuffle, Target } from "lucide-react";
 import clsx from "clsx";
 import type { Scenario } from "@/content/scenarios";
 import { CATEGORY_INFO, characterName, scenarioLevel } from "@/content/scenarios";
 import type { Voice } from "@/content/voices";
 import type { TalkTopic } from "@/content/topics";
+import type { Challenge } from "@/content/challenges";
 import { Avatar } from "../Avatar";
 
 interface Props {
@@ -23,6 +25,10 @@ interface Props {
   warmupCount: number;
   /** The one-minute talk's topic card. */
   topic?: TalkTopic;
+  /** Today's challenge, with a way to pick another one. */
+  challenge?: Challenge;
+  onSwapChallenge?: () => void;
+  hebrewHelp?: boolean;
 }
 
 /** Before the conversation: who you'll talk to, your task, and phrases worth trying. */
@@ -38,12 +44,23 @@ export function Intro({
   starting,
   warmupCount,
   topic,
+  challenge,
+  onSwapChallenge,
+  hebrewHelp,
 }: Props) {
   const speaker = characterName(scenario) ?? voice.displayName;
+  const router = useRouter();
   return (
     <div className="mx-auto flex min-h-dvh max-w-xl flex-col gap-5 px-4 py-6">
       <Link
-        href="/practice"
+        href="/"
+        onClick={(e) => {
+          // Back to wherever he came from (Home, Practice, a report); Home when opened directly.
+          if (window.history.length > 1) {
+            e.preventDefault();
+            router.back();
+          }
+        }}
         className="-ml-2 inline-flex items-center gap-1 self-start rounded-full p-2 text-sm font-bold text-dim"
       >
         <ChevronLeft className="size-5" aria-hidden /> Back
@@ -101,6 +118,34 @@ export function Intro({
           ))}
         </ul>
       </section>
+
+      {challenge && (
+        <section aria-labelledby="challenge-title" className="tile space-y-2 border-xp/60 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2
+              id="challenge-title"
+              className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-faint"
+            >
+              <Flame className="size-4 text-xp" aria-hidden /> Today&apos;s challenge · {challenge.title}
+            </h2>
+            {onSwapChallenge && (
+              <button
+                type="button"
+                onClick={onSwapChallenge}
+                className="tap inline-flex shrink-0 items-center gap-1 text-xs font-extrabold text-accent"
+              >
+                <Shuffle className="size-3.5" aria-hidden /> Another
+              </button>
+            )}
+          </div>
+          <p className="font-bold">{challenge.task}</p>
+          {hebrewHelp && (
+            <p dir="rtl" lang="he" className="text-sm text-dim">
+              {challenge.taskHe}
+            </p>
+          )}
+        </section>
+      )}
 
       <section aria-labelledby="phrases-title">
         <h2 id="phrases-title" className="text-sm font-extrabold uppercase tracking-wider text-faint">

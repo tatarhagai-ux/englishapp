@@ -4,6 +4,8 @@ import { SEED_ERRORS } from "@/content/learner-seed";
 import { HEBREW_PATTERNS } from "@/content/l1/he";
 import type { Turn } from "@/lib/conversation/types";
 import type { ChatMessage } from "@/lib/providers/llm/types";
+import { SAY_SETS } from "@/content/say";
+import type { Challenge } from "@/content/challenges";
 import { LEARNER_PROFILE } from "./learner";
 
 const keyField = z
@@ -26,6 +28,19 @@ const correction = z.object({
   error_key: keyField,
   category: z.string().default("grammar"),
   severity: z.coerce.number().int().min(1).max(3).catch(2),
+});
+
+const percent = z.coerce.number().min(0).max(100).transform(Math.round);
+
+/** What the "next steps" can point to. Only these kinds are accepted; see lib/learner/steps.ts. */
+export const STEP_KINDS = ["say", "mistake", "cards", "listen", "talk", "review"] as const;
+
+const nextStep = z.object({
+  kind: z.enum(STEP_KINDS),
+  /** say: a set id. mistake: an error key. Empty for the others. */
+  target: z.string().trim().max(80).default(""),
+  why_en: z.string().trim().max(200).default(""),
+  why_he: z.string().trim().max(200).default(""),
 });
 
 /**
@@ -65,7 +80,52 @@ export const analysisSchema = z.object({
     .optional()
     .catch(undefined),
   /** Short facts about his life worth remembering for the next conversation. */
-  memory: z.array(z.string().trim().min(3).max(160)).max(3).catch([]).default([]),
+  memory: z.array(z.string().trim().min(3).max(160)).max(4).catch([]).default([]),
+  /** Facts already remembered that this conversation shows are out of date (exact text). */
+  memory_drop: z.array(z.string().trim().min(3).max(160)).max(4).catch([]).default([]),
+  /** One or two sentences: what the conversation was about and what he said that matters. */
+  summary_en: z.string().trim().max(300).catch("").default(""),
+  /** Four scores from 0 to 100; the total is worked out in code (see totalScore). */
+  score: z
+    .object({
+      fluency: percent,
+      accuracy: percent,
+      range: percent,
+      task: percent,
+      note_en: z.string().trim().max(240).default(""),
+    })
+    .optional()
+    .catch(undefined),
+  /** How the conversation felt to the teacher, in plain words. */
+  felt_en: z.string().trim().max(300).catch("").default(""),
+  felt_he: z.string().trim().max(300).catch("").default(""),
+  next_steps: z.array(nextStep).max(3).catch([]).default([]),
+  /** Today's challenge: did he meet it (only when there was one). */
+  challenge: z
+    .object({ met: z.boolean().catch(false), note_en: z.string().trim().max(240).default("") })
+    .optional()
+    .catch(undefined),
+  /** Plain words he leaned on, each with a stronger one to learn. */
+  upgrades: z
+    .array(
+      z.object({
+        plain: z.string().trim().min(1).max(60),
+        better: z.string().trim().min(1).max(60),
+        meaning_he: z.string().trim().max(80).default(""),
+        example: z.string().trim().max(200).default(""),
+      }),
+    )
+    .max(3)
+    .catch([])
+    .default([]),
+  /** One small task for before the next conversation. */
+  homework: z
+    .object({
+      task_en: z.string().trim().min(3).max(240),
+      task_he: z.string().trim().max(240).default(""),
+    })
+    .optional()
+    .catch(undefined),
   /** Interview scenarios only: how each answer was built, and overall readiness. */
   interview: z
     .object({
@@ -124,7 +184,12 @@ export const ANSWER_PARTS = [
 
 export type Analysis = z.infer<typeof analysisSchema>;
 
-export function buildAnalyzerMessages(scenario: Scenario, history: Turn[]): ChatMessage[] {
+/** Weights for the total: how he said it matters a little more than what was ticked off. */
+export function totalScore(score: NonNullable<Analysis["score"]>): number {
+  return Math.round(score.fluency * 0.3 + score.accuracy * 0.3 + score.range * 0.2 + score.task * 0.2);
+}
+
+export function buildAnalyzerMessages(scenario: Scenario, history: Turn[], memory: string[] = []): ChatMessage[] {
   const known = SEED_ERRORS.map((e) => `${e.key}: ${e.title}`).join("\n");
   const patterns = HEBREW_PATTERNS.filter((p) => p.area !== "pronunciation" && p.area !== "prosody")
     .map((p) => `${p.key}: ${p.pattern}${p.example ? ` (e.g. "${p.example}"${p.fix ? ` → "${p.fix}"` : ""})` : ""}`)
@@ -145,6 +210,9 @@ ${known}
 Typical Hebrew-speaker patterns to look for (use these keys for new mistakes when they fit):
 ${patterns}
 
+Facts already remembered about him (copy exact text into memory_drop only if one is now untrue):
+${memory.length ? memory.map((m) => `- ${m}`).join("\n") : "(none yet)"}
+
 Rules:
 - Only judge LEARNER lines. Lines marked "in Hebrew, stuck" are not errors; ignore them, but phrases the tutor offered there are good "phrases".
 - The learner's lines come from speech recognition. Do not report punctuation, capitalization, or anything that is plausibly a recognition error.
@@ -161,11 +229,12 @@ ${
     ? `- interview: for each main interview question he answered (at most 5), judge his answer like a hiring manager: direct = he answered the actual question in his first sentence or two; example = he gave a concrete, real situation; actions = he said what HE did ("I", not only "we"); result = he ended with an outcome, a number, or a lesson. tip_en: the one change that would most improve that answer. better_start: a strong opening sentence in his own content, natural and spoken. readiness: 1 to 5, how ready these answers would sound in a real English interview (language and structure; 5 = ready). note_en: one sentence on what to practice next.
 `
     : ""
-}- memory: up to 3 short facts about his life, plans or work that a good teacher would remember and ask about next time, written in English in the third person ("He has an AZ-900 exam in two weeks."). Only things he actually said; skip anything sensitive (health, religion, money details). Empty if nothing new.
+}- memory: up to 4 short facts about him that a good teacher would remember and use next time, in English in the third person ("He has an AZ-900 exam in two weeks."). Plans, work, interests, opinions, and everyday numbers he mentioned (what something costs, how he worked out a price or a plan). Only things he actually said, never guesses. Skip health, religion, and account or ID numbers. Empty if nothing new.
+- memory_drop: from the list of already remembered facts below, copy the exact text of any fact this conversation shows is no longer true (he finished it, changed his mind, said the opposite). Usually empty.
 - level: his SPEAKING level as shown here (A1, A2, B1, B1+, B2, B2+, C1, C2), judged on range, accuracy, fluency and how well he handles harder questions. confidence is "low" if he said little. note_en: one sentence on what would move him up.
 
 JSON shape:
-{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","best_sentence":"","memory":[""],"level":{"cefr":"B1+","confidence":"medium","note_en":""}${
+{"corrections":[{"original":"","better":"","why_en":"","why_he":"","error_key":"","category":"grammar|vocabulary|preposition|word_order|discourse","severity":2}],"other_errors":[{"error_key":"","original":"","better":""}],"correct_uses":[""],"phrases":[{"text":"","meaning_en":"","meaning_he":""}],"task":{"completed":false,"met":[""],"feedback_en":""},"praise_en":"","best_sentence":"","memory":[""],"memory_drop":[""],"level":{"cefr":"B1+","confidence":"medium","note_en":""}${
     scenario.category === "interview"
       ? `,"interview":{"answers":[{"question":"","direct":true,"example":false,"actions":true,"result":false,"tip_en":"","better_start":""}],"readiness":3,"note_en":""}`
       : ""
@@ -183,6 +252,84 @@ ${transcript}`;
     { role: "system", content: system },
     { role: "user", content: user },
   ];
+}
+
+/** The fields the teacher's summary call returns (see buildCoachMessages). */
+export const coachSchema = analysisSchema.pick({
+  summary_en: true,
+  score: true,
+  felt_en: true,
+  felt_he: true,
+  next_steps: true,
+  homework: true,
+  challenge: true,
+  upgrades: true,
+});
+export type Coach = z.infer<typeof coachSchema>;
+
+function transcriptOf(history: Turn[]): string {
+  return history
+    .map((t) =>
+      t.role === "tutor" ? `TUTOR: ${t.text}` : `LEARNER${t.input === "stuck" ? " (in Hebrew, stuck)" : ""}: ${t.text}`,
+    )
+    .join("\n");
+}
+
+/**
+ * The teacher's wrap-up: score, how it felt, what to do now, homework. A separate call from
+ * the fixes, run at the same time, so neither reply is long enough to time out on a cheap
+ * model; if this one fails the report still has its fixes.
+ */
+export function buildCoachMessages(scenario: Scenario, history: Turn[], challenge?: Challenge): ChatMessage[] {
+  const known = SEED_ERRORS.map((e) => `${e.key}: ${e.title}`).join("\n");
+  const system = `You are an experienced, demanding but warm English teacher for Hebrew speakers. You just listened to a practice conversation. Write your wrap-up for the learner and return ONLY a JSON object.
+
+${LEARNER_PROFILE}
+
+Say it set ids (id: title):
+${SAY_SETS.map((x) => `${x.id}: ${x.title}`).join("\n")}
+
+Known mistake keys (for next_steps of kind "mistake"):
+${known}
+
+Rules:
+- Only judge LEARNER lines. They come from speech recognition: ignore punctuation and plausible recognition errors. Lines marked "in Hebrew, stuck" are moments he could not find the words.
+- summary_en: one or two sentences on what the conversation was about and anything he said that matters, for the teacher's own notes.
+- score: fluency, accuracy, range and task, each 0 to 100, for THIS conversation. Be honest, not generous: 50 to 60 is a normal B1+ conversation, above 85 is rare. fluency = flow and little hesitation, accuracy = mistakes that matter relative to how much he said, range = variety of words and structures, task = how much of the task he completed. note_en: one sentence on what moved the score most.
+- felt_en and felt_he: two or three sentences from the teacher's side, in plain words: where he flowed, where he got stuck or searched for a word, and one thing that stood out. Warm but real. The same text in natural Hebrew for felt_he.
+- next_steps: up to 3 things to do right now, most useful first. Each has a kind: "say" (target = one of the Say it set ids listed above, the one that fits his biggest mistake), "mistake" (target = one of the known mistake keys above that he made in this conversation), "cards" (his word cards), "listen" (a listening story), "talk" (a one-minute talk), or "review" (quick review of old mistakes). why_en: one short reason that points at something he said in THIS conversation. why_he: the same in Hebrew.
+- homework: one small, concrete task for before the next conversation, doable in five minutes, tied to a mistake or a goal from this conversation (for example: "Say three sentences about your week using for or since", or "Record one minute about your exam without saying very"). task_he: the same in Hebrew.
+- upgrades: up to 3 plain or overused words or phrases he actually said (like very good, thing, big, I think), each with ONE stronger, natural alternative that fits what he meant, its Hebrew meaning, and a short example sentence in his own context. Skip it if nothing stood out.
+${
+  challenge
+    ? `- challenge: today's challenge was "${challenge.task}". met = true only if he clearly did it. note_en: one honest sentence on how it went, quoting him if you can.
+`
+    : ""
+}- Keep every text short. Hebrew must be natural, not a word-for-word translation.
+
+JSON shape:
+{"summary_en":"","score":{"fluency":60,"accuracy":60,"range":55,"task":70,"note_en":""},"felt_en":"","felt_he":"","next_steps":[{"kind":"say","target":"","why_en":"","why_he":""}],"homework":{"task_en":"","task_he":""},"upgrades":[{"plain":"","better":"","meaning_he":"","example":""}]${
+    challenge ? `,"challenge":{"met":false,"note_en":""}` : ""
+  }}`;
+
+  const user = `Scenario: ${scenario.title}
+Task: ${scenario.task}
+Success criteria:
+${scenario.successCriteria.map((c) => `- ${c}`).join("\n")}
+
+Transcript:
+${transcriptOf(history)}`;
+  return [
+    { role: "system", content: system },
+    { role: "user", content: user },
+  ];
+}
+
+export function parseCoach(text: string): Coach | null {
+  const raw = extractJson(text);
+  if (raw === null || typeof raw !== "object") return null;
+  const parsed = coachSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 /** Pull a JSON object out of a model reply, tolerating code fences and stray prose. */

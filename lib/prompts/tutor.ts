@@ -2,6 +2,7 @@ import type { Scenario } from "@/content/scenarios";
 import type { ChatMessage } from "@/lib/providers/llm/types";
 import type { CorrectionMode, Turn } from "@/lib/conversation/types";
 import { describeTargets, LEARNER_PROFILE } from "./learner";
+import { challengeForTutor } from "@/lib/learner/challenge";
 
 const CORRECTION_RULES: Record<CorrectionMode, string> = {
   off: "Do not correct mistakes at all. Just respond to the meaning. Corrections come later in a separate report.",
@@ -22,6 +23,14 @@ export interface TutorPromptInput {
   practicePhrases?: string[];
   /** What he told the app in earlier conversations, newest first. */
   memory?: string[];
+  /** What the last few conversations were about, newest first. */
+  recent?: string[];
+  /** Homework from the last report that he hasn't ticked off yet. */
+  homework?: string;
+  /** Today's challenge id (content/challenges.ts). */
+  challenge?: string;
+  /** No history yet: write the first line of the conversation. */
+  opening?: boolean;
   wrapUp: boolean;
   level?: "easier" | "steady" | "stretch";
 }
@@ -56,6 +65,13 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
     input.memory?.length && !roleplay
       ? `What you remember about him from earlier conversations (newest first):\n${input.memory.map((m) => `- ${m}`).join("\n")}\nLike a real coach, early in the conversation pick up one of these naturally (for example, ask how it went). Mention at most one or two, never list them, and don't repeat a question he has already answered.`
       : "",
+    input.recent?.length && !roleplay
+      ? `Your notes from your last conversations with him (newest first):\n${input.recent.map((r) => `- ${r}`).join("\n")}\nDon't repeat a topic you already covered in the same way: build on it, take it further, or pick something new.`
+      : "",
+    input.homework && !roleplay
+      ? `Last time you gave him this homework: "${input.homework}". Early on, ask him to show you (for example, say the sentences now). React honestly: praise what he got right and fix one thing.`
+      : "",
+    challengeForTutor(input.challenge, !!roleplay),
     input.practicePhrases?.length
       ? `Phrases he is learning: ${input.practicePhrases.map((p) => `"${p}"`).join(", ")}. Once or twice, steer the conversation so one of them fits naturally, and if he uses one well, react warmly in a few words.`
       : "",
@@ -64,12 +80,22 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
 - ${LEVEL_RULES[input.level ?? "steady"]} No lists, no markdown, no emojis.
 - Be patient. He often needs a moment to find words. If his answer is very short or trails off, encourage him to go on ("Go on" or "And then?") instead of moving to a new topic. If he is clearly searching for one word, offer just that word, not the whole sentence.
 - Make him feel good about trying: when something he says is well put, say so in a few specific words, and never sound disappointed.
-- Let him do most of the talking. Never answer your own question or lecture.
+- Let him do most of the talking. Never answer your own question or lecture.${
+      roleplay
+        ? ""
+        : `
+- You are a teacher, not only a friend: keep him working at the edge of what he can say. Don't accept a one-word answer to an open question; ask for a reason, an example, or a detail. Now and then ask a harder follow-up (what would you do if, what's the downside, compare two things).
+- If he makes the same important mistake twice, stop once, briefly: say the correct form, have him say it, then go straight back to the conversation.
+- Mix it up: don't ask the same kind of question twice in a row, and don't ask questions he answered in earlier conversations; build on what you know instead.`
+    }
 - His words come from speech recognition and may contain recognition errors. If a word looks like a recognition error, assume he said the sensible thing and do not correct it.
 - If he asks what something means, explain in one simple English sentence and continue.
 - Never say you are an AI unless he asks directly.`,
     `Corrections: ${CORRECTION_RULES[input.correctionMode]}`,
     `When a learner message starts with ${STUCK_MARKER}, he could not find the words in English. Reply with: You could say: "<natural English version of what he meant>". Then ask him to say it himself. Keep it short and encouraging. Do not move on until he has tried.`,
+    input.opening
+      ? `This is the very start of the conversation and you speak first. The usual opening is: "${scenario.opener}" Say something with the same purpose in your own fresh words (1 or 2 short sentences ending with one question).${roleplay ? " Stay in character." : " Greet him by name once. If something you remember about him or today's challenge fits naturally, you may use it."} Don't repeat the usual opening word for word.`
+      : "",
     input.wrapUp
       ? "Time is up. Close the conversation now in 1 or 2 sentences: mention one specific thing he did well, and say goodbye in a way that fits the situation. Do not ask a new question."
       : "",

@@ -10,6 +10,8 @@ export const PRICING = {
     "deepseek/deepseek-v4-flash": { input: 0.14, cachedInput: 0.14, output: 0.28 },
     "deepseek/deepseek-v3.2": { input: 0.21, cachedInput: 0.21, output: 0.31 },
     "deepseek-chat": { input: 0.28, cachedInput: 0.028, output: 0.42 },
+    // OpenRouter's list, 14 October 2026 (via two pricing write-ups; openrouter.ai is blocked here).
+    "anthropic/claude-haiku-5.5": { input: 0.1, cachedInput: 0.01, output: 0.5 },
     default: { input: 1.0, cachedInput: 1.0, output: 3.0 },
   } as Record<string, { input: number; cachedInput: number; output: number }>,
   azure: {

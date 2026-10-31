@@ -25,7 +25,9 @@ import { voiceById, DEFAULT_TUTOR_VOICE_ID } from "@/content/voices";
 import type { Turn, TurnInput } from "@/lib/conversation/types";
 import { usePrefs } from "@/lib/client/prefs";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
-import { ApiError, API_ERROR_TEXT, assist, streamChat } from "@/lib/client/api";
+import { ApiError, API_ERROR_TEXT, assist, fetchOpener, streamChat } from "@/lib/client/api";
+import { nextChallenge, pickChallenge } from "@/lib/learner/challenge";
+import type { Challenge } from "@/content/challenges";
 import { TtsRequestError } from "@/lib/client/tts";
 import { ensureMicrophone, Listener, primeAudio, SpeechQueue, SpeechSetupError } from "@/lib/client/speech";
 import { SentenceChunker } from "@/lib/text/sentences";
@@ -34,6 +36,8 @@ import { usageCostUsd } from "@/lib/cost/pricing";
 import { monthKey } from "@/lib/cost/budget";
 import {
   memoryForTutor,
+  openHomework,
+  recentSummaries,
   phrasesToPractice,
   RESUME_WINDOW_MS,
   targetKeysForNext,
@@ -148,11 +152,22 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   /** True while a tutor reply is still streaming, so the audio queue going idle isn't "done". */
   const pendingRef = useRef(false);
+  const freshOpenerRef = useRef<Promise<string | null> | null>(null);
   // How hard to pitch it today, from his recent conversations; fixed for this conversation.
   const tutorLevel = useMemo(
     () => (hydrated ? adaptation(learner.get(), dayKey(new Date())).level : "steady"),
     [hydrated],
   );
+  // Today's challenge: none in the demo, the level check or the one-minute talk.
+  const roleplay = !isTutor;
+  const [challenge, setChallenge] = useState<Challenge | undefined>(undefined);
+  const challengeSet = useRef(false);
+  useEffect(() => {
+    if (!hydrated || challengeSet.current || demo || topic || scenario.hidden) return;
+    challengeSet.current = true;
+    setChallenge(pickChallenge(learner.get(), { level: tutorLevel, roleplay, scenarioId, day: dayKey(new Date()) }));
+  }, [hydrated, demo, topic, scenario.hidden, tutorLevel, roleplay, scenarioId]);
+  const swapChallenge = () => setChallenge((c) => nextChallenge(learner.get(), c?.id, { level: tutorLevel, roleplay }));
   const rateRef = useRef(prefs.speechRate);
   rateRef.current = prefs.speechRate * paceFor(tutorLevel);
   modeRef.current = mode;
@@ -207,10 +222,10 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     queueRef.current?.stop();
     await stopListening();
     const id = sessionRef.current;
-    if (!id) return router.push("/practice");
+    if (!id) return router.push("/");
     if (!turnsRef.current.some((t) => t.role === "learner")) {
       learner.discardSession(id);
-      return router.push("/practice");
+      return router.push("/");
     }
     learner.finishSession(id);
     setPhase("finishing");
@@ -373,6 +388,34 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   // Tutor ----------------------------------------------------------------------------------
 
+  /** What the tutor needs to know, for a reply or for a fresh opening line. */
+  const chatBody = useCallback(
+    (history: Turn[], extra: { wrapUp?: boolean; opening?: boolean } = {}) => {
+      const s = learner.get();
+      return {
+        scenarioId,
+        history,
+        correctionMode: prefs.correctionMode,
+        targetKeys: planWeekInfo
+          ? [...new Set([...planWeekInfo.targets, ...targetKeysForNext(s)])].slice(0, 3)
+          : targetKeysForNext(s),
+        // Plan days push the week's words first, then whatever is due in the phrase bank.
+        practicePhrases: planWeekInfo
+          ? [...new Set([...weekWordsToPractice(s, planWeekInfo), ...phrasesToPractice(s)])].slice(0, 4)
+          : phrasesToPractice(s),
+        memory: memoryForTutor(s),
+        recent: recentSummaries(s),
+        homework: openHomework(s)?.task,
+        challenge: s.sessions.find((x) => x.id === sessionRef.current)?.challenge,
+        tutorName,
+        wrapUp: extra.wrapUp ?? false,
+        opening: extra.opening,
+        level: tutorLevel,
+      };
+    },
+    [scenarioId, prefs.correctionMode, planWeekInfo, tutorName, tutorLevel],
+  );
+
   const requestTutor = useCallback(async () => {
     if (endedRef.current) return;
     const queue = ensureQueue();
@@ -399,24 +442,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         return;
       }
       const res = await streamChat(
-        {
-          scenarioId,
-          history: turnsRef.current,
-          correctionMode: prefs.correctionMode,
-          targetKeys: planWeekInfo
-            ? [...new Set([...planWeekInfo.targets, ...targetKeysForNext(learner.get())])].slice(0, 3)
-            : targetKeysForNext(learner.get()),
-          // Plan days push the week's words first, then whatever is due in the phrase bank.
-          practicePhrases: planWeekInfo
-            ? [
-                ...new Set([...weekWordsToPractice(learner.get(), planWeekInfo), ...phrasesToPractice(learner.get())]),
-              ].slice(0, 4)
-            : phrasesToPractice(learner.get()),
-          memory: memoryForTutor(learner.get()),
-          tutorName,
-          wrapUp,
-          level: tutorLevel,
-        },
+        chatBody(turnsRef.current, { wrapUp }),
         (delta) => {
           shown += delta;
           setPendingTutor(shown);
@@ -443,20 +469,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       const kind = err instanceof ApiError ? err.kind : "provider";
       setError({ message: API_ERROR_TEXT[kind], retry: () => void requestTutorRef.current() });
     }
-  }, [
-    ensureQueue,
-    tutorLevel,
-    limitSeconds,
-    planWeekInfo,
-    scenarioId,
-    scenario,
-    demo,
-    prefs.correctionMode,
-    tutorName,
-    setTurnsBoth,
-    addCost,
-    afterTutorSpoke,
-  ]);
+  }, [ensureQueue, chatBody, limitSeconds, scenario, demo, setTurnsBoth, addCost, afterTutorSpoke]);
 
   requestTutorRef.current = requestTutor;
 
@@ -505,9 +518,14 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       setTurnsBoth(resumable.turns);
       elapsedRef.current = Math.min(resumable.speakingSeconds * 2, limitSeconds - 60);
     } else {
-      id = learner.startSession(scenarioId, chosen, opener, demo, planDay);
+      id = learner.startSession(scenarioId, chosen, opener, demo, planDay, challenge?.id);
       setTurnsBoth([{ role: "tutor", text: opener }]);
     }
+    sessionRef.current = id;
+    // A fresh first line, written while he learns words or warms up. The scripted one is
+    // the fallback if it is slow or fails.
+    freshOpenerRef.current =
+      resume || demo || topic ? null : fetchOpener(chatBody([], { opening: true }), addCost).catch(() => null);
     sessionRef.current = id;
     setSessionId(id);
     setStarting(false);
@@ -529,12 +547,22 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       setPhase("warmup");
       return;
     }
-    startConversation();
+    void startConversation();
   }
 
-  function startConversation() {
+  async function startConversation() {
     primeAudio();
     setPhase("live");
+    const fresh = freshOpenerRef.current;
+    freshOpenerRef.current = null;
+    if (fresh && turnsRef.current.length === 1) {
+      setOrb("thinking");
+      const text = await Promise.race([fresh, new Promise<null>((r) => setTimeout(() => r(null), 4000))]);
+      if (text && turnsRef.current.length === 1 && sessionRef.current) {
+        setTurnsBoth([{ role: "tutor", text }]);
+        learner.replaceOpener(sessionRef.current, text);
+      }
+    }
     const last = turnsRef.current.at(-1);
     if (last?.role === "tutor") ensureQueue().speak(last.text);
     else void requestTutorRef.current();
@@ -671,6 +699,9 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         starting={starting}
         warmupCount={hydrated ? warmupItems(state).length : 0}
         topic={topic}
+        challenge={challenge}
+        onSwapChallenge={swapChallenge}
+        hebrewHelp={prefs.hebrewHelp}
       />
     );
   }
@@ -693,7 +724,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         mode={mode}
         sessionId={sessionId}
         hebrewHelp={prefs.hebrewHelp}
-        onDone={startConversation}
+        onDone={() => void startConversation()}
       />
     );
   }

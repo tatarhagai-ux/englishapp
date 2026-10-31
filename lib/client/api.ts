@@ -1,5 +1,6 @@
 "use client";
 
+import { usageCostUsd } from "@/lib/cost/pricing";
 import type { ChatRequest, Turn } from "@/lib/conversation/types";
 import type { Analysis } from "@/lib/prompts/analyzer";
 import type { AssistRequest } from "@/lib/prompts/assist";
@@ -129,10 +130,39 @@ export async function streamChat(
   return { text: text.trim(), model, usage };
 }
 
-export function analyzeSession(scenarioId: string, history: Turn[], signal?: AbortSignal) {
+/**
+ * A fresh first line for the tutor, written by the model. Resolves to null when it fails or
+ * comes back empty, so the caller falls back to the scripted opener.
+ */
+export async function fetchOpener(
+  body: ChatRequest,
+  addCost: (usd: number) => void,
+  timeoutMs = 8000,
+): Promise<string | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await streamChat(body, () => {}, ctrl.signal);
+    addCost(usageCostUsd(res.model, res.usage));
+    const text = res.text.trim();
+    return text.length >= 8 ? text : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function analyzeSession(
+  scenarioId: string,
+  history: Turn[],
+  memory: string[] = [],
+  challenge?: string,
+  signal?: AbortSignal,
+) {
   return postJson<{ analysis: Analysis; model: string; usage: Usage | null }>(
     "/api/analyze",
-    { scenarioId, history },
+    { scenarioId, history, memory, challenge },
     signal,
   );
 }

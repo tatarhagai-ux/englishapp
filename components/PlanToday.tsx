@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, Check, ChevronDown, Info } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Info, NotebookPen } from "lucide-react";
 import clsx from "clsx";
 import { scenarioById } from "@/content/scenarios";
-import { useLearner } from "@/lib/client/learner";
+import { learner, useLearner } from "@/lib/client/learner";
+import { openHomework } from "@/lib/learner/model";
+import { usePrefs } from "@/lib/client/prefs";
 import { ownedStretchWords, planPosition, weekToReplay, wordUses, WORD_OWNED_USES } from "@/lib/learner/plan";
 import { speakingChecks } from "@/lib/learner/weekly";
 import { PLAN } from "@/content/plan";
@@ -91,6 +93,8 @@ export function PlanToday({ ready, minutesToday, goal }: { ready: boolean; minut
       </Link>
 
       {!next && ready && <PlanComplete />}
+
+      <Homework />
 
       <WeekWords />
 
@@ -214,6 +218,37 @@ function PlanComplete() {
       <p className="text-xs font-bold text-dim">
         The week whose words you use least. Then keep a daily habit with word cards, a story and a one-minute talk.
       </p>
+    </section>
+  );
+}
+
+/** Homework from the last report: a reminder before he starts, and the tutor asks about it. */
+function Homework() {
+  const state = useLearner();
+  const [prefs] = usePrefs();
+  const hw = openHomework(state);
+  if (!hw) return null;
+  return (
+    <section aria-labelledby="hw-title" className="tile space-y-2 border-xp/60 p-4">
+      <h2 id="hw-title" className="flex items-center gap-2 text-sm font-black">
+        <NotebookPen className="size-4 text-xp" aria-hidden /> Your homework
+      </h2>
+      <p className="font-bold">{hw.task}</p>
+      {prefs.hebrewHelp && hw.taskHe && (
+        <p dir="rtl" lang="he" className="text-sm text-dim">
+          {hw.taskHe}
+        </p>
+      )}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-dim">Your tutor will ask you to show it today.</p>
+        <button
+          type="button"
+          onClick={() => learner.completeHomework(hw.sessionId)}
+          className="btn-3d btn-ghost shrink-0 px-3 py-1.5 text-sm"
+        >
+          Done
+        </button>
+      </div>
     </section>
   );
 }

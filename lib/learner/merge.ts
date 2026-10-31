@@ -16,6 +16,7 @@ import {
   type ErrorRecord,
   type LearnerState,
   type ListeningState,
+  MEMORY_MAX,
   type PhraseRecord,
   type SessionRecord,
 } from "./model";
@@ -28,9 +29,18 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
   const after = (iso: string | undefined) => !resetAt || (iso ?? "") >= resetAt;
 
   const removedPhrases = mergeRecords(a.removed?.phrases, b.removed?.phrases, (x, y) => (x >= y ? x : y));
+  const removedFacts = mergeRecords(a.removed?.facts, b.removed?.facts, (x, y) => (x >= y ? x : y));
   const removedSessions = [...new Set([...(a.removed?.sessions ?? []), ...(b.removed?.sessions ?? [])])];
 
-  const sessions = mergeBy([...a.sessions, ...b.sessions], (s) => s.id, betterSession)
+  const sessions = mergeBy(
+    [...a.sessions, ...b.sessions],
+    (s) => s.id,
+    (x, y) => {
+      const best = betterSession(x, y);
+      // Ticking off homework on either device sticks.
+      return x.homeworkDone || y.homeworkDone ? { ...best, homeworkDone: true } : best;
+    },
+  )
     .filter((s) => after(s.startedAt) && !removedSessions.includes(s.id))
     .sort((x, y) => x.startedAt.localeCompare(y.startedAt) || x.id.localeCompare(y.id));
 
@@ -97,15 +107,19 @@ export function mergeStates(a: LearnerState, b: LearnerState): LearnerState {
     (m) => m.text.toLowerCase(),
     (x, y) => (x.day >= y.day ? x : y),
   )
-    .filter((m) => after(`${m.day}T23:59:59`))
+    .filter((m) => {
+      const gone = removedFacts[m.text.toLowerCase()];
+      return after(`${m.day}T23:59:59`) && !(gone && gone.slice(0, 10) >= m.day);
+    })
     .sort((x, y) => x.day.localeCompare(y.day) || x.text.localeCompare(y.text))
-    .slice(-12);
+    .slice(-MEMORY_MAX);
   if (memory.length) out.memory = memory;
   if (resetAt) out.resetAt = resetAt;
   if (restoredAt) out.restoredAt = restoredAt;
-  if (Object.keys(removedPhrases).length || removedSessions.length) {
+  if (Object.keys(removedPhrases).length || removedSessions.length || Object.keys(removedFacts).length) {
     out.removed = {};
     if (Object.keys(removedPhrases).length) out.removed.phrases = removedPhrases;
+    if (Object.keys(removedFacts).length) out.removed.facts = removedFacts;
     if (removedSessions.length) out.removed.sessions = removedSessions;
   }
   return out;

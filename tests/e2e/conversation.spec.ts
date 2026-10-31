@@ -60,6 +60,8 @@ async function mockApis(page: Page, chatBodies: unknown[]) {
     route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
   );
   await page.route("**/api/chat", async (route: Route) => {
+    // The fresh first line fails here, so the scripted opener stays (tested on its own below).
+    if (route.request().postDataJSON()?.opening) return route.fulfill({ status: 500, body: "{}" });
     chatBodies.push(route.request().postDataJSON());
     const lines = [
       { t: "delta", text: "Oh nice, so you've been studying for two weeks. " },
@@ -221,7 +223,7 @@ test("ending before saying anything discards the session", async ({ page }) => {
   await startSkippingWarmup(page);
   await expect(page.getByText("Hey! So, what have you been up to this week?")).toBeVisible();
   await page.getByRole("button", { name: "End conversation" }).click();
-  await expect(page).toHaveURL("/practice");
+  await expect(page).toHaveURL("/");
   await page.goto("/progress");
   await expect(page.getByRole("heading", { name: "Recent conversations" })).toHaveCount(0);
 });
@@ -232,6 +234,7 @@ test("a chat failure shows a retry that works", async ({ page }) => {
     route.fulfill({ status: 200, contentType: "audio/wav", body: silentWav() }),
   );
   await page.route("**/api/chat", (route) => {
+    if (route.request().postDataJSON()?.opening) return route.fulfill({ status: 500, body: "{}" });
     if (fail) {
       fail = false;
       return route.fulfill({ status: 429, contentType: "application/json", body: '{"error":"provider_error"}' });
@@ -263,6 +266,12 @@ test("practice library lists every category and opens a scenario", async ({ page
   await expect(page.getByText(/Free practice/)).toBeVisible();
   await page.getByRole("button", { name: "How it works" }).click();
   await expect(page.getByText(/Numbered ones go from easier to harder/)).toBeVisible();
+  // One clear suggestion at the top, with a way to see another.
+  const suggested = page.getByRole("region", { name: "Suggested for you" });
+  await expect(suggested.getByRole("link", { name: /Start/ })).toBeVisible();
+  const firstIdea = await suggested.locator("p").nth(1).textContent();
+  await suggested.getByRole("button", { name: "Something else" }).click();
+  await expect(suggested.locator("p").nth(1)).not.toHaveText(firstIdea ?? "");
   const goals = page.getByRole("tablist", { name: "Goals" });
   for (const g of ["Job interview", "At work", "Life abroad", "Everyday talk"]) {
     await expect(goals.getByRole("tab", { name: new RegExp(g) })).toBeVisible();
@@ -271,15 +280,21 @@ test("practice library lists every category and opens a scenario", async ({ page
   const panel = page.getByRole("tabpanel");
   await expect(panel.getByRole("link").first()).toContainText("Tell me about yourself");
   await expect(panel.getByRole("link").first()).toContainText("Next");
+  // The next few are listed; the rest is one tap away.
+  await expect(panel.getByRole("link", { name: /Full mock interview/ })).toHaveCount(0);
+  await panel.getByRole("button", { name: /Show all \d+ conversations/ }).click();
   await expect(panel.getByRole("link").last()).toContainText("Full mock interview");
   // Everyday talk joins free talk and world topics.
   await goals.getByRole("tab", { name: /Everyday talk/ }).click();
+  await expect(panel).toHaveAccessibleName("Everyday talk");
+  await panel.getByRole("button", { name: /Show all 12/ }).click();
   await expect(panel.getByRole("link", { name: /Your week/ })).toBeVisible();
   await expect(panel.getByRole("link", { name: /Will AI take our jobs/ })).toBeVisible();
   // The chosen goal is remembered.
   await goals.getByRole("tab", { name: /Life abroad/ }).click();
   await page.reload();
   await expect(goals.getByRole("tab", { name: /Life abroad/ })).toHaveAttribute("aria-selected", "true");
+  await panel.getByRole("button", { name: /Show all/ }).click();
   await page.getByRole("link", { name: /Problem at the airport/ }).click();
   await expect(page.getByRole("heading", { name: "Problem at the airport" })).toBeVisible();
   await expect(page.getByText("Kate · Australian accent")).toBeVisible();
@@ -585,6 +600,40 @@ test("quick review: two minutes on due items without a conversation", async ({ p
   await expect(page.getByRole("status").filter({ hasText: "Done." })).toBeVisible();
 });
 
+test("today's challenge shows before starting, and the tutor opens with a fresh line", async ({ page }) => {
+  const bodies: { opening?: boolean; challenge?: string; history: unknown[] }[] = [];
+  await page.route("**/api/chat", (route: Route) => {
+    const body = route.request().postDataJSON();
+    bodies.push(body);
+    const text = body.opening ? "Hi Hagai! Quick one: what was the best part of your week?" : "Why that part?";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: JSON.stringify({ t: "delta", text }) + "\n" + JSON.stringify({ t: "done", model: "m", usage: null }) + "\n",
+    });
+  });
+  await page.goto("/session/free-your-week");
+  const card = page.getByRole("region", { name: /Today's challenge/ });
+  await expect(card).toBeVisible();
+  const first = await card.getByRole("heading").textContent();
+  await card.getByRole("button", { name: "Another" }).click();
+  await expect(card.getByRole("heading")).not.toHaveText(first ?? "");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  await expect(page.getByText("Hi Hagai! Quick one: what was the best part of your week?")).toBeVisible();
+  await expect(page.getByText("Hey! So, what have you been up to this week?")).toHaveCount(0);
+  await page.getByLabel("Your reply").fill("The weekend with my family");
+  await page.getByLabel("Your reply").press("Enter");
+  await expect(page.getByText("Why that part?")).toBeVisible();
+  expect(bodies[0]).toMatchObject({ opening: true, history: [] });
+  const reply = bodies.find((b) => !b.opening)!;
+  expect(reply.challenge).toBeTruthy();
+  expect(reply.history[0]).toMatchObject({
+    role: "tutor",
+    text: "Hi Hagai! Quick one: what was the best part of your week?",
+  });
+});
+
 test("demo mode: once the tutor wraps up, a button leads to the sample report", async ({ page }) => {
   await page.goto("/session/free-your-week?demo=1");
   await page.getByRole("button", { name: /Quiet mode/ }).click();
@@ -624,6 +673,11 @@ test("demo mode: a full conversation and sample report with no keys at all", asy
   await expect(page.getByRole("note")).toContainText("Sample report from the demo");
   await expect(page.getByText("I've been living in Shoham for ten years.")).toBeVisible();
   await expect(page.getByLabel(/XP earned/)).toHaveCount(0);
+  // The teacher's wrap-up: a score, what to do now (real links only) and homework.
+  const summary = page.getByRole("region", { name: "Lesson summary" });
+  await expect(summary.getByLabel(/Score \d+ out of 100/)).toBeVisible();
+  await expect(summary.getByRole("link", { name: /Say it: / })).toHaveAttribute("href", "/say/for-and-since");
+  await expect(summary.getByText("Say three sentences about your week using for or since.")).toBeVisible();
 
   // It doesn't count: progress still shows no conversations.
   await page.goto("/progress");

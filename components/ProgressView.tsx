@@ -21,6 +21,7 @@ import {
   interviewReadiness,
   isRealSession,
   levelHistory,
+  scoreHistory,
   statsFrom,
   type Cefr,
   type ErrorRecord,
@@ -57,6 +58,8 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
       <h1 className="text-2xl font-black tracking-tight">Progress</h1>
 
       <WeekSection />
+
+      <ScoresCard state={state} />
 
       <section className="tile p-4" aria-labelledby="level-title">
         <div className="flex items-end justify-between">
@@ -481,6 +484,47 @@ function SkillsCard({ state }: { state: Parameters<typeof skillProgress>[0] }) {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** Lesson scores from the reports: the trend he can see, and the challenges he met. */
+function ScoresCard({ state }: { state: Parameters<typeof scoreHistory>[0] }) {
+  const { points, challengesMet, challengesTried } = scoreHistory(state);
+  if (points.length === 0) return null;
+  const last = points.slice(-12);
+  const avg = (xs: { total: number }[]) => Math.round(xs.reduce((n, p) => n + p.total, 0) / xs.length);
+  const recent = points.slice(-5);
+  const before = points.slice(-10, -5);
+  const change = before.length >= 2 ? avg(recent) - avg(before) : null;
+  return (
+    <section className="tile space-y-3 p-4" aria-labelledby="scores-title">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 id="scores-title" className="font-black">
+          Lesson scores
+        </h2>
+        <p className="text-sm font-bold text-dim">
+          Last 5: <span className="text-lg font-black text-text">{avg(recent)}</span>
+          {change !== null && (
+            <span className={change >= 0 ? "text-good" : "text-bad"}>
+              {" "}
+              ({change >= 0 ? "+" : ""}
+              {change})
+            </span>
+          )}
+        </p>
+      </div>
+      <ol className="flex h-24 items-end gap-1.5" aria-label="Score per conversation, oldest first">
+        {last.map((p) => (
+          <li key={p.id} className="flex h-full flex-1 flex-col justify-end" aria-label={`${p.day}: ${p.total}`}>
+            <span className="block rounded-t-md bg-accent" style={{ height: `${Math.max(4, p.total)}%` }} />
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs font-bold text-faint">
+        Out of 100, from each report: flow, accuracy, range and the task.
+        {challengesTried > 0 && ` Challenges met: ${challengesMet} of ${challengesTried}.`}
+      </p>
     </section>
   );
 }

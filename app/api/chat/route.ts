@@ -36,14 +36,23 @@ export async function POST(req: Request) {
       targetKeys: body.targetKeys,
       practicePhrases: body.practicePhrases,
       memory: body.memory,
+      recent: body.recent,
+      homework: body.homework,
+      challenge: body.challenge,
+      opening: body.opening,
       wrapUp: body.wrapUp,
       level: body.level,
     });
     iterator = llm()
       .stream({
         model,
-        messages: toChatMessages(system, trimHistory(body.history)),
-        temperature: 0.8,
+        messages: body.history.length
+          ? toChatMessages(system, trimHistory(body.history))
+          : [
+              { role: "system", content: system },
+              { role: "user", content: "(The conversation starts now. Say your first line.)" },
+            ],
+        temperature: body.opening ? 0.95 : 0.8,
         maxTokens: 180,
         signal: req.signal,
       })

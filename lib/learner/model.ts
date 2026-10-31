@@ -9,7 +9,7 @@ import { SCENARIOS, scenarioById, type Scenario } from "@/content/scenarios";
 import { voiceById } from "@/content/voices";
 import { SAY_SETS } from "@/content/say";
 import type { Turn } from "@/lib/conversation/types";
-import { ANSWER_PARTS, type Analysis } from "@/lib/prompts/analyzer";
+import { ANSWER_PARTS, totalScore, type Analysis } from "@/lib/prompts/analyzer";
 import { bestStreak, computeStreak, dayKey, weekStart } from "@/lib/game/streak";
 import { EMPTY_STATS, type LearnerStats } from "@/lib/game/achievements";
 import { xpForSession } from "@/lib/game/xp";
@@ -94,6 +94,10 @@ export interface SessionRecord {
   planDay?: string;
   /** Help asked for during the conversation; the tutor adapts to it (lib/learner/adapt.ts). */
   help?: Partial<Record<HelpKind, number>>;
+  /** Today's challenge for this conversation (content/challenges.ts). */
+  challenge?: string;
+  /** He marked the homework from this conversation's report as done. */
+  homeworkDone?: boolean;
 }
 
 /** "replay" covers Repeat and Slower; the rest are the help chips. */
@@ -133,8 +137,11 @@ export interface LearnerState {
   resetAt?: string;
   /** Set when a backup is restored: a "Delete all" from before it no longer applies. */
   restoredAt?: string;
-  /** Deletions, kept so sync doesn't bring them back: phrase (lowercased) → when, and session ids. */
-  removed?: { phrases?: Record<string, string>; sessions?: string[] };
+  /**
+   * Deletions, kept so sync doesn't bring them back: phrase (lowercased) → when, remembered
+   * fact (lowercased) → when, and session ids.
+   */
+  removed?: { phrases?: Record<string, string>; sessions?: string[]; facts?: Record<string, string> };
 }
 
 export interface MemoryItem {
@@ -143,7 +150,10 @@ export interface MemoryItem {
 }
 
 /** How many remembered facts are kept; older ones fall off. */
-export const MEMORY_MAX = 12;
+export const MEMORY_MAX = 40;
+/** What the tutor reads about him each turn: at most this many facts and characters. */
+export const MEMORY_TUTOR_FACTS = 12;
+export const MEMORY_TUTOR_CHARS = 1800;
 /** Days off in a row that don't break the streak. */
 export const STREAK_REST_DAYS = 2;
 
@@ -304,28 +314,109 @@ export function applyAnalysis(
 
   const sessions = state.sessions.map((s) => (s.id === sessionId ? { ...s, report: analysis } : s));
   const day = sessions.find((s) => s.id === sessionId)?.day ?? iso.slice(0, 10);
-  return { ...state, errors, phrases, sessions, memory: rememberFacts(state.memory ?? [], analysis.memory, day) };
+  return {
+    ...state,
+    errors,
+    phrases,
+    sessions,
+    memory: rememberFacts(state.memory ?? [], analysis.memory, day, analysis.memory_drop),
+  };
 }
 
-/** Add new facts (newest last), replacing an older copy of the same fact, capped at MEMORY_MAX. */
-export function rememberFacts(memory: MemoryItem[], facts: string[], day: string): MemoryItem[] {
+/**
+ * Add new facts (newest last), replacing an older copy of the same fact, capped at
+ * MEMORY_MAX. `dropped` are older facts the report found out of date (he moved on, or said
+ * the opposite); they are matched by their exact text and removed.
+ */
+export function rememberFacts(
+  memory: MemoryItem[],
+  facts: string[],
+  day: string,
+  dropped: string[] = [],
+): MemoryItem[] {
   const fresh = facts.map((f) => f.trim()).filter(Boolean);
-  if (!fresh.length) return memory;
+  const gone = new Set(dropped.map((f) => f.trim().toLowerCase()).filter(Boolean));
+  if (!fresh.length && !gone.size) return memory;
   const keys = new Set(fresh.map((f) => f.toLowerCase()));
-  const kept = memory.filter((m) => !keys.has(m.text.toLowerCase()));
+  const kept = memory.filter((m) => !keys.has(m.text.toLowerCase()) && !gone.has(m.text.toLowerCase()));
   return [...kept, ...fresh.map((text) => ({ text, day }))].slice(-MEMORY_MAX);
 }
 
-/** What the tutor gets: the newest few facts, newest first. */
-export function memoryForTutor(state: LearnerState, max = 4): string[] {
-  return (state.memory ?? [])
-    .slice(-max)
-    .reverse()
-    .map((m) => m.text);
+/**
+ * What the tutor gets about him: the newest facts, newest first, within a character budget
+ * so a long memory doesn't make every turn slower or dearer.
+ */
+export function memoryForTutor(state: LearnerState, max = MEMORY_TUTOR_FACTS, maxChars = MEMORY_TUTOR_CHARS): string[] {
+  const out: string[] = [];
+  let chars = 0;
+  for (const m of [...(state.memory ?? [])].reverse()) {
+    if (out.length >= max || chars + m.text.length > maxChars) break;
+    out.push(m.text);
+    chars += m.text.length;
+  }
+  return out;
 }
 
-export function forgetFact(state: LearnerState, text: string): LearnerState {
-  return { ...state, memory: (state.memory ?? []).filter((m) => m.text !== text) };
+export function forgetFact(state: LearnerState, text: string, now = new Date()): LearnerState {
+  const key = text.toLowerCase();
+  return {
+    ...state,
+    memory: (state.memory ?? []).filter((m) => m.text !== text),
+    removed: { ...state.removed, facts: { ...state.removed?.facts, [key]: now.toISOString() } },
+  };
+}
+
+/** Add a fact he typed himself. */
+export function addFact(state: LearnerState, text: string, now = new Date(), day = dayKey(now)): LearnerState {
+  const clean = text.trim().slice(0, 160);
+  if (clean.length < 3) return state;
+  const facts = { ...state.removed?.facts };
+  delete facts[clean.toLowerCase()];
+  return {
+    ...state,
+    memory: rememberFacts(state.memory ?? [], [clean], day),
+    removed: { ...state.removed, facts },
+  };
+}
+
+/** One line per recent finished conversation, newest first, for the tutor. */
+export function recentSummaries(state: LearnerState, max = 3): string[] {
+  return [...state.sessions]
+    .filter((s) => !s.demo && s.report?.summary_en)
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    .slice(0, max)
+    .map((s) => `${s.day}: ${s.report!.summary_en}`);
+}
+
+/** Lesson scores over time, oldest first, and how many challenges he met. */
+export function scoreHistory(state: LearnerState): {
+  points: { id: string; day: string; total: number }[];
+  challengesMet: number;
+  challengesTried: number;
+} {
+  const real = state.sessions.filter((s) => isRealSession(s) && s.report);
+  const points = real
+    .filter((s) => s.report!.score)
+    .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
+    .map((s) => ({ id: s.id, day: s.day, total: totalScore(s.report!.score!) }));
+  const tried = real.filter((s) => s.challenge && s.report!.challenge);
+  return { points, challengesMet: tried.filter((s) => s.report!.challenge!.met).length, challengesTried: tried.length };
+}
+
+/** The newest homework he hasn't ticked off yet, from the last conversation that set one. */
+export function openHomework(
+  state: LearnerState,
+): { sessionId: string; day: string; task: string; taskHe: string } | null {
+  const last = [...state.sessions]
+    .filter((s) => !s.demo && s.report?.homework)
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
+  if (!last || last.homeworkDone) return null;
+  const hw = last.report!.homework!;
+  return { sessionId: last.id, day: last.day, task: hw.task_en, taskHe: hw.task_he };
+}
+
+export function completeHomework(state: LearnerState, sessionId: string): LearnerState {
+  return { ...state, sessions: state.sessions.map((s) => (s.id === sessionId ? { ...s, homeworkDone: true } : s)) };
 }
 
 /** Errors ranked by how much they need work: frequent, recent, and not yet mastered. */
