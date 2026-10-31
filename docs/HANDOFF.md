@@ -11,6 +11,8 @@
 4. **Practice:** "Suggested for you" (`lib/learner/recommend.ts`), שלוש קבוצות עם הסבר וזמן, רשימת שיחות מקוצרת עם "Show all". Back חוזר למקום הקודם.
 5. **Progress:** "Lesson scores" (`scoreHistory`).
 
+6. **מודל הדוח:** `anthropic/claude-haiku-5.5` (ב-`DEFAULT_MODELS` ב-`lib/env.ts`), באישור חגי ב-31.10 לשבוע ניסיון. השיחה נשארת על DeepSeek V4 Flash. אם Haiku נדחה (400/403/404), `withFallback` ב-`app/api/analyze/route.ts` חוזר למודל השיחה. המחיר ($0.10 / $0.50 למיליון) לקוח מאתרי השוואה, כי openrouter.ai חסום מהסביבה. **ב-7.11 לשאול את חגי** אם להשאיר, לפי איכות הדוחות והעלות ב-Progress.
+
 ציונים ומה עוד חסר: `docs/AUDIT.md`. לא נבדק מול המודל האמיתי ובמכשיר.
 
 **עדכון 27.10.2026 (בוקר):** [tatarhagai-ux/englishapp#15](https://github.com/tatarhagai-ux/englishapp/pull/15) **מוזג** לענף `claude/loving-sagan-htpldu` (שעולה לאוויר) אחרי שחגי ביקש למזג את מה שנעשה עד אז. בתיאור ה-PR יש טבלה לפי נושאים ולכל שורה מה לבדוק בטלפון. עבודה נוספת באה בענף `claude/intelligent-fermat-go7dia` ובכל PR חדש, והוא לא ממוזג עד שחגי אומר.

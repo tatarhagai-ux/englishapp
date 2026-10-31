@@ -4,6 +4,7 @@ import { llmConfig } from "@/lib/env";
 import { llm, type Usage } from "@/lib/providers/llm";
 import type { ChatMessage } from "@/lib/providers/llm/types";
 import { errorResponse } from "@/lib/http/errors";
+import { ProviderError } from "@/lib/providers/errors";
 import { turn } from "@/lib/conversation/types";
 import { buildAnalyzerMessages, buildCoachMessages, parseAnalysis, parseCoach } from "@/lib/prompts/analyzer";
 import { scenarioById } from "@/content/scenarios";
@@ -34,6 +35,26 @@ function addUsage(a: Usage | undefined, b: Usage | undefined): Usage | undefined
     cachedPromptTokens: (a.cachedPromptTokens ?? 0) + (b.cachedPromptTokens ?? 0),
     costUsd: a.costUsd !== undefined && b.costUsd !== undefined ? a.costUsd + b.costUsd : undefined,
   };
+}
+
+/**
+ * Run with the report model, falling back to the chat model when the report model is
+ * refused (renamed, retired, or not open to this account). Busy or slow providers are not
+ * retried with another model: the request has its own time limit.
+ */
+async function withFallback<T>(models: string[], run: (model: string) => Promise<T>): Promise<T & { model: string }> {
+  let lastError: unknown;
+  for (const model of [...new Set(models)]) {
+    try {
+      return { ...(await run(model)), model };
+    } catch (err) {
+      lastError = err;
+      const refused = err instanceof ProviderError && [400, 403, 404].includes(err.status);
+      if (!refused) throw err;
+      console.error(`analyzer model ${model} refused, trying the next one`, err.message);
+    }
+  }
+  throw lastError;
 }
 
 /** One JSON call with a single retry if the reply doesn't parse and there is still time. */
@@ -86,35 +107,34 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { analyzerModel } = llmConfig();
+    const { analyzerModel, chatModel } = llmConfig();
+    const models = [analyzerModel, chatModel];
     const started = Date.now();
     const { history, memory } = parsed.data;
     const [core, coach] = await Promise.all([
-      jsonCall(
-        analyzerModel,
-        buildAnalyzerMessages(scenario, history, memory),
-        1800,
-        parseAnalysis,
-        started,
-        req.signal,
+      withFallback(models, (m) =>
+        jsonCall(m, buildAnalyzerMessages(scenario, history, memory), 1800, parseAnalysis, started, req.signal),
       ),
-      jsonCall(
-        analyzerModel,
-        buildCoachMessages(scenario, history, challengeById(parsed.data.challenge)),
-        1200,
-        parseCoach,
-        started,
-        req.signal,
+      withFallback(models, (m) =>
+        jsonCall(
+          m,
+          buildCoachMessages(scenario, history, challengeById(parsed.data.challenge)),
+          1200,
+          parseCoach,
+          started,
+          req.signal,
+        ),
       ).catch((err: unknown) => {
         console.error("coach summary failed", err);
-        return { value: null, usage: undefined };
+        return { value: null, usage: undefined, model: analyzerModel };
       }),
     ]);
     const usage = addUsage(core.usage, coach.usage);
     if (!core.value) return NextResponse.json({ error: "analysis_failed" }, { status: 502 });
     if (!coach.value) console.error("coach summary missing");
     const analysis = { ...core.value, ...(coach.value ?? {}) };
-    return NextResponse.json({ analysis, model: analyzerModel, usage: usage ?? null });
+    // Cost is reported by OpenRouter per call; the model named here is the one that wrote the fixes.
+    return NextResponse.json({ analysis, model: core.model, usage: usage ?? null });
   } catch (err) {
     return errorResponse(err);
   }

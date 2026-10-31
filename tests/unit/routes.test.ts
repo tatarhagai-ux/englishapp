@@ -9,6 +9,8 @@ const fake = {
   /** Replies to the teacher's wrap-up call in /api/analyze, which runs alongside the fixes. */
   coach: [] as string[],
   calls: [] as LlmChatRequest[],
+  /** Models the fake provider refuses, like a retired model name. */
+  refuse: [] as string[],
 };
 
 vi.mock("@/lib/providers/llm", () => ({
@@ -20,6 +22,10 @@ vi.mock("@/lib/providers/llm", () => ({
       for (const ev of fake.streamEvents) yield ev;
     },
     async complete(req: LlmChatRequest) {
+      if (fake.refuse.includes(req.model)) {
+        const { ProviderError } = await import("@/lib/providers/errors");
+        throw new ProviderError("fake", 404, "model not found");
+      }
       const isCoach = String(req.messages[0]?.content).includes("Write your wrap-up");
       if (!isCoach) fake.calls.push(req);
       const text = (isCoach ? fake.coach : fake.completions).shift() ?? "";
@@ -56,6 +62,7 @@ beforeEach(() => {
   fake.streamError = null;
   fake.completions = [];
   fake.coach = [];
+  fake.refuse = [];
   fake.calls = [];
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -167,6 +174,23 @@ describe("POST /api/analyze", () => {
     expect(json.analysis.score.fluency).toBe(60);
     expect(json.analysis.homework.task_en).toBe("Three sentences with since.");
     expect(json.usage.promptTokens).toBe(20);
+  });
+
+  it("uses the stronger report model, and the chat model if that one is refused", async () => {
+    fake.completions = [good];
+    const { POST } = await import("@/app/api/analyze/route");
+    const ok = await (await POST(post({ scenarioId: "free-your-week", history }))).json();
+    expect(ok.model).toBe("anthropic/claude-haiku-5.5");
+    expect(fake.calls[0].model).toBe("anthropic/claude-haiku-5.5");
+
+    fake.calls = [];
+    fake.completions = [good];
+    fake.refuse = ["anthropic/claude-haiku-5.5"];
+    const res = await POST(post({ scenarioId: "free-your-week", history }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.model).toBe("deepseek/deepseek-v4-flash");
+    expect(json.analysis.corrections).toHaveLength(1);
   });
 
   it("still returns the fixes when the wrap-up fails", async () => {

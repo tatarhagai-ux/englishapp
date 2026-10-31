@@ -51,7 +51,9 @@ export function requireAzure() {
 }
 
 const DEFAULT_MODELS = {
-  openrouter: { chat: "deepseek/deepseek-v4-flash", analyzer: "deepseek/deepseek-v4-flash" },
+  // The report runs once a conversation, so it gets a stronger model than the live chat,
+  // which needs speed. Hagai approved this on 31.10.2026 (cheap, a step up in quality).
+  openrouter: { chat: "deepseek/deepseek-v4-flash", analyzer: "anthropic/claude-haiku-5.5" },
   deepseek: { chat: "deepseek-chat", analyzer: "deepseek-chat" },
 } as const;
 
