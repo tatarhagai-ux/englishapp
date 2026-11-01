@@ -31,7 +31,7 @@ export function UnfinishedCard() {
         </span>
         <div className="flex-1">
           <h2 id="unfinished-title" className="font-extrabold">
-            Unfinished conversation
+            {session.pausedAt ? "Paused conversation" : "Unfinished conversation"}
           </h2>
           <p className="text-sm text-dim">
             {scenario.title} · {replies} replies. {resumable ? "Pick it up, or" : "You can still"} get your report.
@@ -41,7 +41,7 @@ export function UnfinishedCard() {
       <div className="flex gap-2">
         {resumable && (
           <Link href={resumeHref} className="btn-3d btn-go flex-1 py-2.5 text-center text-sm">
-            Resume
+            Continue
           </Link>
         )}
         <button

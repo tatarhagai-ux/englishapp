@@ -768,11 +768,46 @@ test("a conversation cut off midway shows on Home: resume it or get the report",
   await page.goto("/");
   const card = page.getByRole("region", { name: "Unfinished conversation" });
   await expect(card).toContainText("2 replies");
-  await expect(card.getByRole("link", { name: "Resume" })).toHaveAttribute("href", "/session/free-your-week");
+  await expect(card.getByRole("link", { name: "Continue" })).toHaveAttribute("href", "/session/free-your-week");
   await card.getByRole("button", { name: "Get the report" }).click();
   await expect(page).toHaveURL(/\/report\/cut1/);
   await page.goto("/");
   await expect(page.getByRole("region", { name: "Unfinished conversation" })).toHaveCount(0);
+});
+
+test("pause in the middle: the clock stops, Continue picks up, and later it waits on Home", async ({ page }) => {
+  const chatBodies: unknown[] = [];
+  await mockApis(page, chatBodies);
+  await page.goto("/session/free-your-week");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  const box = page.getByLabel("Your reply");
+  await box.fill("I worked a lot this week");
+  await box.press("Enter");
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+
+  await page.getByRole("button", { name: "Pause" }).click();
+  const dialog = page.getByRole("dialog", { name: "Paused" });
+  await expect(dialog).toBeVisible();
+  const clock = await page.getByLabel("Elapsed time").textContent();
+  await page.waitForTimeout(2200);
+  await expect(page.getByLabel("Elapsed time")).toHaveText(clock ?? "");
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await expect(dialog).toHaveCount(0);
+  await box.fill("Reports, mostly");
+  await box.press("Enter");
+  await expect.poll(() => chatBodies.length).toBe(2);
+
+  // Something urgent: pause and leave. Home keeps it, and it opens where it stopped.
+  await page.getByRole("button", { name: "Pause" }).click();
+  await page.getByRole("dialog", { name: "Paused" }).getByRole("link", { name: "Continue later" }).click();
+  await expect(page).toHaveURL("/");
+  const card = page.getByRole("region", { name: "Paused conversation" });
+  await expect(card).toContainText("2 replies");
+  await card.getByRole("link", { name: "Continue" }).click();
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: "Continue where you left off" }).click();
+  await expect(page.getByText("Reports, mostly")).toBeVisible();
 });
 
 test("plan days start by learning three of the week's words, then the next three", async ({ page }) => {

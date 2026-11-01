@@ -178,6 +178,21 @@ export const learner = {
     }));
   },
 
+  /** Paused mid-conversation: remember when and where the clock stood. */
+  pauseSession(id: string, elapsedSeconds: number) {
+    learner.updateSession(id, (s) => ({ ...s, pausedAt: new Date().toISOString(), pausedElapsed: elapsedSeconds }));
+  },
+
+  /** Picked up again: it is no longer paused (the clock it had is kept for the next resume). */
+  resumeSession(id: string) {
+    learner.updateSession(id, (s) => {
+      if (!s.pausedAt) return s;
+      const rest = { ...s };
+      delete rest.pausedAt;
+      return rest;
+    });
+  },
+
   /** Swap the scripted first line for the fresh one the tutor actually said. */
   replaceOpener(id: string, text: string) {
     learner.updateSession(id, (s) =>
