@@ -86,3 +86,36 @@ describe("score history", () => {
     expect([h.challengesMet, h.challengesTried]).toEqual([1, 1]);
   });
 });
+
+describe("lesson history", () => {
+  it("keeps finished conversations newest first, and finds a report that was never made", async () => {
+    const { lessonHistory, reportWaiting } = await import("@/lib/learner/model");
+    const mk = (id: string, at: string, extra: Partial<SessionRecord>): SessionRecord => ({
+      id,
+      scenarioId: "free-your-week",
+      mode: "voice",
+      startedAt: at,
+      day: at.slice(0, 10),
+      turns: [{ role: "learner", text: "hi there" }],
+      speakingSeconds: 60,
+      stuckCount: 0,
+      fixedAloud: [],
+      xp: 0,
+      costUsd: 0,
+      ...extra,
+    });
+    const report = parseAnalysis("{}")!;
+    const s = {
+      ...initialState(now),
+      sessions: [
+        mk("old", "2026-10-20T10:00:00Z", { endedAt: "2026-10-20T10:10:00Z", report }),
+        mk("open", "2026-10-31T09:00:00Z", {}),
+        mk("closed-early", "2026-10-30T10:00:00Z", { endedAt: "2026-10-30T10:10:00Z" }),
+        mk("demo", "2026-10-31T08:00:00Z", { endedAt: "2026-10-31T08:05:00Z", report, demo: true }),
+      ],
+    };
+    expect(lessonHistory(s).map((x) => x.id)).toEqual(["closed-early", "old"]);
+    expect(reportWaiting(s, now)?.id).toBe("closed-early");
+    expect(reportWaiting(s, new Date("2026-11-10T00:00:00Z"))).toBeNull();
+  });
+});

@@ -153,9 +153,14 @@ export function ProgressView({ budgetUsd }: { budgetUsd: number }) {
 
       {recent.length > 0 && (
         <section aria-labelledby="history-title" className="space-y-2.5">
-          <h2 id="history-title" className="font-black">
-            Recent conversations
-          </h2>
+          <div className="flex items-baseline justify-between">
+            <h2 id="history-title" className="font-black">
+              Recent conversations
+            </h2>
+            <Link href="/reports" className="tap text-sm font-extrabold text-accent">
+              All lessons
+            </Link>
+          </div>
           <ul className="tile divide-y-2 divide-line overflow-hidden">
             {recent.map((s) => (
               <li key={s.id}>

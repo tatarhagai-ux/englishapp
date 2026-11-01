@@ -424,6 +424,22 @@ export function scoreHistory(state: LearnerState): {
   return { points, challengesMet: tried.filter((s) => s.report!.challenge!.met).length, challengesTried: tried.length };
 }
 
+/** Every real conversation he finished (or that has a report), newest first: his lesson log. */
+export function lessonHistory(state: LearnerState): SessionRecord[] {
+  return state.sessions
+    .filter((s) => isRealSession(s) && (s.endedAt || s.report))
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+}
+
+/**
+ * A finished conversation whose report was never made (the app closed while it was being
+ * written, or the network failed). The newest one from the last week, so it can be made now.
+ */
+export function reportWaiting(state: LearnerState, now = new Date()): SessionRecord | null {
+  const weekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  return lessonHistory(state).find((s) => !s.report && s.endedAt && new Date(s.endedAt).getTime() > weekAgo) ?? null;
+}
+
 /** The newest homework he hasn't ticked off yet, from the last conversation that set one. */
 export function openHomework(
   state: LearnerState,
