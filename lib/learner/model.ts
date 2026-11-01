@@ -94,6 +94,9 @@ export interface SessionRecord {
   planDay?: string;
   /** Help asked for during the conversation; the tutor adapts to it (lib/learner/adapt.ts). */
   help?: Partial<Record<HelpKind, number>>;
+  /** He paused it (the Pause button, or the app went to the background): when, and the clock. */
+  pausedAt?: string;
+  pausedElapsed?: number;
   /** Today's challenge for this conversation (content/challenges.ts). */
   challenge?: string;
   /** He marked the homework from this conversation's report as done. */
@@ -206,7 +209,23 @@ export function isRealSession(s: SessionRecord): boolean {
 }
 
 /** An interrupted conversation can be picked up where it stopped for this long. */
-export const RESUME_WINDOW_MS = 2 * 60 * 60 * 1000;
+export const RESUME_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** When it was last touched: the pause, or else the start. The resume window counts from here. */
+export function lastActive(s: SessionRecord): number {
+  return new Date(s.pausedAt ?? s.startedAt).getTime();
+}
+
+/** Can this conversation be picked up where it stopped? */
+export function canResume(s: SessionRecord, now = new Date()): boolean {
+  return (
+    !s.demo &&
+    !s.endedAt &&
+    !s.report &&
+    s.turns.some((t) => t.role === "learner") &&
+    now.getTime() - lastActive(s) < RESUME_WINDOW_MS
+  );
+}
 
 /**
  * The latest conversation that was cut off (a call, a locked phone, the app closed) after
@@ -219,18 +238,20 @@ export function unfinishedSession(
 ): { session: SessionRecord; resumable: boolean } | null {
   // The newest one that qualifies: a short session opened later doesn't hide it, but a
   // finished one does (he's moved on; an old cut-off talk shouldn't keep coming back).
-  const ageOf = (s: SessionRecord) => now.getTime() - new Date(s.startedAt).getTime();
+  const ageOf = (s: SessionRecord) => now.getTime() - lastActive(s);
   let last: SessionRecord | undefined;
   for (const s of [...state.sessions].reverse()) {
     if (s.demo) continue;
     if (s.report) break;
-    if (!s.endedAt && s.turns.filter((t) => t.role === "learner").length >= 2 && ageOf(s) <= 7 * 24 * 60 * 60 * 1000) {
+    // Paused on purpose counts after one reply; a cut-off one needs two to be worth a report.
+    const replies = s.turns.filter((t) => t.role === "learner").length;
+    if (!s.endedAt && replies >= (s.pausedAt ? 1 : 2) && ageOf(s) <= 7 * 24 * 60 * 60 * 1000) {
       last = s;
       break;
     }
   }
   if (!last) return null;
-  return { session: last, resumable: ageOf(last) < RESUME_WINDOW_MS };
+  return { session: last, resumable: canResume(last, now) };
 }
 
 /**
@@ -401,6 +422,22 @@ export function scoreHistory(state: LearnerState): {
     .map((s) => ({ id: s.id, day: s.day, total: totalScore(s.report!.score!) }));
   const tried = real.filter((s) => s.challenge && s.report!.challenge);
   return { points, challengesMet: tried.filter((s) => s.report!.challenge!.met).length, challengesTried: tried.length };
+}
+
+/** Every real conversation he finished (or that has a report), newest first: his lesson log. */
+export function lessonHistory(state: LearnerState): SessionRecord[] {
+  return state.sessions
+    .filter((s) => isRealSession(s) && (s.endedAt || s.report))
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+}
+
+/**
+ * A finished conversation whose report was never made (the app closed while it was being
+ * written, or the network failed). The newest one from the last week, so it can be made now.
+ */
+export function reportWaiting(state: LearnerState, now = new Date()): SessionRecord | null {
+  const weekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  return lessonHistory(state).find((s) => !s.report && s.endedAt && new Date(s.endedAt).getTime() > weekAgo) ?? null;
 }
 
 /** The newest homework he hasn't ticked off yet, from the last conversation that set one. */

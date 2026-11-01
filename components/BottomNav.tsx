@@ -14,7 +14,7 @@ const ITEMS = [
     icon: Mic,
     also: ["/listen", "/pronounce", "/review", "/words", "/phrases", "/mistakes", "/talk", "/read", "/say"],
   },
-  { href: "/progress", label: "Progress", icon: BarChart3, also: [] },
+  { href: "/progress", label: "Progress", icon: BarChart3, also: ["/reports"] },
   { href: "/settings", label: "Settings", icon: Settings, also: ["/guide"] },
 ] as const;
 

@@ -10,6 +10,7 @@ import { dayKey } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/xp";
 import { ChooseVoicePrompt, Greeting, TutorBadge, VoiceTipCard } from "./HomeClient";
 import { UnfinishedCard } from "./UnfinishedCard";
+import { ReportWaitingCard } from "./ReportWaitingCard";
 import { QUICK_REVIEW_MAX } from "./QuickReview";
 import { PlanToday } from "./PlanToday";
 import { CoachCard } from "./CoachCard";
@@ -107,6 +108,7 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
       )}
 
       {hydrated && <UnfinishedCard />}
+      {hydrated && <ReportWaitingCard />}
 
       {firstTime ? (
         <>
@@ -165,17 +167,26 @@ export function HomeDashboard({ ready }: { ready: boolean }) {
       )}
 
       {hydrated && lastReport?.report && (
-        <Link href={`/report/${lastReport.id}`} className="tile flex items-center gap-3 p-4 hover:border-accent/60">
-          <Target className="size-5 text-accent" aria-hidden />
-          <span className="flex-1">
-            <span className="block font-extrabold">Last report</span>
-            <span className="block text-sm text-dim">
-              {count(lastReport.report.corrections.length, "fix", "fixes")} ·{" "}
-              {lastReport.report.task.completed ? "mission complete" : "mission open"}
+        <div className="tile divide-y-2 divide-line overflow-hidden">
+          <Link href={`/report/${lastReport.id}`} className="flex items-center gap-3 p-4 hover:bg-elev-2">
+            <Target className="size-5 text-accent" aria-hidden />
+            <span className="flex-1">
+              <span className="block font-extrabold">Last report</span>
+              <span className="block text-sm text-dim">
+                {count(lastReport.report.corrections.length, "fix", "fixes")} ·{" "}
+                {lastReport.report.task.completed ? "mission complete" : "mission open"}
+              </span>
             </span>
-          </span>
-          <ArrowRight className="size-5 text-faint" aria-hidden />
-        </Link>
+            <ArrowRight className="size-5 text-faint" aria-hidden />
+          </Link>
+          <Link
+            href="/reports"
+            className="flex items-center gap-3 px-4 py-3 text-sm font-extrabold text-accent hover:bg-elev-2"
+          >
+            <span className="flex-1">All your lessons and summaries</span>
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        </div>
       )}
 
       {stats.sessions === 0 && (

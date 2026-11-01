@@ -356,6 +356,10 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
         />
       )}
 
+      <Link href="/reports" className="tap block text-center text-sm font-extrabold text-accent">
+        All your lessons and summaries
+      </Link>
+
       <div className="grid grid-cols-2 gap-3 pb-6">
         <Link href={`/session/${scenario.id}`} className="btn-3d btn-ghost flex items-center justify-center gap-2 py-3">
           <RotateCcw className="size-4" aria-hidden /> Again

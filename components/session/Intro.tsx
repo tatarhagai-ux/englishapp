@@ -191,7 +191,7 @@ export function Intro({
           </p>
         )}
         {onResume && (
-          <button type="button" onClick={onResume} className="btn-3d btn-ghost w-full py-3">
+          <button type="button" onClick={onResume} className="btn-3d btn-go w-full py-3.5 uppercase">
             Continue where you left off
           </button>
         )}

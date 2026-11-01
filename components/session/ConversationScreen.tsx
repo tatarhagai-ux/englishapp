@@ -10,6 +10,8 @@ import {
   Lightbulb,
   LifeBuoy,
   Mic,
+  Pause,
+  Play,
   Repeat,
   RotateCcw,
   Send,
@@ -39,7 +41,7 @@ import {
   openHomework,
   recentSummaries,
   phrasesToPractice,
-  RESUME_WINDOW_MS,
+  canResume,
   targetKeysForNext,
   warmupItems,
   type WarmupItem,
@@ -132,6 +134,9 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const [draft, setDraft] = useState("");
   /** Asking before ending early: the X sits where a thumb lands by accident. */
   const [confirmEnd, setConfirmEnd] = useState(false);
+  /** Paused: no mic, no voice, the clock stopped. Continue picks up right here. */
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   useWakeLock(phase !== "intro");
 
   const turnsRef = useRef<Turn[]>([]);
@@ -173,24 +178,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   modeRef.current = mode;
   handsFreeRef.current = handsFree;
 
-  // An unfinished conversation for this scenario from the last two hours can be resumed.
+  // An unfinished or paused conversation for this scenario from the last day can be resumed.
   const resumable = useMemo(() => {
     if (!hydrated) return null;
-    const cutoff = Date.now() - RESUME_WINDOW_MS;
-    return (
-      // The newest one, like the Home card picks.
-      [...state.sessions]
-        .reverse()
-        .filter(
-          (s) =>
-            !s.demo &&
-            s.scenarioId === scenarioId &&
-            !s.endedAt &&
-            !s.report &&
-            new Date(s.startedAt).getTime() > cutoff,
-        )
-        .find((s) => s.turns.some((t) => t.role === "learner")) ?? null
-    );
+    const now = new Date();
+    // The newest one, like the Home card picks.
+    return [...state.sessions].reverse().find((s) => s.scenarioId === scenarioId && canResume(s, now)) ?? null;
   }, [hydrated, state.sessions, scenarioId]);
 
   const setTurnsBoth = useCallback((next: Turn[]) => {
@@ -265,7 +258,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   const startListening = useCallback(
     async (language: "en-US" | "he-IL" = "en-US", keep?: { text: string; seconds: number }) => {
-      if (endedRef.current || modeRef.current !== "voice") return;
+      if (endedRef.current || pausedRef.current || modeRef.current !== "voice") return;
       await stopListening();
       setError(null);
       setReview(null);
@@ -355,7 +348,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   );
 
   const afterTutorSpoke = useCallback(() => {
-    if (endedRef.current) return;
+    if (endedRef.current || pausedRef.current) return;
     if (wrapSentRef.current && !pendingRef.current) {
       void finish();
       return;
@@ -476,13 +469,50 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   // Lifecycle ------------------------------------------------------------------------------
 
   useEffect(() => {
-    if (phase !== "live") return;
+    if (phase !== "live" || paused) return;
     const t = setInterval(() => {
       elapsedRef.current += 1;
       setElapsed(elapsedRef.current);
     }, 1000);
     return () => clearInterval(t);
-  }, [phase]);
+  }, [phase, paused]);
+
+  // Pause and continue -----------------------------------------------------------------------
+
+  const pause = useCallback(async () => {
+    if (pausedRef.current || endedRef.current) return;
+    pausedRef.current = true;
+    setPaused(true);
+    setConfirmEnd(false);
+    // A reply still on its way is dropped; on Continue the tutor answers his last turn again.
+    abortRef.current?.abort();
+    pendingRef.current = false;
+    setPendingTutor("");
+    queueRef.current?.stop();
+    await stopListening();
+    setOrb("idle");
+    if (sessionRef.current) learner.pauseSession(sessionRef.current, elapsedRef.current);
+  }, [stopListening]);
+
+  const resume = useCallback(() => {
+    if (!pausedRef.current) return;
+    pausedRef.current = false;
+    setPaused(false);
+    if (sessionRef.current) learner.resumeSession(sessionRef.current);
+    primeAudio();
+    if (turnsRef.current.at(-1)?.role === "learner") void requestTutorRef.current();
+    else afterTutorSpoke();
+  }, [afterTutorSpoke]);
+
+  // A call or switching apps pauses it, so nothing talks to an empty room and the clock waits.
+  useEffect(() => {
+    if (phase !== "live" || demo) return;
+    const onHide = () => {
+      if (document.visibilityState === "hidden") void pause();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [phase, demo, pause]);
 
   useEffect(
     () => () => {
@@ -516,7 +546,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     if (resume && resumable) {
       id = resumable.id;
       setTurnsBoth(resumable.turns);
-      elapsedRef.current = Math.min(resumable.speakingSeconds * 2, limitSeconds - 60);
+      elapsedRef.current = Math.min(resumable.pausedElapsed ?? resumable.speakingSeconds * 2, limitSeconds - 60);
+      learner.resumeSession(resumable.id);
     } else {
       id = learner.startSession(scenarioId, chosen, opener, demo, planDay, challenge?.id);
       setTurnsBoth([{ role: "tutor", text: opener }]);
@@ -770,6 +801,16 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
             />
           </div>
         </div>
+        {!demo && (
+          <button
+            type="button"
+            onClick={() => void pause()}
+            aria-label="Pause"
+            className="grid size-10 place-items-center rounded-xl border-2 border-line bg-elev text-dim hover:text-text"
+          >
+            <Pause className="size-5" />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setHideText((v) => !v)}
@@ -797,6 +838,38 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
             <button type="button" onClick={() => setConfirmEnd(false)} className="btn-3d btn-ghost flex-1 py-2 text-sm">
               Keep talking
             </button>
+          </div>
+        </div>
+      )}
+
+      {paused && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="paused-title"
+          className="fixed inset-0 z-50 grid place-items-center bg-bg px-6"
+        >
+          <div className="w-full max-w-sm space-y-4 text-center">
+            <span className="mx-auto grid size-16 place-items-center rounded-full bg-accent/15 text-accent">
+              <Pause className="size-8" aria-hidden />
+            </span>
+            <h2 id="paused-title" className="text-2xl font-black">
+              Paused
+            </h2>
+            <p className="text-sm text-dim">
+              Your conversation is saved, and the clock is stopped at {minutes}:{seconds}. Continue now, or come back
+              later today from Home.
+            </p>
+            <button
+              type="button"
+              onClick={resume}
+              className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-3.5 text-lg uppercase"
+            >
+              <Play className="size-5" aria-hidden /> Continue
+            </button>
+            <Link href="/" className="btn-3d btn-ghost block w-full py-3 text-sm">
+              Continue later
+            </Link>
           </div>
         </div>
       )}

@@ -157,6 +157,13 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await page.getByRole("link", { name: "Continue" }).click();
   await expect(page).toHaveURL("/");
   await expect(page.getByRole("link", { name: /Last report/ })).toBeVisible();
+  // Every lesson stays in one place to go over again.
+  await page.getByRole("link", { name: /All your lessons/ }).click();
+  await expect(page.getByRole("heading", { name: "Your lessons" })).toBeVisible();
+  await page.getByRole("link", { name: /Your week/ }).click();
+  await expect(page).toHaveURL(/\/report\//);
+  await expect(page.getByText("I've been studying for AZ-900 for two weeks")).toBeVisible();
+  await page.goto("/");
 
   await page.goto("/progress");
   await expect(page.getByRole("heading", { name: "Recent conversations" })).toBeVisible();
@@ -768,11 +775,88 @@ test("a conversation cut off midway shows on Home: resume it or get the report",
   await page.goto("/");
   const card = page.getByRole("region", { name: "Unfinished conversation" });
   await expect(card).toContainText("2 replies");
-  await expect(card.getByRole("link", { name: "Resume" })).toHaveAttribute("href", "/session/free-your-week");
+  await expect(card.getByRole("link", { name: "Continue" })).toHaveAttribute("href", "/session/free-your-week");
   await card.getByRole("button", { name: "Get the report" }).click();
   await expect(page).toHaveURL(/\/report\/cut1/);
   await page.goto("/");
   await expect(page.getByRole("region", { name: "Unfinished conversation" })).toHaveCount(0);
+});
+
+test("pause in the middle: the clock stops, Continue picks up, and later it waits on Home", async ({ page }) => {
+  const chatBodies: unknown[] = [];
+  await mockApis(page, chatBodies);
+  await page.goto("/session/free-your-week");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  const box = page.getByLabel("Your reply");
+  await box.fill("I worked a lot this week");
+  await box.press("Enter");
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+
+  await page.getByRole("button", { name: "Pause" }).click();
+  const dialog = page.getByRole("dialog", { name: "Paused" });
+  await expect(dialog).toBeVisible();
+  const clock = await page.getByLabel("Elapsed time").textContent();
+  await page.waitForTimeout(2200);
+  await expect(page.getByLabel("Elapsed time")).toHaveText(clock ?? "");
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await expect(dialog).toHaveCount(0);
+  await box.fill("Reports, mostly");
+  await box.press("Enter");
+  await expect.poll(() => chatBodies.length).toBe(2);
+
+  // Something urgent: pause and leave. Home keeps it, and it opens where it stopped.
+  await page.getByRole("button", { name: "Pause" }).click();
+  await page.getByRole("dialog", { name: "Paused" }).getByRole("link", { name: "Continue later" }).click();
+  await expect(page).toHaveURL("/");
+  const card = page.getByRole("region", { name: "Paused conversation" });
+  await expect(card).toContainText("2 replies");
+  await card.getByRole("link", { name: "Continue" }).click();
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await page.getByRole("button", { name: "Continue where you left off" }).click();
+  await expect(page.getByText("Reports, mostly")).toBeVisible();
+});
+
+test("a report that was never made waits on Home and in the lessons list", async ({ page }) => {
+  await mockApis(page, []);
+  await page.addInitScript(() => {
+    const at = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const state = {
+      v: 1,
+      errors: {},
+      phrases: [],
+      spend: {},
+      sessions: [
+        {
+          id: "closed1",
+          scenarioId: "free-your-week",
+          mode: "quiet",
+          startedAt: at,
+          endedAt: at,
+          day: at.slice(0, 10),
+          turns: [
+            { role: "tutor", text: "Hey! So, what have you been up to this week?" },
+            { role: "learner", text: "I study for AZ-900 two weeks", input: "text" },
+          ],
+          speakingSeconds: 40,
+          stuckCount: 0,
+          fixedAloud: [],
+          xp: 0,
+          costUsd: 0,
+        },
+      ],
+    };
+    if (!localStorage.getItem("sw_learner_v1")) localStorage.setItem("sw_learner_v1", JSON.stringify(state));
+  });
+  await page.goto("/reports");
+  await expect(page.getByText(/Report not made yet/)).toBeVisible();
+  await page.goto("/");
+  const card = page.getByRole("region", { name: "Your report isn't ready yet" });
+  await card.getByRole("link", { name: "Make it" }).click();
+  await expect(page).toHaveURL(/\/report\/closed1/);
+  await expect(page.getByText("Mission complete!")).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByRole("region", { name: "Your report isn't ready yet" })).toHaveCount(0);
 });
 
 test("plan days start by learning three of the week's words, then the next three", async ({ page }) => {

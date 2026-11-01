@@ -9,6 +9,7 @@ import {
   duePhrases,
   initialState,
   unfinishedSession,
+  canResume,
   rankedErrors,
   recommendScenario,
   reviewMistake,
@@ -333,7 +334,17 @@ describe("unfinishedSession", () => {
 
   it("finds a cut-off conversation with something to learn from", () => {
     expect(unfinishedSession(withTurns(2), new Date("2026-10-26T10:30:00Z"))).toMatchObject({ resumable: true });
-    expect(unfinishedSession(withTurns(2), new Date("2026-10-26T15:00:00Z"))).toMatchObject({ resumable: false });
+    // It can be picked up for a day; after that only the report is offered.
+    expect(unfinishedSession(withTurns(2), new Date("2026-10-26T15:00:00Z"))).toMatchObject({ resumable: true });
+    expect(unfinishedSession(withTurns(2), new Date("2026-10-27T11:00:00Z"))).toMatchObject({ resumable: false });
+  });
+
+  it("a paused one counts after one reply, and the day is counted from the pause", () => {
+    const paused = withTurns(1, { pausedAt: "2026-10-26T20:00:00Z", pausedElapsed: 140 });
+    expect(unfinishedSession(paused, new Date("2026-10-27T15:00:00Z"))).toMatchObject({ resumable: true });
+    expect(unfinishedSession(paused, new Date("2026-10-27T21:00:00Z"))).toMatchObject({ resumable: false });
+    expect(canResume(paused.sessions[0], new Date("2026-10-27T15:00:00Z"))).toBe(true);
+    expect(canResume({ ...paused.sessions[0], turns: [] }, new Date("2026-10-26T21:00:00Z"))).toBe(false);
   });
 
   it("ignores ended, demo, too short and old ones", () => {
