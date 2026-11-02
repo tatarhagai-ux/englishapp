@@ -45,6 +45,7 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
   const scenario = session ? scenarioById(session.scenarioId) : undefined;
   const [status, setStatus] = useState<"idle" | "analyzing" | "error">("idle");
   const [errorText, setErrorText] = useState("");
+  const [retrying, setRetrying] = useState(false);
   const started = useRef(false);
 
   async function analyze() {
@@ -54,19 +55,34 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
       return;
     }
     setStatus("analyzing");
-    try {
-      const res = await analyzeSession(
-        session.scenarioId,
-        session.turns,
-        memoryForTutor(learner.get(), MEMORY_MAX, 6000),
-        session.challenge,
-      );
-      learner.addSpend(session.id, usageCostUsd(res.model, res.usage));
-      learner.saveReport(session.id, res.analysis, prefs.dailyGoalMinutes);
-      setStatus("idle");
-    } catch (err) {
-      setErrorText(API_ERROR_TEXT[err instanceof ApiError ? err.kind : "provider"]);
-      setStatus("error");
+    setRetrying(false);
+    // One quiet retry before showing an error: a single odd reply or a slow moment
+    // shouldn't leave him without a report.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await analyzeSession(
+          session.scenarioId,
+          session.turns,
+          memoryForTutor(learner.get(), MEMORY_MAX, 6000),
+          session.challenge,
+        );
+        learner.addSpend(session.id, usageCostUsd(res.model, res.usage));
+        learner.saveReport(session.id, res.analysis, prefs.dailyGoalMinutes);
+        setStatus("idle");
+        return;
+      } catch (err) {
+        const kind = err instanceof ApiError ? err.kind : "provider";
+        // Not worth a retry: no key, no credit, offline, or a request the server refuses.
+        const final =
+          attempt === 1 ||
+          ["not_configured", "unauthorized", "provider_credit", "offline", "bad_request"].includes(kind);
+        if (final) {
+          setErrorText(API_ERROR_TEXT[kind]);
+          setStatus("error");
+          return;
+        }
+        setRetrying(true);
+      }
     }
   }
 
@@ -136,7 +152,11 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
           <Loader2 className="size-6 animate-spin text-accent" aria-hidden />
           <div>
             <p className="font-extrabold">Reviewing your conversation…</p>
-            <p className="text-sm text-dim">Finding your 3 most useful fixes. About 10 seconds.</p>
+            <p className="text-sm text-dim">
+              {retrying
+                ? "Taking longer than usual. Trying once more…"
+                : "Your fixes, a score and what to do next. Usually 10 to 20 seconds."}
+            </p>
           </div>
         </section>
       )}
