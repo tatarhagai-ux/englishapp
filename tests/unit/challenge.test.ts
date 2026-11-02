@@ -101,7 +101,7 @@ describe("today's challenge", () => {
 
   it("stronger words parse and stay capped", () => {
     const up = Array.from({ length: 5 }, (_, i) => ({ plain: `w${i}`, better: `b${i}` }));
-    expect(parseCoach(JSON.stringify({ upgrades: up }))?.upgrades).toEqual([]);
+    expect(parseCoach(JSON.stringify({ upgrades: up }))?.upgrades.map((u) => u.better)).toEqual(["b0", "b1", "b2"]);
     expect(parseCoach(JSON.stringify({ upgrades: up.slice(0, 2) }))?.upgrades[1]).toMatchObject({ better: "b1" });
   });
 });

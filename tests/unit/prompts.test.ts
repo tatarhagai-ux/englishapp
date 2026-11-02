@@ -116,9 +116,41 @@ describe("analyzer", () => {
     expect(a.phrases).toEqual([]);
   });
 
-  it("returns null for unusable output", () => {
+  it("returns null for output that isn't JSON, and drops a broken item instead of the report", () => {
     expect(parseAnalysis("I can't do that")).toBeNull();
-    expect(parseAnalysis('{"corrections":[{"original":""}]}')).toBeNull();
+    expect(parseAnalysis('{"corrections":[{"original":""}]}')?.corrections).toEqual([]);
+  });
+
+  it("one odd field doesn't sink the report (the failure seen on 2.11)", () => {
+    const good = {
+      original: "I study two weeks",
+      better: "I've been studying for two weeks",
+      why_en: "Duration needs the present perfect.",
+      error_key: "present_perfect_duration",
+      severity: 3,
+    };
+    const a = parseAnalysis(
+      JSON.stringify({
+        corrections: [good, { ...good, original: "x", why_en: "" }, good, good, good, good, good],
+        other_errors: [
+          { error_key: "", original: null, better: "y" },
+          { error_key: "a_b", original: "o", better: "b" },
+        ],
+        phrases: [{ text: "Lately I've been…", meaning_he: null }],
+        praise_en: null,
+        task: { completed: true, met: ["Describes recent activities", 5], feedback_en: "Good." },
+        memory: ["He runs.", "x"],
+        level: { cefr: "B1+", confidence: "high", note_en: null },
+      }),
+    )!;
+    expect(a).not.toBeNull();
+    expect(a.corrections.length).toBeGreaterThan(0);
+    expect(a.other_errors.map((e) => e.error_key)).toEqual(["a_b"]);
+    expect(a.phrases[0]).toMatchObject({ text: "Lately I've been…", meaning_he: "" });
+    expect(a.praise_en).toBe("");
+    expect(a.task.met).toEqual(["Describes recent activities"]);
+    expect(a.memory).toEqual(["He runs."]);
+    expect(a.level?.cefr).toBe("B1+");
   });
 });
 

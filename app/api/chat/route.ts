@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       homework: body.homework,
       challenge: body.challenge,
       format: body.format,
+      move: body.move,
       topic: body.topic,
       opening: body.opening,
       wrapUp: body.wrapUp,

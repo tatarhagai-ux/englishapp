@@ -6,7 +6,15 @@ import type { ChatMessage } from "@/lib/providers/llm/types";
 import { errorResponse } from "@/lib/http/errors";
 import { ProviderError } from "@/lib/providers/errors";
 import { turn } from "@/lib/conversation/types";
-import { buildAnalyzerMessages, buildCoachMessages, parseAnalysis, parseCoach } from "@/lib/prompts/analyzer";
+import {
+  analysisSchema,
+  buildAnalyzerMessages,
+  buildCoachMessages,
+  coachSchema,
+  parseAnalysis,
+  parseCoach,
+  whyUnusable,
+} from "@/lib/prompts/analyzer";
 import { scenarioById } from "@/content/scenarios";
 import { challengeById } from "@/content/challenges";
 
@@ -95,7 +103,7 @@ async function jsonCall<T>(
     if (value) return { value, usage };
     // Why it failed, without the content: cut off by the token limit, or not JSON at all.
     console.error(
-      `${label} reply unusable (model=${model}, attempt=${attempt + 1}, finish=${res.finishReason ?? "?"}, chars=${res.text.length})`,
+      `${label} reply unusable (model=${model}, attempt=${attempt + 1}, finish=${res.finishReason ?? "?"}, chars=${res.text.length}, why=${whyUnusable(res.text, label === "analysis" ? analysisSchema : coachSchema)})`,
     );
   }
   return { value: null, usage };

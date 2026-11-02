@@ -642,8 +642,10 @@ test("today's challenge shows before starting, and the tutor opens with a fresh 
   await page.getByLabel("Your reply").press("Enter");
   await expect(page.getByText("Why that part?")).toBeVisible();
   expect(bodies[0]).toMatchObject({ opening: true, history: [] });
-  const reply = bodies.find((b) => !b.opening)!;
+  const reply = bodies.find((b) => !b.opening)! as { challenge?: string; move?: string; history: unknown[] };
   expect(reply.challenge).toBeTruthy();
+  // The first reply after the opening line is a "share", not another question.
+  expect(reply.move).toBe("share");
   expect(reply.history[0]).toMatchObject({
     role: "tutor",
     text: "Hi Hagai! Quick one: what was the best part of your week?",

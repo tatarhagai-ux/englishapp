@@ -20,11 +20,40 @@ const keyField = z
   )
   .pipe(z.string().min(1));
 
+/**
+ * A list where one bad item doesn't sink the report: invalid items are dropped, the rest
+ * kept (up to max). A model that sends one empty field or one item too many used to
+ * make the whole analysis fail.
+ */
+function lenientList<T extends z.ZodTypeAny>(item: T, max: number) {
+  return z
+    .unknown()
+    .optional()
+    .transform((v): z.infer<T>[] =>
+      Array.isArray(v)
+        ? v
+            .flatMap((x) => {
+              const r = item.safeParse(x);
+              return r.success ? [r.data as z.infer<T>] : [];
+            })
+            .slice(0, max)
+        : [],
+    );
+}
+
+/** Text that is trimmed and cut to length instead of failing; anything else becomes "". */
+function text(max: number) {
+  return z
+    .unknown()
+    .optional()
+    .transform((v) => (typeof v === "string" ? v.trim().slice(0, max) : ""));
+}
+
 const correction = z.object({
   original: z.string().min(1),
   better: z.string().min(1),
   why_en: z.string().min(1),
-  why_he: z.string().default(""),
+  why_he: text(400),
   error_key: keyField,
   category: z.string().default("grammar"),
   severity: z.coerce.number().int().min(1).max(3).catch(2),
@@ -39,8 +68,8 @@ const nextStep = z.object({
   kind: z.enum(STEP_KINDS),
   /** say: a set id. mistake: an error key. Empty for the others. */
   target: z.string().trim().max(80).default(""),
-  why_en: z.string().trim().max(200).default(""),
-  why_he: z.string().trim().max(200).default(""),
+  why_en: text(300),
+  why_he: text(300),
 });
 
 /**
@@ -48,43 +77,39 @@ const nextStep = z.object({
  * numbers as strings, missing optional parts), strict where the app depends on a value.
  */
 export const analysisSchema = z.object({
-  corrections: z.array(correction).max(6).default([]),
-  other_errors: z
-    .array(z.object({ error_key: keyField, original: z.string(), better: z.string() }))
-    .max(15)
-    .default([]),
-  correct_uses: z.array(keyField).max(15).default([]),
-  phrases: z
-    .array(
-      z.object({ text: z.string().min(1), meaning_en: z.string().default(""), meaning_he: z.string().default("") }),
-    )
-    .max(8)
-    .default([]),
+  corrections: lenientList(correction, 6),
+  other_errors: lenientList(z.object({ error_key: keyField, original: text(400), better: text(400) }), 15),
+  correct_uses: lenientList(keyField, 15),
+  phrases: lenientList(
+    z.object({ text: z.string().trim().min(1).max(120), meaning_en: text(200), meaning_he: text(200) }),
+    8,
+  ),
   task: z
     .object({
       completed: z.boolean().catch(false),
-      met: z.array(z.string()).default([]),
-      feedback_en: z.string().default(""),
+      met: lenientList(z.string(), 10),
+      feedback_en: text(400),
     })
+    .catch({ completed: false, met: [], feedback_en: "" })
     .default({ completed: false, met: [], feedback_en: "" }),
-  praise_en: z.string().default(""),
+  praise_en: text(400),
   /** His best English sentence in the conversation, as he said it (shown as a win). */
-  best_sentence: z.string().max(300).catch("").default(""),
+  best_sentence: text(300),
   /** Speaking level shown in this conversation. Optional: a short chat may not show enough. */
   level: z
     .object({
       cefr: z.enum(["A1", "A2", "B1", "B1+", "B2", "B2+", "C1", "C2"]),
       confidence: z.enum(["low", "medium", "high"]).catch("low"),
-      note_en: z.string().default(""),
+      note_en: text(300),
     })
     .optional()
     .catch(undefined),
   /** Short facts about his life worth remembering for the next conversation. */
-  memory: z.array(z.string().trim().min(3).max(160)).max(4).catch([]).default([]),
+  memory: lenientList(z.string().trim().min(3).max(200), 4),
   /** Facts already remembered that this conversation shows are out of date (exact text). */
-  memory_drop: z.array(z.string().trim().min(3).max(160)).max(4).catch([]).default([]),
+  memory_drop: lenientList(z.string().trim().min(3).max(200), 4),
   /** One or two sentences: what the conversation was about and what he said that matters. */
-  summary_en: z.string().trim().max(300).catch("").default(""),
+  summary_en: text(400),
   /** Four scores from 0 to 100; the total is worked out in code (see totalScore). */
   score: z
     .object({
@@ -92,59 +117,58 @@ export const analysisSchema = z.object({
       accuracy: percent,
       range: percent,
       task: percent,
-      note_en: z.string().trim().max(240).default(""),
+      note_en: text(300),
     })
     .optional()
     .catch(undefined),
   /** How the conversation felt to the teacher, in plain words. */
-  felt_en: z.string().trim().max(300).catch("").default(""),
-  felt_he: z.string().trim().max(300).catch("").default(""),
-  next_steps: z.array(nextStep).max(3).catch([]).default([]),
+  felt_en: text(500),
+  felt_he: text(500),
+  next_steps: lenientList(nextStep, 3),
   /** Today's challenge: did he meet it (only when there was one). */
   challenge: z
-    .object({ met: z.boolean().catch(false), note_en: z.string().trim().max(240).default("") })
+    .object({ met: z.boolean().catch(false), note_en: text(300) })
     .optional()
     .catch(undefined),
   /** Plain words he leaned on, each with a stronger one to learn. */
-  upgrades: z
-    .array(
-      z.object({
-        plain: z.string().trim().min(1).max(60),
-        better: z.string().trim().min(1).max(60),
-        meaning_he: z.string().trim().max(80).default(""),
-        example: z.string().trim().max(200).default(""),
-      }),
-    )
-    .max(3)
-    .catch([])
-    .default([]),
+  upgrades: lenientList(
+    z.object({
+      plain: z.string().trim().min(1).max(80),
+      better: z.string().trim().min(1).max(80),
+      meaning_he: text(120),
+      example: text(240),
+    }),
+    3,
+  ),
   /** One small task for before the next conversation. */
   homework: z
     .object({
-      task_en: z.string().trim().min(3).max(240),
-      task_he: z.string().trim().max(240).default(""),
+      task_en: z
+        .string()
+        .trim()
+        .min(3)
+        .transform((t) => t.slice(0, 300)),
+      task_he: text(300),
     })
     .optional()
     .catch(undefined),
   /** Interview scenarios only: how each answer was built, and overall readiness. */
   interview: z
     .object({
-      answers: z
-        .array(
-          z.object({
-            question: z.string().default(""),
-            direct: z.boolean().catch(false),
-            example: z.boolean().catch(false),
-            actions: z.boolean().catch(false),
-            result: z.boolean().catch(false),
-            tip_en: z.string().default(""),
-            better_start: z.string().default(""),
-          }),
-        )
-        .max(5)
-        .default([]),
+      answers: lenientList(
+        z.object({
+          question: text(300),
+          direct: z.boolean().catch(false),
+          example: z.boolean().catch(false),
+          actions: z.boolean().catch(false),
+          result: z.boolean().catch(false),
+          tip_en: text(300),
+          better_start: text(300),
+        }),
+        5,
+      ),
       readiness: z.coerce.number().int().min(1).max(5).catch(3),
-      note_en: z.string().default(""),
+      note_en: text(300),
     })
     .optional()
     .catch(undefined),
@@ -402,6 +426,18 @@ export function repairTruncatedJson(text: string): unknown {
     }
   }
   return null;
+}
+
+/** Why a reply couldn't be used, for the server log: no content, only shape. */
+export function whyUnusable(text: string, schema: z.ZodTypeAny = analysisSchema): string {
+  const raw = extractJson(text);
+  if (raw === null || typeof raw !== "object") return "not JSON";
+  const parsed = schema.safeParse(raw);
+  if (parsed.success) return "ok";
+  return parsed.error.issues
+    .slice(0, 5)
+    .map((i) => `${i.path.join(".") || "(root)"}: ${i.code}`)
+    .join("; ");
 }
 
 export function parseAnalysis(text: string): Analysis | null {

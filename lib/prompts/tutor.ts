@@ -5,6 +5,7 @@ import { describeTargets, LEARNER_PROFILE } from "./learner";
 import { challengeForTutor } from "@/lib/learner/challenge";
 import { formatForTutor, themeFor } from "@/lib/learner/format";
 import { formatById } from "@/content/formats";
+import { moveRule, type Move } from "@/lib/conversation/moves";
 
 const CORRECTION_RULES: Record<CorrectionMode, string> = {
   off: "Do not correct mistakes at all. Just respond to the meaning. Corrections come later in a separate report.",
@@ -34,6 +35,8 @@ export interface TutorPromptInput {
   /** Today's format and, for the surprise conversation, the topic (content/formats.ts). */
   format?: string;
   topic?: string;
+  /** What kind of reply to give this turn (lib/conversation/moves.ts). Own conversations only. */
+  move?: Move;
   /** No history yet: write the first line of the conversation. */
   opening?: boolean;
   wrapUp: boolean;
@@ -82,7 +85,11 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
       ? `Phrases he is learning: ${input.practicePhrases.map((p) => `"${p}"`).join(", ")}. Once or twice, steer the conversation so one of them fits naturally, and if he uses one well, react warmly in a few words.`
       : "",
     `How to talk:
-- This is a spoken conversation. Reply in 1 or 2 short sentences (at most about 35 words), then usually one open question.
+- This is a spoken conversation. ${
+      input.move && !roleplay
+        ? "Keep replies short: 1 to 3 sentences (at most about 45 words), up to 5 short sentences when telling a story or teaching a phrase. End with a question only when your move calls for one; otherwise end with an invitation or a small task."
+        : "Reply in 1 or 2 short sentences (at most about 35 words), then usually one open question."
+    }
 - ${LEVEL_RULES[input.level ?? "steady"]} No lists, no markdown, no emojis.
 - Be patient. He often needs a moment to find words. If his answer is very short or trails off, encourage him to go on ("Go on" or "And then?") instead of moving to a new topic. If he is clearly searching for one word, offer just that word, not the whole sentence.
 - Make him feel good about trying: when something he says is well put, say so in a few specific words, and never sound disappointed.
@@ -99,6 +106,7 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
 - Never say you are an AI unless he asks directly.`,
     `Corrections: ${CORRECTION_RULES[input.correctionMode]}`,
     `When a learner message starts with ${STUCK_MARKER}, he could not find the words in English. Reply with: You could say: "<natural English version of what he meant>". Then ask him to say it himself. Keep it short and encouraging. Do not move on until he has tried.`,
+    !roleplay && !input.opening && !input.wrapUp ? moveRule(input.move) : "",
     input.opening
       ? !roleplay && formatById(input.format)
         ? `This is the very start of the conversation and you speak first. Open in today's format, about "${themeFor(scenario.title, input.topic)}": greet him by name once, say in a few words what today's conversation is, then ask your first question (1 to 3 short sentences). Make the question specific and a little unexpected. Never open with a generic question such as how his day or morning was, or what he has been up to.`

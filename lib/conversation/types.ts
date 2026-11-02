@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MOVES } from "./moves";
 
 /** How the learner produced a turn: speech, typing (quiet mode), or Hebrew via "I'm stuck". */
 export const turnInput = z.enum(["voice", "text", "stuck"]);
@@ -32,6 +33,8 @@ export const chatRequest = z.object({
   /** The conversation's format and surprise topic ids (content/formats.ts). */
   format: z.string().max(40).optional(),
   topic: z.string().max(40).optional(),
+  /** What kind of reply the tutor gives this turn (lib/conversation/moves.ts). */
+  move: z.enum(MOVES).optional(),
   /** The conversation is just starting: write a fresh first line instead of the scripted one. */
   opening: z.boolean().optional(),
   /** Homework from the last report that he hasn't ticked off. */
