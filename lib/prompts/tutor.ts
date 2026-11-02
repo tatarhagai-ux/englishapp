@@ -3,6 +3,8 @@ import type { ChatMessage } from "@/lib/providers/llm/types";
 import type { CorrectionMode, Turn } from "@/lib/conversation/types";
 import { describeTargets, LEARNER_PROFILE } from "./learner";
 import { challengeForTutor } from "@/lib/learner/challenge";
+import { formatForTutor, themeFor } from "@/lib/learner/format";
+import { formatById } from "@/content/formats";
 
 const CORRECTION_RULES: Record<CorrectionMode, string> = {
   off: "Do not correct mistakes at all. Just respond to the meaning. Corrections come later in a separate report.",
@@ -29,6 +31,9 @@ export interface TutorPromptInput {
   homework?: string;
   /** Today's challenge id (content/challenges.ts). */
   challenge?: string;
+  /** Today's format and, for the surprise conversation, the topic (content/formats.ts). */
+  format?: string;
+  topic?: string;
   /** No history yet: write the first line of the conversation. */
   opening?: boolean;
   wrapUp: boolean;
@@ -71,6 +76,7 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
     input.homework && !roleplay
       ? `Last time you gave him this homework: "${input.homework}". Early on, ask him to show you (for example, say the sentences now). React honestly: praise what he got right and fix one thing.`
       : "",
+    roleplay ? "" : formatForTutor(input.format, themeFor(scenario.title, input.topic)),
     challengeForTutor(input.challenge, !!roleplay),
     input.practicePhrases?.length
       ? `Phrases he is learning: ${input.practicePhrases.map((p) => `"${p}"`).join(", ")}. Once or twice, steer the conversation so one of them fits naturally, and if he uses one well, react warmly in a few words.`
@@ -94,7 +100,9 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
     `Corrections: ${CORRECTION_RULES[input.correctionMode]}`,
     `When a learner message starts with ${STUCK_MARKER}, he could not find the words in English. Reply with: You could say: "<natural English version of what he meant>". Then ask him to say it himself. Keep it short and encouraging. Do not move on until he has tried.`,
     input.opening
-      ? `This is the very start of the conversation and you speak first. The usual opening is: "${scenario.opener}" Say something with the same purpose in your own fresh words (1 or 2 short sentences ending with one question).${roleplay ? " Stay in character." : " Greet him by name once. If something you remember about him or today's challenge fits naturally, you may use it."} Don't repeat the usual opening word for word.`
+      ? !roleplay && formatById(input.format)
+        ? `This is the very start of the conversation and you speak first. Open in today's format, about "${themeFor(scenario.title, input.topic)}": greet him by name once, say in a few words what today's conversation is, then ask your first question (1 to 3 short sentences). Make the question specific and a little unexpected. Never open with a generic question such as how his day or morning was, or what he has been up to.`
+        : `This is the very start of the conversation and you speak first. The usual opening is: "${scenario.opener}" Say something with the same purpose in your own fresh words (1 or 2 short sentences ending with one question).${roleplay ? " Stay in character." : " Greet him by name once. If something you remember about him or today's challenge fits naturally, you may use it."} Don't repeat the usual opening word for word.`
       : "",
     input.wrapUp
       ? "Time is up. Close the conversation now in 1 or 2 sentences: mention one specific thing he did well, and say goodbye in a way that fits the situation. Do not ask a new question."

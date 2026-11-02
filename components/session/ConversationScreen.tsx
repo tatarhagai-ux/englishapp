@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import clsx from "clsx";
-import { characterName, MINUTE_TALK_ID, scenarioById } from "@/content/scenarios";
+import { characterName, MINUTE_TALK_ID, scenarioById, SURPRISE_ID } from "@/content/scenarios";
 import { TALK_TOPICS, topicById, topicOpener } from "@/content/topics";
 import { voiceById, DEFAULT_TUTOR_VOICE_ID } from "@/content/voices";
 import type { Turn, TurnInput } from "@/lib/conversation/types";
@@ -29,6 +29,8 @@ import { usePrefs } from "@/lib/client/prefs";
 import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { ApiError, API_ERROR_TEXT, assist, fetchOpener, streamChat } from "@/lib/client/api";
 import { nextChallenge, pickChallenge } from "@/lib/learner/challenge";
+import { nextFormat, nextTopic, pickFormat, pickTopic, themeFor } from "@/lib/learner/format";
+import type { ConversationFormat } from "@/content/formats";
 import type { Challenge } from "@/content/challenges";
 import { TtsRequestError } from "@/lib/client/tts";
 import { ensureMicrophone, Listener, primeAudio, SpeechQueue, SpeechSetupError } from "@/lib/client/speech";
@@ -173,6 +175,19 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
     setChallenge(pickChallenge(learner.get(), { level: tutorLevel, roleplay, scenarioId, day: dayKey(new Date()) }));
   }, [hydrated, demo, topic, scenario.hidden, tutorLevel, roleplay, scenarioId]);
   const swapChallenge = () => setChallenge((c) => nextChallenge(learner.get(), c?.id, { level: tutorLevel, roleplay }));
+  // Today's format (conversations with his own tutor) and, for the surprise conversation, the topic.
+  const [convFormat, setConvFormat] = useState<ConversationFormat | undefined>(undefined);
+  const [surprise, setSurprise] = useState<{ id: string; title: string } | undefined>(undefined);
+  const formatSet = useRef(false);
+  useEffect(() => {
+    if (!hydrated || formatSet.current || demo || topic || scenario.hidden || roleplay) return;
+    formatSet.current = true;
+    const day = dayKey(new Date());
+    setConvFormat(pickFormat(learner.get(), { level: tutorLevel, scenarioId, day }));
+    if (scenarioId === SURPRISE_ID) setSurprise(pickTopic(learner.get(), day));
+  }, [hydrated, demo, topic, scenario.hidden, roleplay, tutorLevel, scenarioId]);
+  const swapFormat = () => setConvFormat((f) => nextFormat(learner.get(), f?.id, tutorLevel));
+  const swapTopic = () => setSurprise((t) => nextTopic(learner.get(), t?.id));
   const rateRef = useRef(prefs.speechRate);
   rateRef.current = prefs.speechRate * paceFor(tutorLevel);
   modeRef.current = mode;
@@ -400,6 +415,8 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         recent: recentSummaries(s),
         homework: openHomework(s)?.task,
         challenge: s.sessions.find((x) => x.id === sessionRef.current)?.challenge,
+        format: s.sessions.find((x) => x.id === sessionRef.current)?.format,
+        topic: s.sessions.find((x) => x.id === sessionRef.current)?.topic,
         tutorName,
         wrapUp: extra.wrapUp ?? false,
         opening: extra.opening,
@@ -549,8 +566,15 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
       elapsedRef.current = Math.min(resumable.pausedElapsed ?? resumable.speakingSeconds * 2, limitSeconds - 60);
       learner.resumeSession(resumable.id);
     } else {
-      id = learner.startSession(scenarioId, chosen, opener, demo, planDay, challenge?.id);
-      setTurnsBoth([{ role: "tutor", text: opener }]);
+      // The fresh first line follows today's format. Until it arrives (or if it fails), the
+      // surprise conversation has a scripted line in its format; the others keep their own.
+      const firstLine = convFormat && surprise ? convFormat.starter(themeFor(scenario.title, surprise.id)) : opener;
+      id = learner.startSession(scenarioId, chosen, firstLine, demo, planDay, {
+        challenge: challenge?.id,
+        format: convFormat?.id,
+        topic: surprise?.id,
+      });
+      setTurnsBoth([{ role: "tutor", text: firstLine }]);
     }
     sessionRef.current = id;
     // A fresh first line, written while he learns words or warms up. The scripted one is
@@ -732,6 +756,10 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         topic={topic}
         challenge={challenge}
         onSwapChallenge={swapChallenge}
+        format={convFormat}
+        onSwapFormat={swapFormat}
+        surpriseTopic={surprise}
+        onSwapTopic={swapTopic}
         hebrewHelp={prefs.hebrewHelp}
       />
     );

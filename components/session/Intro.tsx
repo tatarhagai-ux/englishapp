@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Flame, Keyboard, Mic, Shuffle, Target } from "lucide-react";
+import { ChevronLeft, Flame, Keyboard, MessagesSquare, Mic, Shuffle, Target } from "lucide-react";
 import clsx from "clsx";
 import type { Scenario } from "@/content/scenarios";
 import { CATEGORY_INFO, characterName, scenarioLevel } from "@/content/scenarios";
 import type { Voice } from "@/content/voices";
 import type { TalkTopic } from "@/content/topics";
 import type { Challenge } from "@/content/challenges";
+import type { ConversationFormat } from "@/content/formats";
 import { Avatar } from "../Avatar";
 
 interface Props {
@@ -28,6 +29,11 @@ interface Props {
   /** Today's challenge, with a way to pick another one. */
   challenge?: Challenge;
   onSwapChallenge?: () => void;
+  /** Today's format, and the topic for the surprise conversation. */
+  format?: ConversationFormat;
+  onSwapFormat?: () => void;
+  surpriseTopic?: { id: string; title: string };
+  onSwapTopic?: () => void;
   hebrewHelp?: boolean;
 }
 
@@ -46,6 +52,10 @@ export function Intro({
   topic,
   challenge,
   onSwapChallenge,
+  format,
+  onSwapFormat,
+  surpriseTopic,
+  onSwapTopic,
   hebrewHelp,
 }: Props) {
   const speaker = characterName(scenario) ?? voice.displayName;
@@ -118,6 +128,48 @@ export function Intro({
           ))}
         </ul>
       </section>
+
+      {format && (
+        <section aria-labelledby="format-title" className="tile space-y-2 border-accent/60 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2
+              id="format-title"
+              className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-faint"
+            >
+              <MessagesSquare className="size-4 text-accent" aria-hidden /> Today&apos;s conversation · {format.title}
+            </h2>
+            {onSwapFormat && (
+              <button
+                type="button"
+                onClick={onSwapFormat}
+                className="tap inline-flex shrink-0 items-center gap-1 text-xs font-extrabold text-accent"
+              >
+                <Shuffle className="size-3.5" aria-hidden /> Another format
+              </button>
+            )}
+          </div>
+          {surpriseTopic && (
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-lg font-black leading-snug">Topic: {surpriseTopic.title}</p>
+              {onSwapTopic && (
+                <button
+                  type="button"
+                  onClick={onSwapTopic}
+                  className="tap inline-flex shrink-0 items-center gap-1 text-xs font-extrabold text-accent"
+                >
+                  <Shuffle className="size-3.5" aria-hidden /> Another topic
+                </button>
+              )}
+            </div>
+          )}
+          <p className="font-bold">{format.howEn}</p>
+          {hebrewHelp && (
+            <p dir="rtl" lang="he" className="text-sm text-dim">
+              {format.howHe}
+            </p>
+          )}
+        </section>
+      )}
 
       {challenge && (
         <section aria-labelledby="challenge-title" className="tile space-y-2 border-xp/60 p-4">

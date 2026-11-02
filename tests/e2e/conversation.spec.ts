@@ -79,6 +79,10 @@ async function mockApis(page: Page, chatBodies: unknown[]) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
+        // "Make the summary" asks for the wrap-up alone.
+        ...(route.request().postDataJSON()?.only === "coach"
+          ? { coach: { felt_en: "You kept going when it got hard.", homework: { task_en: "Use since twice." } } }
+          : {}),
         analysis: ANALYSIS,
         model: "deepseek/deepseek-v3.2",
         usage: { promptTokens: 2000, completionTokens: 400 },
@@ -129,6 +133,11 @@ test("a quiet-mode conversation produces a report and updates progress", async (
   await expect(page).toHaveURL(/\/report\//);
   await expect(page.getByText("Mission complete!")).toBeVisible();
   await expect(page.getByText("I've been studying for AZ-900 for two weeks")).toBeVisible();
+  // This report came without the wrap-up: one tap makes it.
+  const summary = page.getByRole("region", { name: "Lesson summary" });
+  await summary.getByRole("button", { name: "Make the summary" }).click();
+  await expect(summary.getByText("You kept going when it got hard.")).toBeVisible();
+  await expect(summary.getByText("Use since twice.")).toBeVisible();
   await page.getByRole("button", { name: "Translate" }).first().click();
   await expect(page.getByText("משתמשים ב-present perfect")).toBeVisible();
   await expect(page.getByRole("link", { name: /Drill this trap from Hebrew: For and since/ })).toHaveAttribute(
@@ -294,7 +303,7 @@ test("practice library lists every category and opens a scenario", async ({ page
   // Everyday talk joins free talk and world topics.
   await goals.getByRole("tab", { name: /Everyday talk/ }).click();
   await expect(panel).toHaveAccessibleName("Everyday talk");
-  await panel.getByRole("button", { name: /Show all 12/ }).click();
+  await panel.getByRole("button", { name: /Show all 13 conversations/ }).click();
   await expect(panel.getByRole("link", { name: /Your week/ })).toBeVisible();
   await expect(panel.getByRole("link", { name: /Will AI take our jobs/ })).toBeVisible();
   // The chosen goal is remembered.
@@ -857,6 +866,39 @@ test("a report that was never made waits on Home and in the lessons list", async
   await expect(page.getByText("Mission complete!")).toBeVisible();
   await page.goto("/");
   await expect(page.getByRole("region", { name: "Your report isn't ready yet" })).toHaveCount(0);
+});
+
+test("surprise conversation: a topic and a format, each can be swapped, and the tutor gets both", async ({ page }) => {
+  const bodies: { format?: string; topic?: string; opening?: boolean }[] = [];
+  await page.route("**/api/chat", (route: Route) => {
+    bodies.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body:
+        JSON.stringify({ t: "delta", text: "Interesting. Why?" }) +
+        "\n" +
+        JSON.stringify({ t: "done", model: "m", usage: null }) +
+        "\n",
+    });
+  });
+  await page.goto("/session/free-surprise");
+  const card = page.getByRole("region", { name: /Today's conversation/ });
+  await expect(card).toBeVisible();
+  const topic = await card.getByText(/^Topic:/).textContent();
+  await card.getByRole("button", { name: "Another topic" }).click();
+  await expect(card.getByText(/^Topic:/)).not.toHaveText(topic ?? "");
+  const format = await card.getByRole("heading").textContent();
+  await card.getByRole("button", { name: "Another format" }).click();
+  await expect(card.getByRole("heading")).not.toHaveText(format ?? "");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  await page.getByLabel("Your reply").fill("I think phones are a problem");
+  await page.getByLabel("Your reply").press("Enter");
+  await expect(page.getByText("Interesting. Why?").last()).toBeVisible();
+  const reply = bodies.find((b) => !b.opening)!;
+  expect(reply.format).toBeTruthy();
+  expect(reply.topic).toBeTruthy();
 });
 
 test("plan days start by learning three of the week's words, then the next three", async ({ page }) => {

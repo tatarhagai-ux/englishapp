@@ -2,7 +2,7 @@
 
 import { usageCostUsd } from "@/lib/cost/pricing";
 import type { ChatRequest, Turn } from "@/lib/conversation/types";
-import type { Analysis } from "@/lib/prompts/analyzer";
+import type { Analysis, Coach } from "@/lib/prompts/analyzer";
 import type { AssistRequest } from "@/lib/prompts/assist";
 import type { Usage } from "@/lib/providers/llm/types";
 
@@ -151,6 +151,16 @@ export async function fetchOpener(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Only the teacher's wrap-up, for a report whose summary didn't come through. */
+export function summarizeSession(scenarioId: string, history: Turn[], challenge?: string) {
+  return postJson<{ coach: Coach; model: string; usage: Usage | null }>("/api/analyze", {
+    scenarioId,
+    history,
+    challenge,
+    only: "coach",
+  });
 }
 
 export function analyzeSession(

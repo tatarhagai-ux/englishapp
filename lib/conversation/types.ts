@@ -29,6 +29,9 @@ export const chatRequest = z.object({
   recent: z.array(z.string().max(340)).max(3).default([]),
   /** Today's challenge id (content/challenges.ts). */
   challenge: z.string().max(40).optional(),
+  /** The conversation's format and surprise topic ids (content/formats.ts). */
+  format: z.string().max(40).optional(),
+  topic: z.string().max(40).optional(),
   /** The conversation is just starting: write a fresh first line instead of the scripted one. */
   opening: z.boolean().optional(),
   /** Homework from the last report that he hasn't ticked off. */

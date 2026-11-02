@@ -29,5 +29,6 @@ export type ChatStreamEvent = { type: "delta"; text: string } | { type: "done"; 
 export interface LlmProvider {
   readonly name: string;
   stream(req: ChatRequest): AsyncIterable<ChatStreamEvent>;
-  complete(req: ChatRequest): Promise<{ text: string; usage?: Usage }>;
+  /** finishReason "length" means the reply hit maxTokens and was cut off. */
+  complete(req: ChatRequest): Promise<{ text: string; usage?: Usage; finishReason?: string }>;
 }

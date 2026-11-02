@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Headphones, Languages, MessageCircle, Repeat2, Shuffle, Volume2 } from "lucide-react";
+import { ArrowRight, Headphones, Languages, MessageCircle, Repeat2, Shuffle, Sparkles, Volume2 } from "lucide-react";
+import { SURPRISE_ID } from "@/content/scenarios";
 import { useLearner } from "@/lib/client/learner";
 import { differentScenario, openSayMisses, warmupItems } from "@/lib/learner/model";
 import { SAY_MISSES_ID, SAY_SETS } from "@/content/say";
@@ -47,6 +48,12 @@ export function KeepGoing({ next, avoid }: { next: NextStep | null; avoid: strin
           <ArrowRight className="size-5 text-accent" aria-hidden />
         </Link>
       )}
+      <Option
+        href={`/session/${SURPRISE_ID}`}
+        icon={Sparkles}
+        title="Surprise conversation"
+        detail="A new topic and a new kind of conversation · 8 min"
+      />
       {other && (
         <Option
           href={`/session/${other.id}`}

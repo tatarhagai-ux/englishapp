@@ -193,6 +193,17 @@ describe("POST /api/analyze", () => {
     expect(json.analysis.corrections).toHaveLength(1);
   });
 
+  it("can make only the wrap-up, for a report that lost it", async () => {
+    fake.coach = [JSON.stringify({ felt_en: "Good flow.", homework: { task_en: "Use since twice." } })];
+    const { POST } = await import("@/app/api/analyze/route");
+    const res = await POST(post({ scenarioId: "free-your-week", history, only: "coach" }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.coach.homework.task_en).toBe("Use since twice.");
+    expect(json.analysis).toBeUndefined();
+    expect(fake.calls).toHaveLength(0);
+  });
+
   it("still returns the fixes when the wrap-up fails", async () => {
     fake.completions = [good];
     fake.coach = ["not json", "still not json"];

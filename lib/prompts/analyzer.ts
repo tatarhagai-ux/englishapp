@@ -344,9 +344,64 @@ export function extractJson(text: string): unknown {
     try {
       return JSON.parse(unfenced.slice(start, end + 1));
     } catch {
-      return null;
+      return repairTruncatedJson(unfenced.slice(start));
     }
   }
+}
+
+/** Add the closing brackets an unfinished JSON prefix needs, or null if it stops inside a string. */
+function closeJson(prefix: string): string | null {
+  const closers: string[] = [];
+  let inString = false;
+  let escaped = false;
+  for (const ch of prefix) {
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") closers.push("}");
+    else if (ch === "[") closers.push("]");
+    else if (ch === "}" || ch === "]") closers.pop();
+  }
+  return inString ? null : prefix + closers.reverse().join("");
+}
+
+/**
+ * A reply cut off by the token limit: keep every field that arrived whole. Walks back from
+ * the end to the last point where a value was complete, then closes the open brackets.
+ */
+export function repairTruncatedJson(text: string): unknown {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  const body = text.slice(start);
+  const cuts: number[] = [];
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "," || ch === "}" || ch === "]") cuts.push(i);
+  }
+  for (let k = cuts.length - 1, tries = 0; k >= 0 && tries < 400; k--, tries++) {
+    const i = cuts[k];
+    const closed = closeJson(body[i] === "," ? body.slice(0, i) : body.slice(0, i + 1));
+    if (!closed) continue;
+    try {
+      return JSON.parse(closed);
+    } catch {
+      // Try an earlier cut.
+    }
+  }
+  return null;
 }
 
 export function parseAnalysis(text: string): Analysis | null {

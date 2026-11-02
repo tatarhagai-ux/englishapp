@@ -123,7 +123,7 @@ export const learner = {
     opener: string,
     demo = false,
     planDay?: string,
-    challenge?: string,
+    extras: { challenge?: string; format?: string; topic?: string } = {},
   ): string {
     const now = new Date();
     const id = `${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -141,7 +141,7 @@ export const learner = {
       costUsd: 0,
       ...(demo ? { demo: true } : {}),
       ...(planDay && !demo ? { planDay } : {}),
-      ...(challenge && !demo ? { challenge } : {}),
+      ...(!demo ? Object.fromEntries(Object.entries(extras).filter(([, v]) => typeof v === "string" && v)) : {}),
     };
     let next: LearnerState = { ...get(), sessions: [...get().sessions, session] };
     // A plan day brings its week's words into the phrase bank (once), for review and counting.
@@ -207,6 +207,11 @@ export const learner = {
   /** Remove a session that never got a learner turn (opened and abandoned). */
   discardSession(id: string) {
     set(removeSession(get(), id));
+  },
+
+  /** Add the teacher's wrap-up to a report that came without it. The fixes are left as they are. */
+  saveSummary(id: string, coach: Partial<Analysis>) {
+    learner.updateSession(id, (s) => (s.report ? { ...s, report: { ...s.report, ...coach } } : s));
   },
 
   saveReport(id: string, analysis: Analysis, dailyGoalMinutes: number) {

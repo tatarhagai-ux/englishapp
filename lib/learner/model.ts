@@ -99,6 +99,9 @@ export interface SessionRecord {
   pausedElapsed?: number;
   /** Today's challenge for this conversation (content/challenges.ts). */
   challenge?: string;
+  /** The conversation's format and, for the surprise conversation, its topic (content/formats.ts). */
+  format?: string;
+  topic?: string;
   /** He marked the homework from this conversation's report as done. */
   homeworkDone?: boolean;
 }

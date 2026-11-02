@@ -47,6 +47,8 @@ export const CATEGORY_INFO: Record<ScenarioCategory, { label: string; goal: stri
 export const PLACEMENT_ID = "placement";
 /** The one-minute talk; its topic card comes from content/topics.ts (the ?topic= link). */
 export const MINUTE_TALK_ID = "minute-talk";
+/** A new topic and format each time (content/formats.ts). */
+export const SURPRISE_ID = "free-surprise";
 
 export const SCENARIOS: readonly Scenario[] = [
   // Placement: a short chat that climbs from easy to hard so the analyzer can place him.
@@ -246,6 +248,23 @@ After each answer, react briefly like a real interviewer (a few words, no teachi
     phrases: ["Lately I've been…", "This week I…", "Next week I'm planning to…", "I'm looking forward to…"],
     opener: "Hey! So, what have you been up to this week?",
     minutes: 10,
+  },
+  {
+    id: SURPRISE_ID,
+    category: "free",
+    title: "Surprise conversation",
+    summary: "A new topic and a new kind of conversation every time: a debate, a story, a pitch, a what-if.",
+    voiceId: null,
+    setting: "A conversation with your tutor on a topic picked for today",
+    task: "Talk about today's topic the way today's format asks: full answers, with reasons and examples.",
+    successCriteria: [
+      "Gives reasons or examples for what he says",
+      "Answers in full sentences that keep the conversation going",
+    ],
+    targets: ["missing_be", "answer_all_parts"],
+    phrases: ["The way I see it…", "For example…", "On the other hand…", "That's a fair point, but…"],
+    opener: "Let's try something new today. Ready?",
+    minutes: 8,
   },
   {
     id: "free-ai-tools",

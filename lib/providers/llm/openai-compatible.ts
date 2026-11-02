@@ -99,8 +99,15 @@ export function createOpenAICompatible(cfg: OpenAICompatibleConfig): LlmProvider
 
     async complete(req) {
       const res = await post(req, false);
-      const json = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: RawUsage };
-      return { text: json.choices?.[0]?.message?.content ?? "", usage: toUsage(json.usage) };
+      const json = (await res.json()) as {
+        choices?: { message?: { content?: string }; finish_reason?: string }[];
+        usage?: RawUsage;
+      };
+      return {
+        text: json.choices?.[0]?.message?.content ?? "",
+        usage: toUsage(json.usage),
+        finishReason: json.choices?.[0]?.finish_reason,
+      };
     },
   };
 }
