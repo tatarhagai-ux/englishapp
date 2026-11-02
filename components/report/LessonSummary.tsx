@@ -2,9 +2,21 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, Check, ClipboardList, Flame, MessageSquareQuote, NotebookPen, Plus, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ClipboardList,
+  Loader2,
+  Flame,
+  MessageSquareQuote,
+  NotebookPen,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import clsx from "clsx";
 import { learner, useLearner } from "@/lib/client/learner";
+import { summarizeSession, ApiError, API_ERROR_TEXT } from "@/lib/client/api";
+import { usageCostUsd } from "@/lib/cost/pricing";
 import { challengeById } from "@/content/challenges";
 import { totalScore, type Analysis } from "@/lib/prompts/analyzer";
 import type { StepLink } from "@/lib/learner/steps";
@@ -44,7 +56,9 @@ export function LessonSummary({
   const delta = total !== null && previousScore !== null ? total - previousScore : null;
   const challenge = challengeById(challengeId);
   const upgrades = report.upgrades ?? [];
-  if (!score && !report.felt_en && !steps.length && !report.homework && !upgrades.length) return null;
+  if (!score && !report.felt_en && !steps.length && !report.homework && !upgrades.length) {
+    return demo ? null : <MissingSummary sessionId={sessionId} />;
+  }
 
   return (
     <section aria-labelledby="summary-title" className="tile space-y-4 p-5">
@@ -234,5 +248,56 @@ function Upgrades({ items, hebrewHelp, demo }: { items: Analysis["upgrades"]; he
           </button>
         ))}
     </div>
+  );
+}
+
+/** The fixes arrived but the wrap-up didn't (a slow or cut-off reply): make it now. */
+function MissingSummary({ sessionId }: { sessionId: string }) {
+  const state = useLearner();
+  const session = state.sessions.find((s) => s.id === sessionId);
+  const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
+  const [error, setError] = useState("");
+  if (!session) return null;
+  async function make() {
+    if (!session) return;
+    setStatus("working");
+    try {
+      const res = await summarizeSession(session.scenarioId, session.turns, session.challenge);
+      learner.addSpend(session.id, usageCostUsd(res.model, res.usage));
+      learner.saveSummary(session.id, res.coach);
+      setStatus("idle");
+    } catch (err) {
+      setError(API_ERROR_TEXT[err instanceof ApiError ? err.kind : "provider"]);
+      setStatus("error");
+    }
+  }
+  return (
+    <section aria-labelledby="summary-title" className="tile space-y-3 border-warn/50 p-5">
+      <h2 id="summary-title" className="flex items-center gap-2 font-black">
+        <ClipboardList className="size-5 text-accent" aria-hidden /> Lesson summary
+      </h2>
+      <p className="text-sm text-dim">
+        Your fixes are below, but the summary (score, how it felt, what to do now, homework) didn&apos;t come through.
+      </p>
+      {status === "error" && (
+        <p role="alert" className="text-sm font-bold text-bad">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={() => void make()}
+        disabled={status === "working"}
+        className="btn-3d btn-go flex w-full items-center justify-center gap-2 py-3 text-sm uppercase"
+      >
+        {status === "working" ? (
+          <>
+            <Loader2 className="size-4 animate-spin" aria-hidden /> Writing your summary…
+          </>
+        ) : (
+          "Make the summary"
+        )}
+      </button>
+    </section>
   );
 }

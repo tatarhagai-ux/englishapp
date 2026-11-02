@@ -24,7 +24,13 @@ const body = z.object({
   memory: z.array(z.string().max(160)).max(40).default([]),
   /** Today's challenge id, so the wrap-up can say whether he met it. */
   challenge: z.string().max(40).optional(),
+  /** Only the teacher's wrap-up, for a report that already has its fixes but lost the summary. */
+  only: z.literal("coach").optional(),
 });
+
+/** Token room per reply. Hebrew lines cost several times more tokens than English ones. */
+const CORE_MAX_TOKENS = 2400;
+const COACH_MAX_TOKENS = 2400;
 
 function addUsage(a: Usage | undefined, b: Usage | undefined): Usage | undefined {
   if (!a) return b;
@@ -65,6 +71,7 @@ async function jsonCall<T>(
   parse: (text: string) => T | null,
   started: number,
   signal: AbortSignal,
+  label = "analysis",
 ): Promise<{ value: T | null; usage?: Usage }> {
   let usage: Usage | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -86,6 +93,10 @@ async function jsonCall<T>(
     usage = addUsage(usage, res.usage);
     const value = parse(res.text);
     if (value) return { value, usage };
+    // Why it failed, without the content: cut off by the token limit, or not JSON at all.
+    console.error(
+      `${label} reply unusable (model=${model}, attempt=${attempt + 1}, finish=${res.finishReason ?? "?"}, chars=${res.text.length})`,
+    );
   }
   return { value: null, usage };
 }
@@ -111,20 +122,35 @@ export async function POST(req: Request) {
     const models = [analyzerModel, chatModel];
     const started = Date.now();
     const { history, memory } = parsed.data;
-    const [core, coach] = await Promise.all([
-      withFallback(models, (m) =>
-        jsonCall(m, buildAnalyzerMessages(scenario, history, memory), 1800, parseAnalysis, started, req.signal),
-      ),
+    const coachCall = () =>
       withFallback(models, (m) =>
         jsonCall(
           m,
           buildCoachMessages(scenario, history, challengeById(parsed.data.challenge)),
-          1200,
+          COACH_MAX_TOKENS,
           parseCoach,
           started,
           req.signal,
+          "coach summary",
         ),
-      ).catch((err: unknown) => {
+      );
+    if (parsed.data.only === "coach") {
+      const coach = await coachCall();
+      if (!coach.value) return NextResponse.json({ error: "analysis_failed" }, { status: 502 });
+      return NextResponse.json({ coach: coach.value, model: coach.model, usage: coach.usage ?? null });
+    }
+    const [core, coach] = await Promise.all([
+      withFallback(models, (m) =>
+        jsonCall(
+          m,
+          buildAnalyzerMessages(scenario, history, memory),
+          CORE_MAX_TOKENS,
+          parseAnalysis,
+          started,
+          req.signal,
+        ),
+      ),
+      coachCall().catch((err: unknown) => {
         console.error("coach summary failed", err);
         return { value: null, usage: undefined, model: analyzerModel };
       }),

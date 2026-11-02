@@ -177,3 +177,24 @@ describe("teacher's wrap-up prompt", () => {
     expect(parseCoach("nope")).toBeNull();
   });
 });
+
+describe("a reply cut off by the token limit", () => {
+  it("keeps every field that arrived whole", async () => {
+    const { repairTruncatedJson, parseCoach } = await import("@/lib/prompts/analyzer");
+    const full = JSON.stringify({
+      summary_en: "Talked about his week.",
+      score: { fluency: 60, accuracy: 55, range: 50, task: 70 },
+      felt_en: 'You flowed when you talked about "work", then slowed down.',
+      next_steps: [{ kind: "say", target: "for-and-since", why_en: "You said I study two weeks." }],
+      homework: { task_en: "Three sentences with since.", task_he: "שלושה משפטים עם since." },
+    });
+    const cut = full.slice(0, full.indexOf("homework") + 30);
+    const repaired = repairTruncatedJson(cut) as Record<string, unknown>;
+    expect(repaired.summary_en).toBe("Talked about his week.");
+    expect(repaired.felt_en).toContain('"work"');
+    const coach = parseCoach(cut);
+    expect(coach?.score?.fluency).toBe(60);
+    expect(coach?.next_steps[0].target).toBe("for-and-since");
+    expect(repairTruncatedJson("no json here")).toBeNull();
+  });
+});

@@ -1,4 +1,5 @@
 import { SAY_MISSES_ID } from "@/content/say";
+import { SURPRISE_ID } from "@/content/scenarios";
 import { STORIES } from "@/content/stories";
 import { cardQueue, isRealSession, openSayMisses, rankedErrors, warmupItems, type LearnerState } from "./model";
 import { stepLinks } from "./steps";
@@ -89,6 +90,13 @@ export function practiceSuggestions(state: LearnerState, now = new Date()): Sugg
       minutes: 4,
     });
   }
+
+  add({
+    href: `/session/${SURPRISE_ID}`,
+    title: "Surprise conversation",
+    why: "A topic you haven't talked about, in a new format: a debate, a story, a pitch or a what-if.",
+    minutes: 8,
+  });
 
   add({
     href: "/talk",
