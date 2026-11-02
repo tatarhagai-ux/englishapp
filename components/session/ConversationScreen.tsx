@@ -30,6 +30,7 @@ import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { ApiError, API_ERROR_TEXT, assist, fetchOpener, streamChat } from "@/lib/client/api";
 import { nextChallenge, pickChallenge } from "@/lib/learner/challenge";
 import { nextFormat, nextTopic, pickFormat, pickTopic, themeFor } from "@/lib/learner/format";
+import { moveFor } from "@/lib/conversation/moves";
 import type { ConversationFormat } from "@/content/formats";
 import type { Challenge } from "@/content/challenges";
 import { TtsRequestError } from "@/lib/client/tts";
@@ -416,6 +417,11 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         homework: openHomework(s)?.task,
         challenge: s.sessions.find((x) => x.id === sessionRef.current)?.challenge,
         format: s.sessions.find((x) => x.id === sessionRef.current)?.format,
+        // Each reply in his own tutor's conversations gets a different kind of move.
+        move:
+          isTutor && !topic && !scenario.hidden && !extra.opening && sessionRef.current
+            ? moveFor(history.filter((t) => t.role === "tutor").length, sessionRef.current)
+            : undefined,
         topic: s.sessions.find((x) => x.id === sessionRef.current)?.topic,
         tutorName,
         wrapUp: extra.wrapUp ?? false,
@@ -423,7 +429,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         level: tutorLevel,
       };
     },
-    [scenarioId, prefs.correctionMode, planWeekInfo, tutorName, tutorLevel],
+    [scenarioId, prefs.correctionMode, planWeekInfo, tutorName, tutorLevel, isTutor, topic, scenario.hidden],
   );
 
   const requestTutor = useCallback(async () => {

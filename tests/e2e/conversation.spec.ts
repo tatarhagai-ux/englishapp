@@ -642,8 +642,10 @@ test("today's challenge shows before starting, and the tutor opens with a fresh 
   await page.getByLabel("Your reply").press("Enter");
   await expect(page.getByText("Why that part?")).toBeVisible();
   expect(bodies[0]).toMatchObject({ opening: true, history: [] });
-  const reply = bodies.find((b) => !b.opening)!;
+  const reply = bodies.find((b) => !b.opening)! as { challenge?: string; move?: string; history: unknown[] };
   expect(reply.challenge).toBeTruthy();
+  // The first reply after the opening line is a "share", not another question.
+  expect(reply.move).toBe("share");
   expect(reply.history[0]).toMatchObject({
     role: "tutor",
     text: "Hi Hagai! Quick one: what was the best part of your week?",
@@ -899,6 +901,28 @@ test("surprise conversation: a topic and a format, each can be swapped, and the 
   const reply = bodies.find((b) => !b.opening)!;
   expect(reply.format).toBeTruthy();
   expect(reply.topic).toBeTruthy();
+});
+
+test("the report retries once on its own when the first try fails", async ({ page }) => {
+  await mockApis(page, []);
+  let calls = 0;
+  await page.route("**/api/analyze", (route: Route) => {
+    calls++;
+    if (calls === 1)
+      return route.fulfill({ status: 502, contentType: "application/json", body: '{"error":"analysis_failed"}' });
+    return route.fallback();
+  });
+  await page.goto("/session/free-your-week");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  await page.getByLabel("Your reply").fill("I study for AZ-900 two weeks");
+  await page.getByLabel("Your reply").press("Enter");
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+  await endEarly(page);
+  await expect(page).toHaveURL(/\/report\//);
+  await expect(page.getByText("Mission complete!")).toBeVisible();
+  expect(calls).toBe(2);
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
 });
 
 test("plan days start by learning three of the week's words, then the next three", async ({ page }) => {
