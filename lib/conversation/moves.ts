@@ -6,7 +6,20 @@
  * no two conversations run the same way and a question never comes three times in a row.
  */
 
-export const MOVES = ["ask", "share", "teach", "flip", "story", "game", "level-up", "recap"] as const;
+export const MOVES = [
+  "ask",
+  "share",
+  "teach",
+  "flip",
+  "story",
+  "game",
+  "level-up",
+  "recap",
+  "roleplay",
+  "quick-fire",
+  "rate-it",
+  "spot-it",
+] as const;
 export type Move = (typeof MOVES)[number];
 
 export const MOVE_RULES: Record<Move, string> = {
@@ -23,6 +36,14 @@ export const MOVE_RULES: Record<Move, string> = {
     "Take one idea he said in simple words and ask him to say it again at a higher level: more precise words, a more formal tone, or a longer sentence with a reason. If he gets it, say what made it better.",
   recap:
     "Sum up what he has said so far in one sentence, show you were listening, then point to one part that is still missing or unclear and ask him to add it.",
+  roleplay:
+    "Switch into a short roleplay (two or three turns) that fits the topic: say in one sentence who you are (a customer, a neighbor, a colleague, a friend who needs help) and give him a small real-life task, then speak in character. When it is done, step out with one tip about how he said something.",
+  "quick-fire":
+    "Quick-fire round: ask three very short questions in a row, one line each, and tell him to answer each in one sentence without thinking too long. It breaks the rhythm and gets him speaking fast.",
+  "rate-it":
+    "Ask him to rate something about the topic from 1 to 10 and to explain the number with one reason and one example. Then react to his number (surprised, you'd have said more or less) and ask what would move it by one point.",
+  "spot-it":
+    "Spot the mistake: say two short sentences about the topic where one contains a typical mistake a Hebrew speaker makes (word order, a missing article, for or since, a direct translation). Ask which one sounds wrong and how to fix it. Don't point at it yourself.",
 };
 
 /** Where the teach moment and the hand-over land, and the order of the rest. */
@@ -30,15 +51,67 @@ const BASE: readonly Move[] = [
   "share",
   "ask",
   "teach",
-  "ask",
+  "quick-fire",
   "flip",
   "share",
   "story",
+  "ask",
+  "spot-it",
   "level-up",
+  "rate-it",
+  "roleplay",
   "ask",
   "game",
   "recap",
 ];
+
+/**
+ * How a conversation opens. The first minutes of every conversation felt the same because
+ * the opening was always "a question about you"; each conversation now gets one of these,
+ * and never one of its last few opening lines.
+ */
+export const OPENING_STYLES = [
+  {
+    id: "unexpected-question",
+    rule: "Open with one specific, slightly unexpected question that makes him think. Not about his daily routine.",
+  },
+  {
+    id: "this-or-that",
+    rule: "Open with a quick this-or-that choice connected to the theme and ask him to pick one and say why.",
+  },
+  {
+    id: "callback",
+    rule: "Open by picking up one concrete thing from your notes about him or from last time (a plan, a number, a person) and ask how it turned out. If your notes have nothing fitting, open with a mini story instead.",
+  },
+  {
+    id: "mini-story",
+    rule: "Open with two sentences of your own: a small story or observation about the theme. Then ask whether anything like it ever happened to him.",
+  },
+  {
+    id: "hot-take",
+    rule: "Open with a playful hot take about the theme and ask if he agrees or disagrees.",
+  },
+  {
+    id: "what-would-you-do",
+    rule: "Open with a one-sentence imaginary situation that involves him and ask what he would do.",
+  },
+  {
+    id: "word-first",
+    rule: "Open by giving him one fresh useful word or phrase connected to the theme, with its meaning in a few words, and ask him to use it in his first answer.",
+  },
+  {
+    id: "rate-it",
+    rule: "Open by asking him to rate something about the theme from 1 to 10 and explain the number.",
+  },
+] as const;
+
+export function openingStyleFor(seed: string): (typeof OPENING_STYLES)[number] {
+  return OPENING_STYLES[hash(`${seed}|open`) % OPENING_STYLES.length];
+}
+
+export function openingStyleById(id: string | undefined) {
+  return OPENING_STYLES.find((o) => o.id === id);
+}
 
 function hash(text: string): number {
   let h = 2166136261;

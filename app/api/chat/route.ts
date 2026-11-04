@@ -41,6 +41,8 @@ export async function POST(req: Request) {
       challenge: body.challenge,
       format: body.format,
       move: body.move,
+      style: body.style,
+      avoidOpenings: body.avoidOpenings,
       topic: body.topic,
       opening: body.opening,
       wrapUp: body.wrapUp,

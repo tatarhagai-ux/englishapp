@@ -39,7 +39,8 @@ const ANALYSIS = {
       severity: 3,
     },
   ],
-  other_errors: [],
+  // A mistake key the app doesn't track: a real report once crashed on exactly this (4.11).
+  other_errors: [{ error_key: "made_up_key_xyz", original: "I have meeting", better: "I have a meeting" }],
   correct_uses: ["study_for"],
   phrases: [{ text: "Lately I've been…", meaning_en: "Talking about recent activity", meaning_he: "לאחרונה אני…" }],
   task: { completed: true, met: ["Talks about at least one future plan"], feedback_en: "Good plan for next week." },
@@ -74,21 +75,36 @@ async function mockApis(page: Page, chatBodies: unknown[]) {
       body: lines.map((l) => JSON.stringify(l)).join("\n") + "\n",
     });
   });
-  await page.route("**/api/analyze", (route: Route) =>
-    route.fulfill({
+  // The app asks for the fixes and the teacher's wrap-up as two separate requests. The
+  // first wrap-up request fails here, so the "Make the summary" button is tested too.
+  let coachCalls = 0;
+  await page.route("**/api/analyze", (route: Route) => {
+    const only = route.request().postDataJSON()?.only;
+    if (only === "coach") {
+      coachCalls++;
+      if (coachCalls === 1) {
+        return route.fulfill({ status: 502, contentType: "application/json", body: '{"error":"analysis_failed"}' });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          coach: { felt_en: "You kept going when it got hard.", homework: { task_en: "Use since twice." } },
+          model: "deepseek/deepseek-v3.2",
+          usage: { promptTokens: 1500, completionTokens: 300 },
+        }),
+      });
+    }
+    return route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        // "Make the summary" asks for the wrap-up alone.
-        ...(route.request().postDataJSON()?.only === "coach"
-          ? { coach: { felt_en: "You kept going when it got hard.", homework: { task_en: "Use since twice." } } }
-          : {}),
         analysis: ANALYSIS,
         model: "deepseek/deepseek-v3.2",
         usage: { promptTokens: 2000, completionTokens: 400 },
       }),
-    }),
-  );
+    });
+  });
 }
 
 test("a quiet-mode conversation produces a report and updates progress", async ({ page }) => {
@@ -907,6 +923,8 @@ test("the report retries once on its own when the first try fails", async ({ pag
   await mockApis(page, []);
   let calls = 0;
   await page.route("**/api/analyze", (route: Route) => {
+    // Only the request for the fixes is counted; the wrap-up is its own request.
+    if (route.request().postDataJSON()?.only === "coach") return route.fallback();
     calls++;
     if (calls === 1)
       return route.fulfill({ status: 502, contentType: "application/json", body: '{"error":"analysis_failed"}' });

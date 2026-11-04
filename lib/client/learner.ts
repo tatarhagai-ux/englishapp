@@ -223,6 +223,14 @@ export const learner = {
     set({ ...state, sessions: state.sessions.map((s) => (s.id === id ? { ...s, xp } : s)) });
   },
 
+  /**
+   * Show a report without folding it into the learner model. Used for the demo, and as a
+   * fallback when updating the model from a real report failed: he still gets to read it.
+   */
+  attachReport(id: string, analysis: Analysis) {
+    learner.updateSession(id, (s) => ({ ...s, report: analysis }));
+  },
+
   /** A demo report is shown but never folded into the learner model. */
   saveDemoReport(id: string, analysis: Analysis) {
     learner.updateSession(id, (s) => ({ ...s, report: analysis }));

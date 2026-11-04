@@ -5,7 +5,7 @@ import { llm, type Usage } from "@/lib/providers/llm";
 import type { ChatMessage } from "@/lib/providers/llm/types";
 import { errorResponse } from "@/lib/http/errors";
 import { ProviderError } from "@/lib/providers/errors";
-import { turn } from "@/lib/conversation/types";
+import { CHAT_LIMITS, turn } from "@/lib/conversation/types";
 import {
   analysisSchema,
   buildAnalyzerMessages,
@@ -29,11 +29,15 @@ const body = z.object({
   scenarioId: z.string().min(1).max(80),
   history: z.array(turn).min(1).max(120),
   /** Facts already remembered, so the report can retire the ones that are out of date. */
-  memory: z.array(z.string().max(160)).max(40).default([]),
+  memory: z.array(z.string().max(CHAT_LIMITS.fact)).max(40).default([]),
   /** Today's challenge id, so the wrap-up can say whether he met it. */
   challenge: z.string().max(40).optional(),
-  /** Only the teacher's wrap-up, for a report that already has its fixes but lost the summary. */
-  only: z.literal("coach").optional(),
+  /**
+   * The app asks for the fixes ("core") and the teacher's wrap-up ("coach") as two separate
+   * requests at the same time, so each has its own time limit and neither can break the
+   * other. Without it, both are made in this one request (older clients, diagnostics).
+   */
+  only: z.enum(["core", "coach"]).optional(),
 });
 
 /** Token room per reply. Hebrew lines cost several times more tokens than English ones. */
@@ -144,10 +148,11 @@ export async function POST(req: Request) {
       );
     if (parsed.data.only === "coach") {
       const coach = await coachCall();
+      console.log(`analyze coach done (model=${coach.model}, ok=${!!coach.value}, ms=${Date.now() - started})`);
       if (!coach.value) return NextResponse.json({ error: "analysis_failed" }, { status: 502 });
       return NextResponse.json({ coach: coach.value, model: coach.model, usage: coach.usage ?? null });
     }
-    const [core, coach] = await Promise.all([
+    const coreCall = () =>
       withFallback(models, (m) =>
         jsonCall(
           m,
@@ -157,7 +162,15 @@ export async function POST(req: Request) {
           started,
           req.signal,
         ),
-      ),
+      );
+    if (parsed.data.only === "core") {
+      const core = await coreCall();
+      console.log(`analyze core done (model=${core.model}, ok=${!!core.value}, ms=${Date.now() - started})`);
+      if (!core.value) return NextResponse.json({ error: "analysis_failed" }, { status: 502 });
+      return NextResponse.json({ analysis: core.value, model: core.model, usage: core.usage ?? null });
+    }
+    const [core, coach] = await Promise.all([
+      coreCall(),
       coachCall().catch((err: unknown) => {
         console.error("coach summary failed", err);
         return { value: null, usage: undefined, model: analyzerModel };

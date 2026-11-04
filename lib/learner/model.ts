@@ -10,6 +10,7 @@ import { voiceById } from "@/content/voices";
 import { SAY_SETS } from "@/content/say";
 import type { Turn } from "@/lib/conversation/types";
 import { ANSWER_PARTS, totalScore, type Analysis } from "@/lib/prompts/analyzer";
+import { CHAT_LIMITS, clampChat } from "@/lib/conversation/types";
 import { bestStreak, computeStreak, dayKey, weekStart } from "@/lib/game/streak";
 import { EMPTY_STATS, type LearnerStats } from "@/lib/game/achievements";
 import { xpForSession } from "@/lib/game/xp";
@@ -299,13 +300,18 @@ export function applyAnalysis(
         };
   }
   for (const o of analysis.other_errors) {
-    madeKeys.add(o.error_key);
+    // Further mistakes only count for mistakes already tracked. A key the model made up
+    // (not tracked, not in the corrections) used to be added to madeKeys anyway and crash
+    // the loop below, which lost the whole report.
     const prev = errors[o.error_key];
-    if (prev) errors[o.error_key] = { ...prev, occurrences: prev.occurrences + 1, lastSeen: iso };
+    if (!prev) continue;
+    madeKeys.add(o.error_key);
+    errors[o.error_key] = { ...prev, occurrences: prev.occurrences + 1, lastSeen: iso };
   }
 
   for (const key of madeKeys) {
     const e = errors[key];
+    if (!e) continue;
     errors[key] = {
       ...e,
       cleanSessions: 0,
@@ -375,7 +381,7 @@ export function memoryForTutor(state: LearnerState, max = MEMORY_TUTOR_FACTS, ma
   let chars = 0;
   for (const m of [...(state.memory ?? [])].reverse()) {
     if (out.length >= max || chars + m.text.length > maxChars) break;
-    out.push(m.text);
+    out.push(clampChat(m.text, CHAT_LIMITS.fact));
     chars += m.text.length;
   }
   return out;
@@ -409,7 +415,19 @@ export function recentSummaries(state: LearnerState, max = 3): string[] {
     .filter((s) => !s.demo && s.report?.summary_en)
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
     .slice(0, max)
-    .map((s) => `${s.day}: ${s.report!.summary_en}`);
+    .map((s) => clampChat(`${s.day}: ${s.report!.summary_en}`, CHAT_LIMITS.recent));
+}
+
+/**
+ * How his last few conversations began (the tutor's first line), newest first, so the next
+ * one can open differently. The conversation being started is left out.
+ */
+export function recentOpenings(state: LearnerState, exceptId?: string | null, max = 4): string[] {
+  return [...state.sessions]
+    .filter((s) => !s.demo && s.id !== exceptId && s.turns[0]?.role === "tutor")
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    .slice(0, max)
+    .map((s) => clampChat(s.turns[0].text, CHAT_LIMITS.opening));
 }
 
 /** Lesson scores over time, oldest first, and how many challenges he met. */

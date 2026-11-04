@@ -41,3 +41,68 @@ describe("conversation moves", () => {
     expect(chatRequest.safeParse({ scenarioId: "x", history: [], move: "dance" }).success).toBe(false);
   });
 });
+
+describe("openings and request limits", () => {
+  it("each conversation gets an opening style, spread across the styles, and the tutor is told what to avoid", async () => {
+    const { OPENING_STYLES, openingStyleFor } = await import("@/lib/conversation/moves");
+    const used = new Set(Array.from({ length: 60 }, (_, i) => openingStyleFor(`session-${i}`).id));
+    expect(used.size).toBe(OPENING_STYLES.length);
+    const base = { tutorName: "Ava", correctionMode: "gentle" as const, targetKeys: [], wrapUp: false };
+    const p = buildTutorSystemPrompt({
+      ...base,
+      scenario: free,
+      format: "story",
+      opening: true,
+      style: "hot-take",
+      avoidOpenings: ["Hey! So, what have you been up to this week?"],
+    });
+    expect(p).toContain("playful hot take");
+    expect(p).toContain("Do not open in a similar way");
+    expect(p).toContain("what have you been up to this week");
+  });
+
+  it("text the report and memory produce always fits the requests (a long fact or summary once would have broken every later one)", async () => {
+    const { CHAT_LIMITS, clampChat } = await import("@/lib/conversation/types");
+    const fact = "x".repeat(200);
+    const summary = "y".repeat(400);
+    const homework = "z".repeat(300);
+    expect(
+      chatRequest.safeParse({
+        scenarioId: "x",
+        history: [],
+        memory: [fact],
+        recent: [`2026-11-04: ${summary}`],
+        homework,
+        avoidOpenings: ["w".repeat(300)],
+      }).success,
+    ).toBe(true);
+    expect(clampChat("a".repeat(600), CHAT_LIMITS.recent).length).toBeLessThanOrEqual(CHAT_LIMITS.recent);
+    expect(clampChat("short", 50)).toBe("short");
+  });
+
+  it("recent openings are the tutor's first lines, newest first, without the current conversation", async () => {
+    const { recentOpenings, initialState } = await import("@/lib/learner/model");
+    const mk = (id: string, at: string, text: string) => ({
+      id,
+      scenarioId: "free-your-week",
+      mode: "voice" as const,
+      startedAt: at,
+      day: at.slice(0, 10),
+      turns: [{ role: "tutor" as const, text }],
+      speakingSeconds: 0,
+      stuckCount: 0,
+      fixedAloud: [],
+      xp: 0,
+      costUsd: 0,
+    });
+    const s = {
+      ...initialState(),
+      sessions: [
+        mk("a", "2026-11-01T10:00:00Z", "Opening A"),
+        mk("b", "2026-11-02T10:00:00Z", "Opening B"),
+        mk("now", "2026-11-03T10:00:00Z", "Scripted fallback"),
+      ],
+    };
+    expect(recentOpenings(s, "now")).toEqual(["Opening B", "Opening A"]);
+  });
+});

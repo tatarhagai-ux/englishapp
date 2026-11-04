@@ -8,6 +8,8 @@ export function errorResponse(err: unknown) {
     return NextResponse.json({ error: "not_configured", service: err.service }, { status: 503 });
   }
   if (err instanceof ProviderError) {
+    // Message only (no prompts or replies): which provider, what status, what it said.
+    console.error(`provider error (${err.provider} ${err.status}): ${err.message.slice(0, 200)}`);
     // A rejected key and an empty balance can't be fixed by retrying, so the client gets
     // a distinct code for each and can say exactly what to do.
     if (err.status === 401 || err.status === 403) {
