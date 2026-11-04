@@ -5,7 +5,7 @@ import { describeTargets, LEARNER_PROFILE } from "./learner";
 import { challengeForTutor } from "@/lib/learner/challenge";
 import { formatForTutor, themeFor } from "@/lib/learner/format";
 import { formatById } from "@/content/formats";
-import { moveRule, type Move } from "@/lib/conversation/moves";
+import { moveRule, openingStyleById, type Move } from "@/lib/conversation/moves";
 
 const CORRECTION_RULES: Record<CorrectionMode, string> = {
   off: "Do not correct mistakes at all. Just respond to the meaning. Corrections come later in a separate report.",
@@ -35,6 +35,9 @@ export interface TutorPromptInput {
   /** Today's format and, for the surprise conversation, the topic (content/formats.ts). */
   format?: string;
   topic?: string;
+  /** How to open (opening only) and the openings to stay away from. */
+  style?: string;
+  avoidOpenings?: string[];
   /** What kind of reply to give this turn (lib/conversation/moves.ts). Own conversations only. */
   move?: Move;
   /** No history yet: write the first line of the conversation. */
@@ -109,7 +112,11 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
     !roleplay && !input.opening && !input.wrapUp ? moveRule(input.move) : "",
     input.opening
       ? !roleplay && formatById(input.format)
-        ? `This is the very start of the conversation and you speak first. Open in today's format, about "${themeFor(scenario.title, input.topic)}": greet him by name once, say in a few words what today's conversation is, then ask your first question (1 to 3 short sentences). Make the question specific and a little unexpected. Never open with a generic question such as how his day or morning was, or what he has been up to.`
+        ? `This is the very start of the conversation and you speak first. Open in today's format, about "${themeFor(scenario.title, input.topic)}": greet him by name once and say in a few words what today's conversation is (1 to 3 short sentences in all). ${openingStyleById(input.style)?.rule ?? "Make your first question specific and a little unexpected."} Never open with a generic question such as how his day or morning was, or what he has been up to.${
+            input.avoidOpenings?.length
+              ? `\nHis last conversations began like this. Do not open in a similar way, with similar words or the same kind of question:\n${input.avoidOpenings.map((o) => `- ${o}`).join("\n")}`
+              : ""
+          }`
         : `This is the very start of the conversation and you speak first. The usual opening is: "${scenario.opener}" Say something with the same purpose in your own fresh words (1 or 2 short sentences ending with one question).${roleplay ? " Stay in character." : " Greet him by name once. If something you remember about him or today's challenge fits naturally, you may use it."} Don't repeat the usual opening word for word.`
       : "",
     input.wrapUp

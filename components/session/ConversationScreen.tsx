@@ -30,7 +30,8 @@ import { learner, useHydrated, useLearner } from "@/lib/client/learner";
 import { ApiError, API_ERROR_TEXT, assist, fetchOpener, streamChat } from "@/lib/client/api";
 import { nextChallenge, pickChallenge } from "@/lib/learner/challenge";
 import { nextFormat, nextTopic, pickFormat, pickTopic, themeFor } from "@/lib/learner/format";
-import { moveFor } from "@/lib/conversation/moves";
+import { moveFor, openingStyleFor } from "@/lib/conversation/moves";
+import { CHAT_LIMITS, clampChat } from "@/lib/conversation/types";
 import type { ConversationFormat } from "@/content/formats";
 import type { Challenge } from "@/content/challenges";
 import { TtsRequestError } from "@/lib/client/tts";
@@ -42,6 +43,7 @@ import { monthKey } from "@/lib/cost/budget";
 import {
   memoryForTutor,
   openHomework,
+  recentOpenings,
   recentSummaries,
   phrasesToPractice,
   canResume,
@@ -414,7 +416,10 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
           : phrasesToPractice(s),
         memory: memoryForTutor(s),
         recent: recentSummaries(s),
-        homework: openHomework(s)?.task,
+        homework: openHomework(s)?.task ? clampChat(openHomework(s)!.task, CHAT_LIMITS.homework) : undefined,
+        // The first line: a different way to start each time, and not like the last few.
+        style: extra.opening && sessionRef.current ? openingStyleFor(sessionRef.current).id : undefined,
+        avoidOpenings: extra.opening ? recentOpenings(s, sessionRef.current) : [],
         challenge: s.sessions.find((x) => x.id === sessionRef.current)?.challenge,
         format: s.sessions.find((x) => x.id === sessionRef.current)?.format,
         // Each reply in his own tutor's conversations gets a different kind of move.

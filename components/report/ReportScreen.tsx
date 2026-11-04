@@ -22,7 +22,7 @@ import clsx from "clsx";
 import { scenarioById } from "@/content/scenarios";
 import { useHydrated, useLearner, learner } from "@/lib/client/learner";
 import { usePrefs } from "@/lib/client/prefs";
-import { analyzeSession, ApiError, API_ERROR_TEXT } from "@/lib/client/api";
+import { analyzeSession, summarizeSession, ApiError, API_ERROR_TEXT } from "@/lib/client/api";
 import { usageCostUsd } from "@/lib/cost/pricing";
 import { criterionMet, wordCount } from "@/lib/text/compare";
 import { planDayByKey, planWeek } from "@/content/plan";
@@ -46,6 +46,9 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
   const [status, setStatus] = useState<"idle" | "analyzing" | "error">("idle");
   const [errorText, setErrorText] = useState("");
   const [retrying, setRetrying] = useState(false);
+  const [errorCode, setErrorCode] = useState("");
+  /** The teacher's wrap-up runs on its own: working, done, or failed (then a button offers it again). */
+  const [summary, setSummary] = useState<"idle" | "working" | "done" | "failed">("idle");
   const started = useRef(false);
 
   async function analyze() {
@@ -56,20 +59,27 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
     }
     setStatus("analyzing");
     setRetrying(false);
-    // One quiet retry before showing an error: a single odd reply or a slow moment
-    // shouldn't leave him without a report.
-    for (let attempt = 0; attempt < 2; attempt++) {
+    setErrorCode("");
+    setSummary("working");
+
+    // The teacher's wrap-up is its own request, started at the same time as the fixes:
+    // each has its own time limit, and a slow or failed wrap-up never holds the report back.
+    const wrapUp = summarizeSession(session.scenarioId, session.turns, session.challenge).then(
+      (res) => ({ res }),
+      (err: unknown) => ({ err }),
+    );
+
+    // The fixes, with one quiet retry for a slow moment or an odd reply. The retry only
+    // covers the request itself: once the answer is here it is never asked for (or paid for) again.
+    let result: Awaited<ReturnType<typeof analyzeSession>> | null = null;
+    for (let attempt = 0; attempt < 2 && !result; attempt++) {
       try {
-        const res = await analyzeSession(
+        result = await analyzeSession(
           session.scenarioId,
           session.turns,
           memoryForTutor(learner.get(), MEMORY_MAX, 6000),
           session.challenge,
         );
-        learner.addSpend(session.id, usageCostUsd(res.model, res.usage));
-        learner.saveReport(session.id, res.analysis, prefs.dailyGoalMinutes);
-        setStatus("idle");
-        return;
       } catch (err) {
         const kind = err instanceof ApiError ? err.kind : "provider";
         // Not worth a retry: no key, no credit, offline, or a request the server refuses.
@@ -78,11 +88,42 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
           ["not_configured", "unauthorized", "provider_credit", "offline", "bad_request"].includes(kind);
         if (final) {
           setErrorText(API_ERROR_TEXT[kind]);
+          setErrorCode(err instanceof ApiError && err.status ? `${err.status}` : "");
           setStatus("error");
           return;
         }
         setRetrying(true);
       }
+    }
+    if (!result) return;
+
+    learner.addSpend(session.id, usageCostUsd(result.model, result.usage));
+    try {
+      learner.saveReport(session.id, result.analysis, prefs.dailyGoalMinutes);
+    } catch (err) {
+      // The answer arrived but updating the learner model from it failed on this device.
+      // Show the report anyway, and say what happened instead of blaming the AI service.
+      console.error("saving the report failed", err);
+      try {
+        learner.attachReport(session.id, result.analysis);
+      } catch (inner) {
+        console.error("attaching the report failed", inner);
+        setErrorText("The report came back, but this phone couldn't save it.");
+        setErrorCode(err instanceof Error ? err.message.slice(0, 80) : "local");
+        setStatus("error");
+        return;
+      }
+    }
+    setStatus("idle");
+
+    const done = await wrapUp;
+    if ("res" in done) {
+      learner.addSpend(session.id, usageCostUsd(done.res.model, done.res.usage));
+      learner.saveSummary(session.id, done.res.coach);
+      setSummary("done");
+    } else {
+      console.error("the summary request failed", done.err);
+      setSummary("failed");
     }
   }
 
@@ -163,6 +204,7 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
       {status === "error" && (
         <section role="alert" className="tile space-y-3 border-bad/40 p-5">
           <p className="font-bold text-bad">{errorText}</p>
+          {errorCode && <p className="text-xs font-bold text-faint">Code: {errorCode}</p>}
           <button type="button" onClick={() => void analyze()} className="btn-3d btn-ghost px-4 py-2 text-sm">
             Try again
           </button>
@@ -180,6 +222,7 @@ export function ReportScreen({ sessionId }: { sessionId: string }) {
             hebrewHelp={prefs.hebrewHelp}
             demo={!!session.demo}
             challengeId={session.challenge}
+            summaryWorking={summary === "working"}
           />
 
           <section

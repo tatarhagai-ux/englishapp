@@ -41,6 +41,7 @@ export function LessonSummary({
   hebrewHelp,
   demo,
   challengeId,
+  summaryWorking = false,
 }: {
   report: Analysis;
   steps: StepLink[];
@@ -50,6 +51,8 @@ export function LessonSummary({
   hebrewHelp: boolean;
   demo: boolean;
   challengeId?: string;
+  /** The wrap-up is being written right now (it runs next to the fixes). */
+  summaryWorking?: boolean;
 }) {
   const score = report.score;
   const total = score ? totalScore(score) : null;
@@ -57,7 +60,8 @@ export function LessonSummary({
   const challenge = challengeById(challengeId);
   const upgrades = report.upgrades ?? [];
   if (!score && !report.felt_en && !steps.length && !report.homework && !upgrades.length) {
-    return demo ? null : <MissingSummary sessionId={sessionId} />;
+    if (demo) return null;
+    return summaryWorking ? <SummaryWorking /> : <MissingSummary sessionId={sessionId} />;
   }
 
   return (
@@ -298,6 +302,21 @@ function MissingSummary({ sessionId }: { sessionId: string }) {
           "Make the summary"
         )}
       </button>
+    </section>
+  );
+}
+
+/** The wrap-up is on its way: the fixes below are already here. */
+function SummaryWorking() {
+  return (
+    <section aria-labelledby="summary-title" className="tile flex items-center gap-3 p-5" aria-live="polite">
+      <Loader2 className="size-5 shrink-0 animate-spin text-accent" aria-hidden />
+      <div>
+        <h2 id="summary-title" className="font-black">
+          Writing your summary…
+        </h2>
+        <p className="text-sm text-dim">Your fixes are below. The score and next steps appear here in a moment.</p>
+      </div>
     </section>
   );
 }

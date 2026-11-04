@@ -18,7 +18,11 @@ export type ApiErrorKind =
   | "bad_request";
 
 export class ApiError extends Error {
-  constructor(public readonly kind: ApiErrorKind) {
+  constructor(
+    public readonly kind: ApiErrorKind,
+    /** The HTTP status, for the small code shown with an error. */
+    public readonly status?: number,
+  ) {
     super(kind);
   }
 }
@@ -69,7 +73,7 @@ async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Pr
     if (err instanceof DOMException && err.name === "AbortError") throw err;
     throw networkError();
   });
-  if (!res.ok) throw new ApiError(await kindOf(res));
+  if (!res.ok) throw new ApiError(await kindOf(res), res.status);
   return (await res.json()) as T;
 }
 
@@ -170,9 +174,10 @@ export function analyzeSession(
   challenge?: string,
   signal?: AbortSignal,
 ) {
+  // The fixes only: the teacher's wrap-up is its own request (summarizeSession).
   return postJson<{ analysis: Analysis; model: string; usage: Usage | null }>(
     "/api/analyze",
-    { scenarioId, history, memory, challenge },
+    { scenarioId, history, memory, challenge, only: "core" },
     signal,
   );
 }
