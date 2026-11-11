@@ -943,6 +943,55 @@ test("the report retries once on its own when the first try fails", async ({ pag
   await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
 });
 
+test("time's up is a suggestion: keep going with no limit, or let the tutor wrap up", async ({ page }) => {
+  const chatBodies: { wrapUp?: boolean }[] = [];
+  await mockApis(page, chatBodies);
+  await page.clock.install();
+  await page.goto("/session/free-your-week");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  const box = page.getByLabel("Your reply");
+  await box.fill("I worked a lot this week");
+  await box.press("Enter");
+  await expect(page.getByText("What's the hardest part so far?")).toBeVisible();
+
+  // Past the planned 10 minutes: a choice, not an ending.
+  await page.clock.runFor(11 * 60 * 1000);
+  const choice = page.getByRole("group", { name: "Time is up" });
+  await expect(choice).toBeVisible();
+  await choice.getByRole("button", { name: "Keep going" }).click();
+  await expect(choice).toHaveCount(0);
+  await expect(page.getByText(/No time limit/)).toBeVisible();
+  await box.fill("Reports, mostly");
+  await box.press("Enter");
+  await expect.poll(() => chatBodies.length).toBe(2);
+  expect(chatBodies[1].wrapUp).toBe(false);
+});
+
+test("time's up: +5 minutes, then the next reply after that wraps up", async ({ page }) => {
+  const chatBodies: { wrapUp?: boolean }[] = [];
+  await mockApis(page, chatBodies);
+  await page.clock.install();
+  await page.goto("/session/free-your-week");
+  await page.getByRole("button", { name: /Quiet mode/ }).click();
+  await startSkippingWarmup(page);
+  const box = page.getByLabel("Your reply");
+  await page.clock.runFor(11 * 60 * 1000);
+  const choice = page.getByRole("group", { name: "Time is up" });
+  await choice.getByRole("button", { name: "+5 minutes" }).click();
+  await expect(choice).toHaveCount(0);
+  await box.fill("One more thing");
+  await box.press("Enter");
+  await expect.poll(() => chatBodies.length).toBe(1);
+  expect(chatBodies[0].wrapUp).toBe(false);
+  await page.clock.runFor(6 * 60 * 1000);
+  await expect(choice).toBeVisible();
+  await box.fill("Okay, that's all");
+  await box.press("Enter");
+  await expect.poll(() => chatBodies.length).toBe(2);
+  expect(chatBodies[1].wrapUp).toBe(true);
+});
+
 test("plan days start by learning three of the week's words, then the next three", async ({ page }) => {
   await mockApis(page, []);
   await page.goto("/session/free-your-week?plan=w1d1");

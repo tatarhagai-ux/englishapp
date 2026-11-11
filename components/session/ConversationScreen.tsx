@@ -150,6 +150,13 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const handsFreeRef = useRef(handsFree);
   const endedRef = useRef(false);
   const wrapSentRef = useRef(false);
+  /**
+   * The time limit is a recommendation: when it's reached he can add 5 minutes or keep going
+   * with no limit. Extra seconds on top of the planned length; Infinity means no limit.
+   */
+  const [extraSeconds, setExtraSeconds] = useState(0);
+  const extraRef = useRef(0);
+  extraRef.current = extraSeconds;
   const elapsedRef = useRef(0);
   const pttBuffer = useRef<{ text: string; seconds: number }>({ text: "", seconds: 0 });
   /** Words heard but not yet finalized, so a quick tap-to-send doesn't drop the end of the sentence. */
@@ -440,7 +447,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
   const requestTutor = useCallback(async () => {
     if (endedRef.current) return;
     const queue = ensureQueue();
-    const wrapUp = elapsedRef.current >= limitSeconds;
+    const wrapUp = elapsedRef.current >= limitSeconds + extraRef.current;
     if (wrapUp) wrapSentRef.current = true;
     setOrb("thinking");
     setError(null);
@@ -801,7 +808,12 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
 
   const minutes = Math.floor(elapsed / 60);
   const seconds = String(elapsed % 60).padStart(2, "0");
-  const progress = Math.min(1, elapsed / limitSeconds);
+  const effectiveLimit = limitSeconds + extraSeconds;
+  const openEnded = !Number.isFinite(effectiveLimit);
+  const progress = openEnded ? 1 : Math.min(1, elapsed / effectiveLimit);
+  const timeUp = !openEnded && elapsed >= effectiveLimit;
+  const extendBy = (seconds: number) =>
+    setExtraSeconds(Number.isFinite(seconds) ? Math.max(extraSeconds, elapsed - limitSeconds) + seconds : Infinity);
 
   return (
     <div className="mx-auto flex h-dvh max-w-xl flex-col">
@@ -809,6 +821,7 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
         <button
           type="button"
           onClick={() => {
+            // Ending after the planned length isn't early, even when he chose to keep going.
             const early = elapsedRef.current < limitSeconds && turnsRef.current.some((t) => t.role === "learner");
             if (early) setConfirmEnd(true);
             else void finish();
@@ -1128,10 +1141,28 @@ export function ConversationScreen({ scenarioId, budgetUsd }: Props) {
                     : "Tap the mic to talk."
                   : "Quiet mode: type, and listen to the reply."}
         </p>
-        {sessionId && elapsed >= limitSeconds && !wrapSentRef.current && (
-          <p className="mt-1 text-center text-xs font-extrabold text-accent">
-            Time&apos;s up after this reply. Nice work.
-          </p>
+        {sessionId && timeUp && !wrapSentRef.current && !demo && (
+          <div
+            role="group"
+            aria-label="Time is up"
+            className="mt-2 space-y-2 rounded-xl border-2 border-accent/50 bg-accent/10 p-2.5"
+          >
+            <p className="text-center text-xs font-extrabold text-accent">
+              {Math.round(limitSeconds / 60)} minutes are up. Your tutor wraps up after your next reply, unless you keep
+              going.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => extendBy(5 * 60)} className="btn-3d btn-ghost py-2 text-sm">
+                +5 minutes
+              </button>
+              <button type="button" onClick={() => extendBy(Infinity)} className="btn-3d btn-go py-2 text-sm">
+                Keep going
+              </button>
+            </div>
+          </div>
+        )}
+        {sessionId && openEnded && !wrapSentRef.current && (
+          <p className="mt-1 text-center text-xs font-bold text-dim">No time limit. End whenever you like with ✕.</p>
         )}
       </footer>
     </div>
