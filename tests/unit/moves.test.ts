@@ -106,3 +106,11 @@ describe("openings and request limits", () => {
     expect(recentOpenings(s, "now")).toEqual(["Opening B", "Opening A"]);
   });
 });
+
+describe("different worlds", () => {
+  it("the tutor is asked to link the topic to another area of life, in its own conversations only", () => {
+    const base = { tutorName: "Ava", correctionMode: "gentle" as const, targetKeys: [], wrapUp: false };
+    expect(buildTutorSystemPrompt({ ...base, scenario: free })).toContain("Travel between worlds");
+    expect(buildTutorSystemPrompt({ ...base, scenario: hotel })).not.toContain("Travel between worlds");
+  });
+});

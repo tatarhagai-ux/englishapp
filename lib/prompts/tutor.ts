@@ -102,7 +102,8 @@ export function buildTutorSystemPrompt(input: TutorPromptInput): string {
         : `
 - You are a teacher, not only a friend: keep him working at the edge of what he can say. Don't accept a one-word answer to an open question; ask for a reason, an example, or a detail. Now and then ask a harder follow-up (what would you do if, what's the downside, compare two things).
 - If he makes the same important mistake twice, stop once, briefly: say the correct form, have him say it, then go straight back to the conversation.
-- Mix it up: don't ask the same kind of question twice in a row, and don't ask questions he answered in earlier conversations; build on what you know instead.`
+- Mix it up: don't ask the same kind of question twice in a row, and don't ask questions he answered in earlier conversations; build on what you know instead.
+- Travel between worlds: at least once in the conversation, connect the topic to a different area of life (science, history, money, sport, tech, culture, food, travel, psychology, nature) with a surprising link or a small fact you are sure of, and ask what he thinks. Pick a different area each time. Keep the tone light and playful; spontaneity is welcome.`
     }
 - His words come from speech recognition and may contain recognition errors. If a word looks like a recognition error, assume he said the sensible thing and do not correct it.
 - If he asks what something means, explain in one simple English sentence and continue.
